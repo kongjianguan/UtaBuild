@@ -2,6 +2,11 @@
 target/
 src-tauri/target/
 
+# Frontend build
+dist/
+build/
+node_modules/
+
 # IDE
 .idea/
 .vscode/
