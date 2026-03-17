@@ -2,20 +2,15 @@
 
 跨平台歌词搜索与显示工具，复刻 utaten.com 的歌词搜索与振假名（Ruby）显示体验。
 
-## 支持平台
-
-- Windows (x86_64)
-- Android (aarch64)
-
-## 环境要求
+## 环境要求 Enviroment requirement
 
 - Rust 1.77+
 - Tauri v2 CLI: `cargo install tauri-cli --version "^2"`
 
-## 安装
+## 安装 Install
 
 ```bash
-# 克隆项目
+# 克隆项目 clone project
 git clone <repo-url>
 cd utabuild-tauri
 
@@ -26,26 +21,21 @@ rustup default stable
 cargo install tauri-cli --version "^2"
 ```
 
-## 开发
+## 开发 Debug
 
 ```bash
 cargo tauri dev
 ```
 
-## 构建
+## 构建 Build
 
 ```bash
 # Windows
 cargo tauri build
 # 输出: src-tauri/target/release/bundle/
 
-# Android (需要Android Studio)
-# 1. git pull 在Windows端
-# 2. 用Android Studio打开项目
+# Android (need Android Studio)
+# 1. git pull 
+# 2. Open with Android Studio
 # 3. Build > Build Bundle(s) / APK(s)
 ```
-
-## 文档
-
-- [架构详解](./docs/ARCHITECTURE.md)
-- [Ruby渲染方案](./docs/RUBY_RENDERING.md)
