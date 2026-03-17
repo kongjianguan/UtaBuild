@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>UtaBuild - 歌詞ビューア</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 搜索界面 -->
+    <header id="search-header">
+      <h1>UtaBuild</h1>
+      <p class="subtitle">歌詞検索ツール</p>
+      
+      <div class="search-form">
+        <input
+          type="text"
+          id="search-title"
+          placeholder="曲名を入力..."
+          autocomplete="off"
+          style="ime-mode: disabled;"
+        />
+        <input 
+          type="text" 
+          id="search-artist" 
+          placeholder="アーティスト名（任意）"
+          autocomplete="off"
+        />
+        <button id="search-btn" type="button">検索</button>
+      </div>
+    </header>
+
+    <!-- 搜索结果列表 -->
+    <section id="result-list" class="hidden">
+      <h2>検索結果</h2>
+      <div id="results-container"></div>
+      <button id="back-btn" class="secondary">戻る</button>
+    </section>
+
+    <!-- 歌词显示 -->
+    <section id="lyrics-view" class="hidden">
+      <div id="lyrics-header">
+        <h2 id="lyrics-title"></h2>
+        <p id="lyrics-artist"></p>
+      </div>
+      
+      <div class="lyrics-controls">
+        <div class="control-group">
+          <span>文字サイズ:</span>
+          <button data-size="small">小</button>
+          <button data-size="medium" disabled>中</button>
+          <button data-size="large">大</button>
+        </div>
+        <div class="control-group">
+          <span>ふりがな:</span>
+          <button data-ruby="hiragana" disabled>あ</button>
+          <button data-ruby="romaji">A</button>
+          <button data-ruby="off">OFF</button>
+        </div>
+        <div class="control-group">
+          <span>ダークモード:</span>
+          <button data-dark="on">ON</button>
+          <button data-dark="off" disabled>OFF</button>
+        </div>
+      </div>
+      
+      <div id="lyrics-body"></div>
+      
+      <button id="back-to-results-btn" class="secondary">結果に戻る</button>
+    </section>
+
+    <!-- 加载指示器 -->
+    <div id="loading" class="hidden">
+      <div class="spinner"></div>
+      <p>読み込み中...</p>
+    </div>
+
+    <!-- 错误提示 -->
+    <div id="error-toast" class="hidden">
+      <span id="error-message"></span>
+      <button id="error-close">&times;</button>
+    </div>
+  </div>
+
+  <script src="js/app.js" type="module"></script>
+</body>
+</html>
