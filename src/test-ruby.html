@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ruby Rendering Test</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app" style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <h1 style="text-align: center;">Ruby Rendering Test</h1>
+    
+    <div class="lyrics-controls">
+      <div class="control-group">
+        <span>文字サイズ:</span>
+        <button id="size-small" data-size="small">小</button>
+        <button id="size-medium" data-size="medium" disabled>中</button>
+        <button id="size-large" data-size="large">大</button>
+      </div>
+      <div class="control-group">
+        <span>ダークモード:</span>
+        <button id="dark-on" data-dark="on">ON</button>
+        <button id="dark-off" data-dark="off" disabled>OFF</button>
+      </div>
+    </div>
+
+    <!-- 完整歌词测试（千本桜片段） -->
+    <div id="lyrics-body">
+      <div class="lyricBody">
+        <div class="medium">
+          <!-- 大胆不敵だいたんふてきにハイカラ革命かくめい -->
+          <span class="ruby"><span class="rb">大胆不敵</span><span class="rt">だいたんふてき</span></span>にハイカラ<span class="ruby"><span class="rb">革命</span><span class="rt">かくめい</span></span><br>
+          <!-- 磊々落々反戦国家らいらいらくらくはんせんこっか -->
+          <span class="ruby"><span class="rb">磊々落々反戦国家</span><span class="rt">らいらいらくらくはんせんこっか</span></span><br>
+          <br>
+          <!-- 日ひの丸印まるじるしの二輪車転にりんしゃころがし -->
+          <span class="ruby"><span class="rb">日</span><span class="rt">ひ</span></span>の<span class="ruby"><span class="rb">丸印</span><span class="rt">まるじるし</span></span>の<span class="ruby"><span class="rb">二輪車転</span><span class="rt">にりんしゃころ</span></span>がし<br>
+          <!-- 悪霊退散あくりょうたいさん -->
+          <span class="ruby"><span class="rb">悪霊退散</span><span class="rt">あくりょうたいさん</span></span> <span class="ruby"><span class="rb">ICBM</span><span class="rt">あいしーびーえむ</span></span><br>
+          <br>
+          <!-- 環状線かんじょうせんを走はしり抜ぬけて -->
+          <span class="ruby"><span class="rb">環状線</span><span class="rt">かんじょうせん</span></span>を<span class="ruby"><span class="rb">走</span><span class="rt">はし</span></span>り<span class="ruby"><span class="rb">抜</span><span class="rt">ぬ</span></span>けて<br>
+          <!-- 東奔西走とうほんせいそうなんのその -->
+          <span class="ruby"><span class="rb">東奔西走</span><span class="rt">とうほんせいそう</span></span>なんのその<br>
+          <br>
+          <!-- 少年少女戦国無双しょうねんしょうじょせんごくむそう -->
+          <span class="ruby"><span class="rb">少年少女戦国無双</span><span class="rt">しょうねんしょうじょせんごくむそう</span></span><br>
+          <!-- 浮世うきよの随まにまに -->
+          <span class="ruby"><span class="rb">浮世</span><span class="rt">うきよ</span></span>の<span class="ruby"><span class="rb">随</span><span class="rt">まにま</span></span>に<br>
+          <br>
+          <!-- 千本桜せんぼんざくら 夜よるニ紛まぎレ -->
+          <span class="ruby"><span class="rb">千本桜</span><span class="rt">せんぼんざくら</span></span> <span class="ruby"><span class="rb">夜</span><span class="rt">よる</span></span>ニ<span class="ruby"><span class="rb">紛</span><span class="rt">まぎ</span></span>レ<br>
+          <!-- 君きみノ声こえモ届とどカナイヨ -->
+          <span class="ruby"><span class="rb">君</span><span class="rt">きみ</span></span>ノ<span class="ruby"><span class="rb">声</span><span class="rt">こえ</span></span>モ<span class="ruby"><span class="rb">届</span><span class="rt">とど</span></span>カナイヨ<br>
+          <br>
+          <!-- 此処ここは宴うたげ 鋼はがねの檻おり -->
+          <span class="ruby"><span class="rb">此処</span><span class="rt">ここ</span></span>は<span class="ruby"><span class="rb">宴</span><span class="rt">うたげ</span></span> <span class="ruby"><span class="rb">鋼</span><span class="rt">はがね</span></span>の<span class="ruby"><span class="rb">檻</span><span class="rt">おり</span></span><br>
+          <!-- その断頭台だんとうだいで見下みおろして -->
+          その<span class="ruby"><span class="rb">断頭台</span><span class="rt">だんとうだい</span></span>で<span class="ruby"><span class="rb">見下</span><span class="rt">みお</span></span>ろして<br>
+        </div>
+      </div>
+    </div>
+
+    <!-- 测试：纯文字 vs Ruby的对比 -->
+    <h2 style="margin-top: 40px;">对比测试</h2>
+    <div class="lyricBody">
+      <div class="medium">
+        <!-- 普通文字 -->
+        <div style="margin-bottom: 10px; color: #666;">
+          （無注音）春日影、不思議な時は
+        </div>
+        <!-- 带Ruby -->
+        <div>
+          （有注音）<span class="ruby"><span class="rb">春日影</span><span class="rt">はるひかげ</span></span>、<span class="ruby"><span class="rb">不思議</span><span class="rt">ふしぎ</span></span>な<span class="ruby"><span class="rb">時</span><span class="rt">とき</span></span>は
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 控制按钮逻辑
+    document.querySelectorAll('[data-size]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const size = btn.dataset.size;
+        document.querySelectorAll('.lyricBody > div').forEach(el => {
+          el.className = size;
+        });
+        document.querySelectorAll('[data-size]').forEach(b => b.disabled = false);
+        btn.disabled = true;
+      });
+    });
+
+    document.querySelectorAll('[data-dark]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode', btn.dataset.dark === 'on');
+        document.querySelectorAll('[data-dark]').forEach(b => b.disabled = false);
+        btn.disabled = true;
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+[package]
+name = "utabuild-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "utabuild-cli"
+path = "src/main.rs"
+
+[lib]
+name = "utabuild_cli"
+path = "src/lib.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+moka = { version = "0.12", features = ["future"] }
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "gzip"] }
+scraper = "0.18"
+regex = "1"
+encoding_rs = "0.8"
+flate2 = "1"
+
+# dirs: 仅在非Android平台使用
+[target.'cfg(not(target_os = "android"))'.dependencies]
+dirs = "5"
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.21", optional = true }
+
+[features]
+default = []
+android = ["jni"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+
+[dev-dependencies]
+tempfile = "3"
