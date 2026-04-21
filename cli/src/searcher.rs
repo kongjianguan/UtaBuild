@@ -1,5 +1,7 @@
 use crate::cache_manager::{CacheManager, SearchResultEntry};
-use crate::models::{LyricElement, LyricsSearchResponse, SearchResult, SearchPagination, SearchResponse};
+use crate::models::{
+    LyricElement, LyricsSearchResponse, SearchPagination, SearchResponse, SearchResult,
+};
 use regex::Regex;
 use reqwest::Client;
 use scraper::{Html, Selector};
@@ -20,13 +22,13 @@ pub fn parse_artist_info(raw: &str) -> ArtistInfo {
         .chars()
         .map(|c| if c == '\n' || c == '\r' { ' ' } else { c })
         .collect();
-    
+
     let re_space = Regex::new(r"\s+").unwrap();
     let normalized = re_space.replace_all(&cleaned, " ").trim().to_string();
-    
+
     let re_lyricist = Regex::new(r"作\s*詞[：:]\s*").unwrap();
     let re_composer = Regex::new(r"作\s*曲[：:]\s*").unwrap();
-    
+
     let (artist_part, rest) = if let Some(m) = re_lyricist.find(&normalized) {
         (&normalized[..m.start()], &normalized[m.end()..])
     } else if let Some(m) = re_composer.find(&normalized) {
@@ -38,24 +40,36 @@ pub fn parse_artist_info(raw: &str) -> ArtistInfo {
             composer: None,
         };
     };
-    
+
     let artist = artist_part.trim().to_string();
-    
+
     let (lyricist, composer) = if let Some(m) = re_composer.find(rest) {
         let lyricist_text = rest[..m.start()].trim();
         let composer_text = rest[m.end()..].trim();
         (
-            if lyricist_text.is_empty() { None } else { Some(lyricist_text.to_string()) },
-            if composer_text.is_empty() { None } else { Some(composer_text.to_string()) },
+            if lyricist_text.is_empty() {
+                None
+            } else {
+                Some(lyricist_text.to_string())
+            },
+            if composer_text.is_empty() {
+                None
+            } else {
+                Some(composer_text.to_string())
+            },
         )
     } else {
         let text = rest.trim();
         (
-            if text.is_empty() { None } else { Some(text.to_string()) },
+            if text.is_empty() {
+                None
+            } else {
+                Some(text.to_string())
+            },
             None,
         )
     };
-    
+
     ArtistInfo {
         artist,
         lyricist,
@@ -72,6 +86,12 @@ pub struct UtaTenSearcher {
     pub cache: CacheManager,
     delay: Duration,
     last_request: Arc<Mutex<Instant>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SearchRequest {
+    path: &'static str,
+    params: Vec<(&'static str, String)>,
 }
 
 impl UtaTenSearcher {
@@ -123,7 +143,7 @@ impl UtaTenSearcher {
         if content_encoding == Some("gzip") {
             use flate2::read::GzDecoder;
             use std::io::Read;
-            let mut decoder = GzDecoder::new(&bytes[..]);
+            let mut decoder = GzDecoder::new(bytes);
             let mut decompressed = Vec::new();
             if decoder.read_to_end(&mut decompressed).is_ok() {
                 decoded_bytes = decompressed;
@@ -136,7 +156,7 @@ impl UtaTenSearcher {
 
         let (cow, _encoding, _had_errors) = encoding_rs::SHIFT_JIS.decode(&decoded_bytes);
         let result = cow.into_owned();
-        
+
         if Self::has_japanese(&result) {
             return result;
         }
@@ -146,12 +166,15 @@ impl UtaTenSearcher {
     }
 
     fn has_japanese(text: &str) -> bool {
-        text.chars()
-            .any(|c| ('\u{3040}'..='\u{30ff}').contains(&c) || ('\u{4e00}'..='\u{9fff}').contains(&c))
+        text.chars().any(|c| {
+            ('\u{3040}'..='\u{30ff}').contains(&c) || ('\u{4e00}'..='\u{9fff}').contains(&c)
+        })
     }
 
     pub async fn search(&self, title: &str, artist: Option<&str>) -> Vec<SearchResult> {
-        self.search_with_options(title, artist, "title", 1).await.results
+        self.search_with_options(title, artist, "title", 1)
+            .await
+            .results
     }
 
     pub async fn search_with_options(
@@ -162,29 +185,28 @@ impl UtaTenSearcher {
         page: u32,
     ) -> SearchResponse {
         let mut response = SearchResponse::new();
-        response.query_title = Some(query.to_string());
-        response.query_artist = artist.map(|s| s.to_string());
+        let trimmed_query = query.trim();
+        let trimmed_artist = artist.map(str::trim).filter(|value| !value.is_empty());
+
+        response.query_title = (!trimmed_query.is_empty()).then(|| trimmed_query.to_string());
+        response.query_artist = trimmed_artist.map(ToString::to_string);
         response.search_type = search_type.to_string();
         response.page = page;
 
         self.rate_limit().await;
 
-        let search_query = match (search_type, artist) {
-            ("artist", _) => query.trim().to_string(),
-            ("title", Some(a)) => format!("{} {}", query.trim(), a.trim()),
-            _ => query.trim().to_string(),
-        };
+        let search_request =
+            Self::build_search_request(trimmed_query, trimmed_artist, search_type, page);
+        let url = format!("{}{}", BASE_URL, search_request.path);
+        debug!("HTTP GET: {} with params: {:?}", url, search_request.params);
 
-        let params = [
-            ("layout_search_type", search_type),
-            ("layout_search_text", &search_query),
-            ("page", &page.to_string()),
-        ];
-
-        let url = format!("{}/search", BASE_URL);
-        debug!("HTTP GET: {} with params: {:?}", url, params);
-
-        let http_response = match self.client.get(&url).query(&params).send().await {
+        let http_response = match self
+            .client
+            .get(&url)
+            .query(&search_request.params)
+            .send()
+            .await
+        {
             Ok(r) => r,
             Err(e) => {
                 error!("Search request failed: {}", e);
@@ -213,10 +235,31 @@ impl UtaTenSearcher {
 
         let html_content = Self::decode_response(&bytes, &headers);
         let document = Html::parse_document(&html_content);
+        let results = Self::extract_search_results(&document);
 
-        let table_selector = Selector::parse("table.searchResult.artistLyricList").unwrap();
+        let pagination = self.extract_pagination(&document, page);
+        response.pagination = Some(pagination.clone());
+
+        debug!("Returning {} unique results", results.len());
+        response.results = results;
+        response.status = if response.results.is_empty() {
+            "not_found"
+        } else {
+            "select"
+        }
+        .to_string();
+
+        response
+    }
+
+    fn extract_search_results(document: &Html) -> Vec<SearchResult> {
+        let table_selector = Selector::parse(
+            "table.searchResult.artistLyricList, table.searchResult.lyricList, table.searchResult, table.lyricList",
+        )
+        .unwrap();
         let row_selector = Selector::parse("tr").unwrap();
-        let artist_cell_selector = Selector::parse("td.searchResult__artist").unwrap();
+        let artist_cell_selector =
+            Selector::parse("td.searchResult__artist, td.lyricList__artist").unwrap();
         let link_selector = Selector::parse("a[href*=\"/lyric/\"]").unwrap();
 
         let mut results: Vec<SearchResult> = Vec::new();
@@ -256,19 +299,52 @@ impl UtaTenSearcher {
             }
         }
 
-        let pagination = self.extract_pagination(&document, page);
-        response.pagination = Some(pagination.clone());
+        results
+    }
 
-        debug!("Returning {} unique results", results.len());
-        response.results = results;
-        response.status = if response.results.is_empty() { "not_found" } else { "select" }.to_string();
+    fn build_search_request(
+        query: &str,
+        artist: Option<&str>,
+        search_type: &str,
+        page: u32,
+    ) -> SearchRequest {
+        let trimmed_query = query.trim();
+        let trimmed_artist = artist.map(str::trim).filter(|value| !value.is_empty());
+        let page = page.max(1).to_string();
 
-        response
+        match (search_type, trimmed_artist) {
+            ("artist", _) => SearchRequest {
+                path: "/search",
+                params: vec![
+                    ("artist_name", trimmed_query.to_string()),
+                    ("sort", "popular_sort_asc".to_string()),
+                    ("show_artists", "1".to_string()),
+                    ("page", page),
+                ],
+            },
+            (_, Some(artist_name)) => SearchRequest {
+                path: "/search",
+                params: vec![
+                    ("title", trimmed_query.to_string()),
+                    ("artist_name", artist_name.to_string()),
+                    ("sort", "popular_sort_asc".to_string()),
+                    ("show_artists", "1".to_string()),
+                    ("page", page),
+                ],
+            },
+            _ => SearchRequest {
+                path: "/search",
+                params: vec![
+                    ("layout_search_type", search_type.to_string()),
+                    ("layout_search_text", trimmed_query.to_string()),
+                    ("page", page),
+                ],
+            },
+        }
     }
 
     fn extract_pagination(&self, document: &Html, current_page: u32) -> SearchPagination {
-        let pager_selector = Selector::parse("div.pager").unwrap();
-        let current_selector = Selector::parse("span.current, span.pager__item--current").unwrap();
+        let pager_selector = Selector::parse(".pager").unwrap();
         let link_selector = Selector::parse("a[href*=\"page=\"]").unwrap();
 
         let mut total_pages = current_page;
@@ -277,26 +353,9 @@ impl UtaTenSearcher {
         if let Some(pager) = document.select(&pager_selector).next() {
             for link in pager.select(&link_selector) {
                 if let Some(href) = link.value().attr("href") {
-                    if let Some(page_num) = href.split("page=").last() {
-                        if let Ok(num) = page_num.parse::<u32>() {
-                            total_pages = total_pages.max(num);
-                        }
-                    }
-                }
-            }
-
-            let next_selector = Selector::parse("a.next, a.pager__item--next").unwrap();
-            has_next = pager.select(&next_selector).next().is_some();
-
-            if pager.select(&current_selector).next().is_none() {
-                let all_links: Vec<_> = pager.select(&link_selector).collect();
-                if let Some(last_link) = all_links.last() {
-                    if let Some(href) = last_link.value().attr("href") {
-                        if let Some(page_num) = href.split("page=").last() {
-                            if let Ok(num) = page_num.parse::<u32>() {
-                                total_pages = total_pages.max(num);
-                            }
-                        }
+                    if let Some(num) = Self::extract_page_number_from_href(href) {
+                        total_pages = total_pages.max(num);
+                        has_next |= num > current_page;
                     }
                 }
             }
@@ -309,25 +368,18 @@ impl UtaTenSearcher {
         }
     }
 
-    fn match_artist(found_artist: &str, target: &str) -> bool {
-        if found_artist.is_empty() || target.is_empty() {
-            return false;
-        }
+    fn extract_page_number_from_href(href: &str) -> Option<u32> {
+        let page_marker = href.find("page=")?;
+        let digits: String = href[page_marker + "page=".len()..]
+            .chars()
+            .take_while(|ch| ch.is_ascii_digit())
+            .collect();
 
-        let found = found_artist.to_lowercase().trim().to_string();
-        let target = target.to_lowercase().trim().to_string();
-
-        if found == target {
-            return true;
+        if digits.is_empty() {
+            None
+        } else {
+            digits.parse::<u32>().ok()
         }
-        if found.contains(&target) || target.contains(&found) {
-            return true;
-        }
-        if found.replace(' ', "") == target.replace(' ', "") {
-            return true;
-        }
-
-        false
     }
 
     pub async fn get_lyrics_with_ruby(&self, lyric_url: &str) -> Option<String> {
@@ -435,18 +487,15 @@ impl UtaTenSearcher {
                             let has_ruby_class = classes.contains(&"ruby");
                             let has_rb_class = classes.contains(&"rb");
                             let has_rt_class = classes.contains(&"rt");
-                            
+
                             if has_ruby_class {
                                 let (base_text, ruby_text) = self.extract_ruby_content(child_ref);
-                                
+
                                 if !base_text.is_empty()
                                     && !ruby_text.is_empty()
                                     && Self::has_japanese(&ruby_text)
                                 {
-                                    elements.push(LyricElement::new_ruby(
-                                        base_text,
-                                        ruby_text,
-                                    ));
+                                    elements.push(LyricElement::new_ruby(base_text, ruby_text));
                                 } else if !base_text.is_empty() {
                                     elements.push(LyricElement::new_text(base_text));
                                 }
@@ -492,12 +541,9 @@ impl UtaTenSearcher {
         (base_text, ruby_text)
     }
 
-    pub async fn process_song(
-        &self,
-        title: &str,
-        artist: Option<&str>,
-    ) -> LyricsSearchResponse {
-        let mut result = LyricsSearchResponse::new(title.to_string(), artist.map(|s| s.to_string()));
+    pub async fn process_song(&self, title: &str, artist: Option<&str>) -> LyricsSearchResponse {
+        let mut result =
+            LyricsSearchResponse::new(title.to_string(), artist.map(|s| s.to_string()));
 
         if let Some(cached_entry) = self.cache.search().get(title, artist).await {
             info!("\n=== [SEARCH CACHE HIT] ===");
@@ -543,16 +589,19 @@ impl UtaTenSearcher {
                 .filter_map(|r| serde_json::to_value(r).ok())
                 .collect();
 
-            self.cache.search().insert(
-                title,
-                artist,
-                SearchResultEntry::new(
-                    search_results_json,
-                    result.found_title.clone(),
-                    result.found_artist.clone(),
-                    result.lyrics_url.clone(),
-                ),
-            ).await;
+            self.cache
+                .search()
+                .insert(
+                    title,
+                    artist,
+                    SearchResultEntry::new(
+                        search_results_json,
+                        result.found_title.clone(),
+                        result.found_artist.clone(),
+                        result.lyrics_url.clone(),
+                    ),
+                )
+                .await;
         } else {
             result.status = "not_found".to_string();
             result.error = Some("未找到匹配的歌词".to_string());
@@ -613,7 +662,10 @@ impl UtaTenSearcher {
 
         if let Some(html) = self.get_lyrics_with_ruby(&lyrics_url).await {
             let annotations = self.extract_ruby_lyrics(&html);
-            self.cache.lyrics().insert(lyrics_url.clone(), annotations.clone()).await;
+            self.cache
+                .lyrics()
+                .insert(lyrics_url.clone(), annotations.clone())
+                .await;
 
             info!("\n=== [CACHE STORED] ===");
             info!("  URL: {}", lyrics_url);
@@ -644,5 +696,170 @@ impl UtaTenSearcher {
 impl Default for UtaTenSearcher {
     fn default() -> Self {
         Self::new(CacheManager::new())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builds_quick_title_search_request_without_artist_filter() {
+        let request = UtaTenSearcher::build_search_request("R", None, "title", 3);
+        assert_eq!(
+            request,
+            SearchRequest {
+                path: "/search",
+                params: vec![
+                    ("layout_search_type", "title".to_string()),
+                    ("layout_search_text", "R".to_string()),
+                    ("page", "3".to_string()),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn builds_detailed_title_search_request_with_artist_filter() {
+        let request = UtaTenSearcher::build_search_request("R", Some("Roselia"), "title", 1);
+        assert_eq!(
+            request,
+            SearchRequest {
+                path: "/search",
+                params: vec![
+                    ("title", "R".to_string()),
+                    ("artist_name", "Roselia".to_string()),
+                    ("sort", "popular_sort_asc".to_string()),
+                    ("show_artists", "1".to_string()),
+                    ("page", "1".to_string()),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn builds_detailed_artist_only_request_when_title_is_empty() {
+        let request = UtaTenSearcher::build_search_request("", Some("Roselia"), "title", 2);
+        assert_eq!(
+            request,
+            SearchRequest {
+                path: "/search",
+                params: vec![
+                    ("title", "".to_string()),
+                    ("artist_name", "Roselia".to_string()),
+                    ("sort", "popular_sort_asc".to_string()),
+                    ("show_artists", "1".to_string()),
+                    ("page", "2".to_string()),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn builds_artist_search_request() {
+        let request = UtaTenSearcher::build_search_request("Roselia", None, "artist", 4);
+        assert_eq!(
+            request,
+            SearchRequest {
+                path: "/search",
+                params: vec![
+                    ("artist_name", "Roselia".to_string()),
+                    ("sort", "popular_sort_asc".to_string()),
+                    ("show_artists", "1".to_string()),
+                    ("page", "4".to_string()),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn extracts_page_number_from_query_and_path_links() {
+        assert_eq!(
+            UtaTenSearcher::extract_page_number_from_href("/search?page=12"),
+            Some(12)
+        );
+        assert_eq!(
+            UtaTenSearcher::extract_page_number_from_href("/search/=/title=R/page=42/"),
+            Some(42)
+        );
+        assert_eq!(
+            UtaTenSearcher::extract_page_number_from_href("/search"),
+            None
+        );
+    }
+
+    #[test]
+    fn parses_modern_pagination_markup() {
+        let searcher = UtaTenSearcher::new(CacheManager::new());
+        let document = Html::parse_document(
+            r#"
+            <nav class="pager">
+              <ul class="pager__inner">
+                <li class="pager__item pager__item--first">
+                  <a href="/search/=/title=R/page=1/">First</a>
+                </li>
+                <li class="pager__item pager__item--current"><span>1</span></li>
+                <li class="pager__item"><a href="/search/=/title=R/page=2/">2</a></li>
+                <li class="pager__item"><a href="/search/=/title=R/page=3/">3</a></li>
+                <li class="pager__item pager__item--last">
+                  <a href="/search/=/title=R/page=100/">Last</a>
+                </li>
+              </ul>
+            </nav>
+            "#,
+        );
+
+        let pagination = searcher.extract_pagination(&document, 1);
+        assert_eq!(pagination.current_page, 1);
+        assert_eq!(pagination.total_pages, 100);
+        assert!(pagination.has_next);
+    }
+
+    #[test]
+    fn extracts_results_from_detailed_search_table_markup() {
+        let document = Html::parse_document(
+            r#"
+            <table class="searchResult lyricList">
+              <tr>
+                <td>
+                  <p class="searchResult__title">
+                    <a href="/lyric/tu19061219/">FIRE BIRD</a>
+                  </p>
+                </td>
+                <td class="searchResult__artist">
+                  <p><a href="/artist/22798/">Roselia</a></p>
+                  <div class="searchResult__lyricist">
+                    <p>作詞：<span class="songWriters">上松範康(Elements Garden)</span></p>
+                    <p>作曲：<span class="songWriters">藤永龍太郎(Elements Garden)</span></p>
+                  </div>
+                </td>
+                <td class="lyricList__beginning">
+                  <a href="/lyric/tu19061219/">空がどんな高くても</a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <p class="searchResult__title">
+                    <a href="/lyric/yb18072521/">R</a>
+                  </p>
+                </td>
+                <td class="searchResult__artist">
+                  <p><a href="/artist/22798/">Roselia</a></p>
+                </td>
+                <td class="lyricList__beginning">
+                  <a href="/lyric/yb18072521/">礎なるOne's Intention</a>
+                </td>
+              </tr>
+            </table>
+            "#,
+        );
+
+        let results = UtaTenSearcher::extract_search_results(&document);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].title, "FIRE BIRD");
+        assert_eq!(results[0].artist, "Roselia");
+        assert_eq!(results[1].title, "R");
+        assert_eq!(results[1].artist, "Roselia");
+        assert_eq!(results[1].url, "/lyric/yb18072521/");
     }
 }

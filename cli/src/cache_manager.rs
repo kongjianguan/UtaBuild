@@ -67,7 +67,10 @@ impl LyricsCache {
 
     pub fn stats(&self) -> CacheStats {
         let total = self.cache.entry_count();
-        CacheStats { total, valid: total }
+        CacheStats {
+            total,
+            valid: total,
+        }
     }
 }
 
@@ -104,12 +107,7 @@ impl SearchCache {
         self.cache.get(&key).await
     }
 
-    pub async fn insert(
-        &self,
-        title: &str,
-        artist: Option<&str>,
-        entry: SearchResultEntry,
-    ) {
+    pub async fn insert(&self, title: &str, artist: Option<&str>, entry: SearchResultEntry) {
         let key = Self::make_key(title, artist);
         self.cache.insert(key, entry).await;
     }
@@ -121,7 +119,10 @@ impl SearchCache {
 
     pub fn stats(&self) -> CacheStats {
         let total = self.cache.entry_count();
-        CacheStats { total, valid: total }
+        CacheStats {
+            total,
+            valid: total,
+        }
     }
 }
 

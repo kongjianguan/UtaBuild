@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::models::{LyricElement, SearchResult};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LyricsElement {
@@ -47,7 +47,7 @@ impl LyricsElement {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LyricsLine {
-     #[serde(rename = "elements")]  // 保持向后兼容
+    #[serde(rename = "elements")] // 保持向后兼容
     pub units: Vec<LyricsElement>,
 }
 
@@ -100,12 +100,7 @@ pub struct LyricsOutput {
 }
 
 impl LyricsOutput {
-    pub fn success(
-        title: String,
-        artist: String,
-        url: String,
-        elements: &[LyricElement],
-    ) -> Self {
+    pub fn success(title: String, artist: String, url: String, elements: &[LyricElement]) -> Self {
         Self {
             status: "success".to_string(),
             title: Some(title),
@@ -297,11 +292,11 @@ mod tests {
     #[test]
     fn test_text_element_serialization() {
         let text_elem = LyricsElement::text("こんにちは".to_string());
-        
+
         assert_eq!(text_elem.element_type, "text");
         assert_eq!(text_elem.base, Some("こんにちは".to_string()));
         assert_eq!(text_elem.ruby, None);
-        
+
         let json = serde_json::to_string(&text_elem).unwrap();
         assert!(json.contains("text"));
         assert!(json.contains("こんにちは"));
@@ -311,11 +306,11 @@ mod tests {
     #[test]
     fn test_ruby_element_serialization() {
         let ruby_elem = LyricsElement::ruby("私".to_string(), "わたし".to_string());
-        
+
         assert_eq!(ruby_elem.element_type, "ruby");
         assert_eq!(ruby_elem.base, Some("私".to_string()));
         assert_eq!(ruby_elem.ruby, Some("わたし".to_string()));
-        
+
         let json = serde_json::to_string(&ruby_elem).unwrap();
         assert!(json.contains("ruby"));
         assert!(json.contains("私"));
@@ -325,11 +320,11 @@ mod tests {
     #[test]
     fn test_linebreak_element() {
         let linebreak_elem = LyricsElement::linebreak();
-        
+
         assert_eq!(linebreak_elem.element_type, "linebreak");
         assert_eq!(linebreak_elem.base, None);
         assert_eq!(linebreak_elem.ruby, None);
-        
+
         let json = serde_json::to_string(&linebreak_elem).unwrap();
         assert!(json.contains("linebreak"));
         assert!(!json.contains("base"));
@@ -341,7 +336,7 @@ mod tests {
             LyricsElement::ruby("私".to_string(), "わたし".to_string()),
             LyricsElement::text("は".to_string()),
         ];
-        
+
         let line = LyricsLine::new(elements);
         assert_eq!(line.units.len(), 2);
     }
@@ -365,9 +360,9 @@ mod tests {
                 ruby: Some("わたし".to_string()),
             },
         ];
-        
+
         let content = LyricsContent::from_elements(&model_elements);
-        
+
         assert_eq!(content.lines.len(), 2);
         assert_eq!(content.lines[0].units.len(), 1);
         assert_eq!(content.lines[1].units.len(), 1);
@@ -375,25 +370,23 @@ mod tests {
 
     #[test]
     fn test_lyrics_output_serialization() {
-        let elements = vec![
-            LyricElement {
-                element_type: "text".to_string(),
-                base: Some("テスト".to_string()),
-                ruby: None,
-            },
-        ];
-        
+        let elements = vec![LyricElement {
+            element_type: "text".to_string(),
+            base: Some("テスト".to_string()),
+            ruby: None,
+        }];
+
         let output = LyricsOutput::success(
             "テスト曲".to_string(),
             "テストアーティスト".to_string(),
             "https://example.com/test".to_string(),
             &elements,
         );
-        
+
         assert_eq!(output.status, "success");
         assert_eq!(output.title, Some("テスト曲".to_string()));
         assert_eq!(output.artist, Some("テストアーティスト".to_string()));
-        
+
         let json = output.to_json().unwrap();
         assert!(json.contains("\"status\": \"success\""));
         assert!(json.contains("\"title\": \"テスト曲\""));
@@ -404,10 +397,10 @@ mod tests {
     #[test]
     fn test_error_output_no_results() {
         let error = ErrorOutput::no_results("検索結果が見つかりませんでした");
-        
+
         assert_eq!(error.status, "no_results");
         assert_eq!(error.message, "検索結果が見つかりませんでした");
-        
+
         let json = error.to_json().unwrap();
         assert!(json.contains("\"status\": \"no_results\""));
         assert!(json.contains("\"message\": \"検索結果が見つかりませんでした\""));
@@ -416,10 +409,10 @@ mod tests {
     #[test]
     fn test_error_output_error() {
         let error = ErrorOutput::error("エラーが発生しました");
-        
+
         assert_eq!(error.status, "error");
         assert_eq!(error.message, "エラーが発生しました");
-        
+
         let json = error.to_json().unwrap();
         assert!(json.contains("\"status\": \"error\""));
         assert!(json.contains("\"message\": \"エラーが発生しました\""));
@@ -427,15 +420,13 @@ mod tests {
 
     #[test]
     fn test_search_query_serialization() {
-        let query_with_both = SearchQuery::new(
-            Some("曲名".to_string()),
-            Some("アーティスト".to_string()),
-        );
-        
+        let query_with_both =
+            SearchQuery::new(Some("曲名".to_string()), Some("アーティスト".to_string()));
+
         let json = serde_json::to_string(&query_with_both).unwrap();
         assert!(json.contains("曲名"));
         assert!(json.contains("アーティスト"));
-        
+
         let query_with_title_only = SearchQuery::new(Some("曲名".to_string()), None);
         let json = serde_json::to_string(&query_with_title_only).unwrap();
         assert!(json.contains("曲名"));
@@ -464,13 +455,13 @@ mod tests {
                 composer: None,
             },
         ];
-        
+
         let output = HistoryOutput::new(items);
-        
+
         assert_eq!(output.status, "success");
         assert_eq!(output.count, 2);
         assert_eq!(output.items.len(), 2);
-        
+
         let json = output.to_json().unwrap();
         assert!(json.contains("\"status\": \"success\""));
         assert!(json.contains("\"count\": 2"));
@@ -479,11 +470,11 @@ mod tests {
     #[test]
     fn test_history_output_empty() {
         let output = HistoryOutput::empty();
-        
+
         assert_eq!(output.status, "success");
         assert_eq!(output.count, 0);
         assert!(output.items.is_empty());
-        
+
         let json = output.to_json().unwrap();
         assert!(json.contains("\"status\": \"success\""));
         assert!(json.contains("\"count\": 0"));
@@ -499,7 +490,7 @@ mod tests {
             url: None,
             lyrics: None,
         });
-        
+
         let json = output.to_json().unwrap();
         assert!(json.contains("\"status\": \"success\""));
     }
@@ -511,4 +502,3 @@ mod tests {
         assert!(json.contains("\"status\": \"error\""));
     }
 } // end mod tests
-

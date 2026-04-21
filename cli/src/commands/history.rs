@@ -1,7 +1,7 @@
-use crate::output::{ErrorOutput, HistoryItem, HistoryOutput, LyricsOutput};
 use crate::cache_manager::CacheManager;
+use crate::output::{ErrorOutput, HistoryItem, HistoryOutput, LyricsOutput};
+use crate::platform::{ensure_dir_exists, get_data_dir};
 use crate::searcher::UtaTenSearcher;
-use crate::platform::{get_data_dir, ensure_dir_exists};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -151,10 +151,18 @@ pub async fn use_record(index: u32, cache_dir: Option<&PathBuf>) -> anyhow::Resu
         .position(|r| r.url == item.url)
         .unwrap_or(0);
 
-    let lyricist = process_result.search_results.get(target_index).and_then(|r| r.lyricist.clone());
-    let composer = process_result.search_results.get(target_index).and_then(|r| r.composer.clone());
+    let lyricist = process_result
+        .search_results
+        .get(target_index)
+        .and_then(|r| r.lyricist.clone());
+    let composer = process_result
+        .search_results
+        .get(target_index)
+        .and_then(|r| r.composer.clone());
 
-    let selected_result = searcher.select_result(process_result.clone(), target_index).await;
+    let selected_result = searcher
+        .select_result(process_result.clone(), target_index)
+        .await;
 
     if selected_result.status == "success" {
         add_to_history(
@@ -174,9 +182,7 @@ pub async fn use_record(index: u32, cache_dir: Option<&PathBuf>) -> anyhow::Resu
         );
         println!("{}", lyrics_output.to_json()?);
     } else {
-        let output = ErrorOutput::error(
-            selected_result.error.as_deref().unwrap_or("获取歌词失败")
-        );
+        let output = ErrorOutput::error(selected_result.error.as_deref().unwrap_or("获取歌词失败"));
         println!("{}", output.to_json()?);
     }
 
@@ -255,7 +261,7 @@ mod tests {
             lyricist: Some("作詞者".to_string()),
             composer: Some("作曲者".to_string()),
         };
-        
+
         let json = serde_json::to_string(&record).unwrap();
         assert!(json.contains("テスト曲"));
         assert!(json.contains("テストアーティスト"));
@@ -263,7 +269,7 @@ mod tests {
         assert!(json.contains("2024-01-01T12:00:00"));
         assert!(json.contains("作詞者"));
         assert!(json.contains("作曲者"));
-        
+
         let deserialized: HistoryRecord = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.title, "テスト曲");
         assert_eq!(deserialized.artist, "テストアーティスト");
@@ -279,7 +285,7 @@ mod tests {
             lyricist: None,
             composer: None,
         };
-        
+
         let json = serde_json::to_string(&record).unwrap();
         assert!(json.contains("曲名"));
         assert!(!json.contains("lyricist"));
@@ -305,12 +311,12 @@ mod tests {
             lyricist: None,
             composer: None,
         });
-        
+
         let json = serde_json::to_string(&history).unwrap();
         assert!(json.contains("\"items\""));
         assert!(json.contains("\"曲1\""));
         assert!(json.contains("\"曲2\""));
-        
+
         let deserialized: History = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.items.len(), 2);
     }
@@ -319,15 +325,15 @@ mod tests {
     fn test_get_history_file_path_with_cache_dir() {
         let cache_dir = PathBuf::from("/tmp/test_cache");
         let path = get_history_file_path(Some(&cache_dir));
-        
+
         assert_eq!(path, PathBuf::from("/tmp/test_cache/history.json"));
     }
 
     #[test]
     fn test_get_history_file_path_without_cache_dir() {
         let path = get_history_file_path(None);
-        
-        assert!(path.to_string_lossy().contains(".utabuild"));
+
+        assert!(path.to_string_lossy().contains("utabuild"));
         assert!(path.to_string_lossy().ends_with("history.json"));
     }
 
@@ -335,9 +341,9 @@ mod tests {
     fn test_load_history_nonexistent_file() {
         let temp_dir = tempdir().unwrap();
         let cache_path = PathBuf::from(temp_dir.path());
-        
+
         let history = load_history(Some(&cache_path));
-        
+
         assert!(history.items.is_empty());
     }
 
@@ -345,7 +351,7 @@ mod tests {
     fn test_save_and_load_history() {
         let temp_dir = tempdir().unwrap();
         let cache_path = PathBuf::from(temp_dir.path());
-        
+
         let mut history = History::new();
         history.items.push(HistoryRecord {
             title: "テスト曲".to_string(),
@@ -355,11 +361,11 @@ mod tests {
             lyricist: Some("作詞者".to_string()),
             composer: None,
         });
-        
+
         save_history(&history, Some(&cache_path)).unwrap();
-        
+
         let loaded = load_history(Some(&cache_path));
-        
+
         assert_eq!(loaded.items.len(), 1);
         assert_eq!(loaded.items[0].title, "テスト曲");
         assert_eq!(loaded.items[0].artist, "テストアーティスト");
@@ -370,7 +376,7 @@ mod tests {
     fn test_add_to_history() {
         let temp_dir = tempdir().unwrap();
         let cache_path = PathBuf::from(temp_dir.path());
-        
+
         add_to_history(
             "曲1",
             "アーティスト1",
@@ -378,12 +384,13 @@ mod tests {
             None,
             None,
             Some(&cache_path),
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         let history = load_history(Some(&cache_path));
         assert_eq!(history.items.len(), 1);
         assert_eq!(history.items[0].title, "曲1");
-        
+
         add_to_history(
             "曲2",
             "アーティスト2",
@@ -391,8 +398,9 @@ mod tests {
             Some("作詞者".to_string()),
             Some("作曲者".to_string()),
             Some(&cache_path),
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         let history = load_history(Some(&cache_path));
         assert_eq!(history.items.len(), 2);
         assert_eq!(history.items[0].title, "曲2");
@@ -403,7 +411,7 @@ mod tests {
     fn test_add_to_history_updates_existing() {
         let temp_dir = tempdir().unwrap();
         let cache_path = PathBuf::from(temp_dir.path());
-        
+
         add_to_history(
             "曲1",
             "アーティスト1",
@@ -411,11 +419,12 @@ mod tests {
             None,
             None,
             Some(&cache_path),
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         let history = load_history(Some(&cache_path));
         assert_eq!(history.items.len(), 1);
-        
+
         add_to_history(
             "曲1",
             "アーティスト1",
@@ -423,8 +432,9 @@ mod tests {
             Some("新しい作詞者".to_string()),
             None,
             Some(&cache_path),
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         let history = load_history(Some(&cache_path));
         assert_eq!(history.items.len(), 1);
         assert_eq!(history.items[0].url, "https://example.com/1_updated");
@@ -435,7 +445,7 @@ mod tests {
     fn test_add_to_history_max_size() {
         let temp_dir = tempdir().unwrap();
         let cache_path = PathBuf::from(temp_dir.path());
-        
+
         for i in 0..(MAX_HISTORY_SIZE + 10) {
             add_to_history(
                 &format!("曲{}", i),
@@ -444,19 +454,23 @@ mod tests {
                 None,
                 None,
                 Some(&cache_path),
-            ).unwrap();
+            )
+            .unwrap();
         }
-        
+
         let history = load_history(Some(&cache_path));
         assert_eq!(history.items.len(), MAX_HISTORY_SIZE);
-        
-        assert_eq!(history.items[0].title, format!("曲{}", MAX_HISTORY_SIZE + 9));
+
+        assert_eq!(
+            history.items[0].title,
+            format!("曲{}", MAX_HISTORY_SIZE + 9)
+        );
     }
 
     #[test]
     fn test_get_current_timestamp() {
         let timestamp = get_current_timestamp();
-        
+
         assert!(timestamp.contains("T"));
         assert!(timestamp.len() > 10);
     }

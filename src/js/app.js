@@ -49,14 +49,25 @@ async function initTauri() {
     
     // Mock搜索结果
     if (cmd === 'search_lyrics') {
+      const page = Number(args.page || 1);
       return {
         status: 'select',
         query_title: args.title,
-        results: [
-          { index: 0, title: args.title || '春日影', artist: 'MyGO!!!!!', url: '/lyric/mock1', lyricist: '織田', composer: '北澤' },
-          { index: 1, title: args.title || '春日影', artist: 'Ave Mujica', url: '/lyric/mock2', lyricist: 'CRYCHIC', composer: '祥子' },
-          { index: 2, title: args.title + ' (カバー)', artist: 'Other', url: '/lyric/mock3' },
-        ]
+        query_artist: args.artist || null,
+        page,
+        pagination: {
+          current_page: page,
+          total_pages: 3,
+          has_next: page < 3,
+        },
+        results: Array.from({ length: 3 }, (_, index) => ({
+          index,
+          title: `${args.title || '春日影'} P${page}-${index + 1}`,
+          artist: index === 0 ? 'MyGO!!!!!' : index === 1 ? 'Ave Mujica' : 'Other',
+          url: `/lyric/mock${page}-${index + 1}`,
+          lyricist: index === 2 ? null : ['織田', 'CRYCHIC'][index],
+          composer: index === 2 ? null : ['北澤', '祥子'][index],
+        })),
       };
     }
     
@@ -112,6 +123,9 @@ const elements = {
   searchBtn: $('#search-btn'),
   resultList: $('#result-list'),
   resultsContainer: $('#results-container'),
+  resultsSummary: $('#results-summary'),
+  resultsPagination: $('#results-pagination'),
+  paginationInfo: $('#pagination-info'),
   lyricsView: $('#lyrics-view'),
   lyricsTitle: $('#lyrics-title'),
   lyricsArtist: $('#lyrics-artist'),
@@ -129,6 +143,11 @@ const elements = {
 
 let currentSearchResults = null;
 let currentLyrics = null;
+let currentSearchQuery = null;
+let currentSearchRunId = 0;
+let isLoadingMoreResults = false;
+let resultsScrollObserver = null;
+let resultsScrollEventsInitialized = false;
 
 // 当前视图状态：'search' | 'results' | 'lyrics'
 let currentView = 'search';
@@ -283,10 +302,206 @@ function renderLyrics(elements) {
 
 // ==================== Event Handlers ====================
 
-// 搜索
-async function handleSearch() {
-  const title = elements.searchTitle.value.trim();
-  const artist = elements.searchArtist.value.trim() || null;
+function getPaginationInfo(result) {
+  const currentPage = result?.pagination?.current_page ?? result?.page ?? 1;
+  const totalPages = result?.pagination?.total_pages ?? currentPage;
+  const hasNext = result?.pagination?.has_next ?? (currentPage < totalPages);
+  const loadedPages = result?.pagination?.loaded_pages ?? currentPage;
+  const loadingMore = Boolean(result?.pagination?.loading_more);
+  return { currentPage, totalPages, hasNext, loadedPages, loadingMore };
+}
+
+function updatePagination(result) {
+  const { totalPages, loadedPages, hasNext, loadingMore } = getPaginationInfo(result);
+  const showPagination = totalPages > 1;
+
+  if (showPagination) {
+    elements.paginationInfo.textContent = loadingMore
+      ? `${loadedPages}/${totalPages}ページ読み込み済み · 続きを読み込み中...`
+      : hasNext
+        ? `${loadedPages}/${totalPages}ページ読み込み済み · 下にスクロールして続きを読み込む`
+        : `${loadedPages}/${totalPages}ページを読み込み済み`;
+  } else {
+    elements.paginationInfo.textContent = '';
+  }
+  elements.resultsPagination.classList.toggle('hidden', !showPagination);
+  syncInfiniteScrollObserver();
+}
+
+function updateResultsSummary(result) {
+  const resultCount = result?.results?.length ?? 0;
+  const { loadedPages, totalPages, loadingMore } = getPaginationInfo(result);
+  const title = result?.query_title ?? currentSearchQuery?.title ?? '';
+  const artist = result?.query_artist ?? currentSearchQuery?.artist;
+  const queryLabel = artist ? `${title} / ${artist}` : title;
+
+  if (!queryLabel) {
+    hide(elements.resultsSummary);
+    return;
+  }
+
+  const loadingSuffix = loadingMore ? '・続きを取得中' : '';
+  elements.resultsSummary.textContent = `「${queryLabel}」の検索結果 ${resultCount}件（${loadedPages}/${totalPages}ページ読み込み済み${loadingSuffix}）`;
+  show(elements.resultsSummary);
+}
+
+function getResultItemKey(item) {
+  return item?.url || `${item?.title || ''}::${item?.artist || ''}`;
+}
+
+function mergeSearchResults(existingResult, nextResult, { loadingMore = false } = {}) {
+  const existingItems = existingResult?.results ?? [];
+  const nextItems = nextResult?.results ?? [];
+  const mergedItems = [...existingItems];
+  const seenKeys = new Set(existingItems.map(getResultItemKey));
+
+  nextItems.forEach((item) => {
+    const key = getResultItemKey(item);
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      mergedItems.push(item);
+    }
+  });
+
+  const totalPages =
+    nextResult?.pagination?.total_pages ??
+    existingResult?.pagination?.total_pages ??
+    nextResult?.page ??
+    existingResult?.page ??
+    1;
+  const loadedPages = Math.max(
+    existingResult?.pagination?.loaded_pages ?? existingResult?.pagination?.current_page ?? existingResult?.page ?? 1,
+    nextResult?.pagination?.loaded_pages ?? nextResult?.pagination?.current_page ?? nextResult?.page ?? 1,
+  );
+
+  return {
+    ...existingResult,
+    ...nextResult,
+    results: mergedItems,
+    query_title: nextResult?.query_title ?? existingResult?.query_title,
+    query_artist: nextResult?.query_artist ?? existingResult?.query_artist,
+    pagination: {
+      ...(existingResult?.pagination ?? {}),
+      ...(nextResult?.pagination ?? {}),
+      current_page: nextResult?.pagination?.current_page ?? nextResult?.page ?? loadedPages,
+      total_pages: totalPages,
+      has_next: nextResult?.pagination?.has_next ?? (loadedPages < totalPages),
+      loaded_pages: loadedPages,
+      loading_more: loadingMore,
+    },
+  };
+}
+
+async function loadRemainingSearchPages(searchRunId) {
+  if (
+    currentSearchRunId !== searchRunId ||
+    !currentSearchQuery ||
+    !currentSearchResults ||
+    isLoadingMoreResults
+  ) {
+    return;
+  }
+
+  const { currentPage, totalPages, hasNext } = getPaginationInfo(currentSearchResults);
+  if (!hasNext || currentPage >= totalPages) {
+    currentSearchResults = mergeSearchResults(currentSearchResults, currentSearchResults, { loadingMore: false });
+    renderResultList(currentSearchResults);
+    return;
+  }
+
+  const nextPage = currentPage + 1;
+  isLoadingMoreResults = true;
+  currentSearchResults = mergeSearchResults(currentSearchResults, currentSearchResults, { loadingMore: true });
+  renderResultList(currentSearchResults);
+
+  try {
+    const nextResult = await invoke('search_lyrics', {
+      title: currentSearchQuery.title,
+      artist: currentSearchQuery.artist ?? null,
+      page: nextPage,
+    });
+
+    if (currentSearchRunId !== searchRunId) {
+      return;
+    }
+
+    if (nextResult.status !== 'select' || !Array.isArray(nextResult.results)) {
+      throw new Error(nextResult.error || `ページ ${nextPage} の取得に失敗しました`);
+    }
+
+    currentSearchResults = mergeSearchResults(currentSearchResults, nextResult, { loadingMore: false });
+    renderResultList(currentSearchResults);
+  } catch (err) {
+    if (currentSearchRunId !== searchRunId) {
+      return;
+    }
+
+    currentSearchResults = mergeSearchResults(currentSearchResults, currentSearchResults, { loadingMore: false });
+    renderResultList(currentSearchResults);
+    console.error('Load more search results error:', err);
+    const message = err instanceof Error ? err.message : String(err);
+    showError(`続きの検索結果の取得に失敗しました: ${message}`);
+  } finally {
+    isLoadingMoreResults = false;
+    maybeLoadMoreResults();
+  }
+}
+
+function maybeLoadMoreResults() {
+  if (
+    currentView !== 'results' ||
+    !currentSearchResults ||
+    isLoadingMoreResults ||
+    elements.resultsPagination.classList.contains('hidden')
+  ) {
+    return;
+  }
+
+  const rect = elements.resultsPagination.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+
+  if (rect.top <= viewportHeight + 160) {
+    void loadRemainingSearchPages(currentSearchRunId);
+  }
+}
+
+function syncInfiniteScrollObserver() {
+  if (!resultsScrollObserver) {
+    return;
+  }
+
+  resultsScrollObserver.disconnect();
+
+  if (!elements.resultsPagination.classList.contains('hidden')) {
+    resultsScrollObserver.observe(elements.resultsPagination);
+  }
+}
+
+function initInfiniteScroll() {
+  if (!resultsScrollEventsInitialized) {
+    window.addEventListener('scroll', maybeLoadMoreResults, { passive: true });
+    window.addEventListener('resize', maybeLoadMoreResults);
+    resultsScrollEventsInitialized = true;
+  }
+
+  if (typeof window.IntersectionObserver === 'function') {
+    resultsScrollObserver = new window.IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        maybeLoadMoreResults();
+      }
+    }, {
+      root: null,
+      rootMargin: '0px 0px 160px 0px',
+      threshold: 0,
+    });
+
+    syncInfiniteScrollObserver();
+  }
+}
+
+async function performSearch(page = 1, searchRunId = currentSearchRunId) {
+  const title = currentSearchQuery?.title;
+  const artist = currentSearchQuery?.artist ?? null;
   
   if (!title) {
     showError('曲名を入力してください');
@@ -298,13 +513,22 @@ async function handleSearch() {
   console.log('🔍 搜索:', title, '| isTauriEnv:', isTauriEnv, '| invoke:', typeof invoke);
   
   try {
-    const result = await invoke('search_lyrics', { title, artist, page: 1 });
+    const result = await invoke('search_lyrics', { title, artist, page });
+
+    if (searchRunId !== currentSearchRunId) {
+      return;
+    }
     
-    currentSearchResults = result;
+    currentSearchResults = mergeSearchResults(null, result, { loadingMore: false });
     
     if (result.status === 'select' && result.results && result.results.length > 0) {
-      renderResultList(result.results);
-      showResults();
+      renderResultList(currentSearchResults);
+      if (currentView === 'results') {
+        switchToResults();
+      } else {
+        showResults();
+      }
+      maybeLoadMoreResults();
     } else if (result.status === 'not_found') {
       showError('結果が見つかりませんでした');
     } else {
@@ -318,11 +542,24 @@ async function handleSearch() {
   }
 }
 
-// 渲染搜索结果列表
-function renderResultList(results) {
-  elements.resultsContainer.innerHTML = '';
+// 搜索
+async function handleSearch() {
+  const title = elements.searchTitle.value.trim();
+  const artist = elements.searchArtist.value.trim() || null;
   
-  results.forEach((item, index) => {
+  currentSearchQuery = { title, artist };
+  currentSearchRunId += 1;
+  isLoadingMoreResults = false;
+  await performSearch(1, currentSearchRunId);
+}
+
+// 渲染搜索结果列表
+function renderResultList(result) {
+  elements.resultsContainer.innerHTML = '';
+  updateResultsSummary(result);
+  updatePagination(result);
+  
+  result.results.forEach((item, index) => {
     const div = document.createElement('div');
     div.className = 'result-item';
     div.innerHTML = `
@@ -534,6 +771,9 @@ function init() {
   
   // 控制按钮
   initControls();
+
+  // 结果页无限滚动
+  initInfiniteScroll();
   
   // Android返回按钮支持
   initBackButton();

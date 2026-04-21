@@ -1,11 +1,11 @@
 //! 跨平台路径抽象
-//! 
+//!
 //! 提供统一的路径获取函数，兼容Windows/macOS/Linux/Android/iOS
 
 use std::path::PathBuf;
 
 /// 获取应用缓存目录
-/// 
+///
 /// - Windows: `%LOCALAPPDATA%\utabuild`
 /// - macOS: `~/Library/Caches/utabuild`
 /// - Linux: `~/.cache/utabuild`
@@ -25,7 +25,7 @@ pub fn get_cache_dir() -> PathBuf {
 }
 
 /// 获取应用配置/数据目录
-/// 
+///
 /// - Windows: `%APPDATA%\utabuild`
 /// - macOS: `~/Library/Application Support/utabuild`
 /// - Linux: `~/.local/share/utabuild`

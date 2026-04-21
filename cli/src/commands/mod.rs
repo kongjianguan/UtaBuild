@@ -1,5 +1,5 @@
-pub mod search;
 pub mod history;
+pub mod search;
 
 use clap::Subcommand;
 use std::path::PathBuf;
@@ -17,6 +17,7 @@ pub enum HistoryAction {
     Clear,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn handle_search(
     title: Option<String>,
     artist: Option<String>,
@@ -30,10 +31,22 @@ pub async fn handle_search(
     if log_path.is_some() {
         crate::logger::init_logger_with_pathbuf(log_path);
     }
-    search::execute(title, artist, page, select, cache_dir, output, output_default).await
+    search::execute(
+        title,
+        artist,
+        page,
+        select,
+        cache_dir,
+        output,
+        output_default,
+    )
+    .await
 }
 
-pub async fn handle_history(action: HistoryAction, cache_dir: Option<PathBuf>) -> anyhow::Result<()> {
+pub async fn handle_history(
+    action: HistoryAction,
+    cache_dir: Option<PathBuf>,
+) -> anyhow::Result<()> {
     match action {
         HistoryAction::List => history::list(cache_dir.as_ref()),
         HistoryAction::Use { index } => history::use_record(index, cache_dir.as_ref()).await,
