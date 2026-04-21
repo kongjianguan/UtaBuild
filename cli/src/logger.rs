@@ -1,10 +1,10 @@
+use crate::platform::{ensure_dir_exists, get_log_path};
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Instant;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
-use crate::platform::{get_log_path, ensure_dir_exists};
 
 const MAX_LOG_SIZE: u64 = 30 * 1024;
 
@@ -68,7 +68,7 @@ impl Logger {
                     .create(true)
                     .open(&file_path)
                 {
-                    let _ = file.write_all(format!("[LOG ROTATED - Size limit reached]\n").as_bytes());
+                    let _ = file.write_all(b"[LOG ROTATED - Size limit reached]\n");
                 }
             }
         }
@@ -97,23 +97,31 @@ impl Logger {
         Instant::now()
     }
 
-    pub fn log_response(&self, status: u16, url: &str, duration_ms: u64, response_preview: Option<&str>) {
+    pub fn log_response(
+        &self,
+        status: u16,
+        url: &str,
+        duration_ms: u64,
+        response_preview: Option<&str>,
+    ) {
         let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
         let preview = response_preview.unwrap_or("N/A");
         let preview_truncated: String = preview.chars().take(200).collect();
         let log_entry = format!(
             "[{}] RESPONSE: {} {} - {}ms\n  Status: {}\n  Preview: {}\n",
-            timestamp, url, if status < 400 { "SUCCESS" } else { "FAILED" }, duration_ms, status, preview_truncated
+            timestamp,
+            url,
+            if status < 400 { "SUCCESS" } else { "FAILED" },
+            duration_ms,
+            status,
+            preview_truncated
         );
         self.write_log(&log_entry);
     }
 
     pub fn log_error(&self, context: &str, error: &str) {
         let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-        let log_entry = format!(
-            "[{}] ERROR: {}\n  Message: {}\n",
-            timestamp, context, error
-        );
+        let log_entry = format!("[{}] ERROR: {}\n  Message: {}\n", timestamp, context, error);
         self.write_log(&log_entry);
     }
 
@@ -152,17 +160,17 @@ pub fn init_logger(level: &str) {
 }
 
 pub fn init_logger_with_path(path: Option<&str>) {
-    let log_path = path
-        .map(PathBuf::from)
-        .unwrap_or_else(get_log_path);
+    let log_path = path.map(PathBuf::from).unwrap_or_else(get_log_path);
 
-    ensure_dir_exists(&log_path.parent().unwrap_or(&PathBuf::from(".")).to_path_buf())
-        .unwrap_or(());
+    ensure_dir_exists(
+        &log_path
+            .parent()
+            .unwrap_or(&PathBuf::from("."))
+            .to_path_buf(),
+    )
+    .unwrap_or(());
 
-    let file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path);
+    let file = OpenOptions::new().create(true).append(true).open(&log_path);
 
     if let Ok(file) = file {
         tracing_subscriber::registry()
@@ -181,13 +189,15 @@ pub fn init_logger_with_path(path: Option<&str>) {
 pub fn init_logger_with_pathbuf(path: Option<PathBuf>) {
     let log_path = path.unwrap_or_else(get_log_path);
 
-    ensure_dir_exists(&log_path.parent().unwrap_or(&PathBuf::from(".")).to_path_buf())
-        .unwrap_or(());
+    ensure_dir_exists(
+        &log_path
+            .parent()
+            .unwrap_or(&PathBuf::from("."))
+            .to_path_buf(),
+    )
+    .unwrap_or(());
 
-    let file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path);
+    let file = OpenOptions::new().create(true).append(true).open(&log_path);
 
     if let Ok(file) = file {
         tracing_subscriber::registry()

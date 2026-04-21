@@ -1,10 +1,10 @@
-use std::path::PathBuf;
-use std::fs;
-use serde::{Deserialize, Serialize};
-use tracing::{debug, warn};
-use chrono::{DateTime, Utc, Duration};
 use crate::output::LyricsOutput;
-use crate::platform::{get_cache_dir, get_data_dir, ensure_dir_exists};
+use crate::platform::{ensure_dir_exists, get_cache_dir, get_data_dir};
+use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+use tracing::{debug, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheEntry {
@@ -66,12 +66,10 @@ impl Cache {
         let file_path = self.cache_dir.join(format!("{}.json", key));
         if file_path.exists() {
             match fs::read_to_string(&file_path) {
-                Ok(content) => {
-                    match serde_json::from_str::<CacheEntry>(&content) {
-                        Ok(entry) => return Some(entry),
-                        Err(e) => warn!("解析缓存失败: {}", e),
-                    }
-                }
+                Ok(content) => match serde_json::from_str::<CacheEntry>(&content) {
+                    Ok(entry) => return Some(entry),
+                    Err(e) => warn!("解析缓存失败: {}", e),
+                },
                 Err(e) => warn!("读取缓存失败: {}", e),
             }
         }
@@ -117,7 +115,11 @@ fn get_search_cache_path(cache_dir: Option<&PathBuf>) -> PathBuf {
     }
 }
 
-pub fn save_search_cache(query: SearchQuery, results: Vec<SearchResultItem>, cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
+pub fn save_search_cache(
+    query: SearchQuery,
+    results: Vec<SearchResultItem>,
+    cache_dir: Option<&PathBuf>,
+) -> anyhow::Result<()> {
     let cache = SearchCache::new(query, results);
     let path = get_search_cache_path(cache_dir);
 
@@ -141,23 +143,21 @@ pub fn load_search_cache(cache_dir: Option<&PathBuf>) -> Option<SearchCache> {
     }
 
     match fs::read_to_string(&path) {
-        Ok(content) => {
-            match serde_json::from_str::<SearchCache>(&content) {
-                Ok(cache) => {
-                    if cache.is_valid() {
-                        debug!("搜索缓存有效: {:?}", path);
-                        Some(cache)
-                    } else {
-                        debug!("搜索缓存已过期: {:?}", path);
-                        None
-                    }
-                }
-                Err(e) => {
-                    warn!("解析搜索缓存失败: {}", e);
+        Ok(content) => match serde_json::from_str::<SearchCache>(&content) {
+            Ok(cache) => {
+                if cache.is_valid() {
+                    debug!("搜索缓存有效: {:?}", path);
+                    Some(cache)
+                } else {
+                    debug!("搜索缓存已过期: {:?}", path);
                     None
                 }
             }
-        }
+            Err(e) => {
+                warn!("解析搜索缓存失败: {}", e);
+                None
+            }
+        },
         Err(e) => {
             warn!("读取搜索缓存失败: {}", e);
             None
@@ -206,7 +206,7 @@ fn get_lyrics_cache_dir() -> PathBuf {
 fn url_to_cache_filename(url: &str) -> String {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
-    
+
     let mut hasher = DefaultHasher::new();
     url.hash(&mut hasher);
     let hash = hasher.finish();
@@ -216,15 +216,15 @@ fn url_to_cache_filename(url: &str) -> String {
 pub fn save_lyrics_cache(url: &str, lyrics: LyricsOutput) -> anyhow::Result<()> {
     let cache_dir = get_lyrics_cache_dir();
     fs::create_dir_all(&cache_dir)?;
-    
+
     let cache = LyricsCache::new(url.to_string(), lyrics);
     let filename = url_to_cache_filename(url);
     let path = cache_dir.join(&filename);
-    
+
     let content = serde_json::to_string_pretty(&cache)?;
     fs::write(&path, content)?;
     debug!("歌词缓存已保存: {:?}", path);
-    
+
     Ok(())
 }
 
@@ -232,33 +232,31 @@ pub fn get_lyrics_cache(url: &str) -> Option<LyricsOutput> {
     let cache_dir = get_lyrics_cache_dir();
     let filename = url_to_cache_filename(url);
     let path = cache_dir.join(&filename);
-    
+
     if !path.exists() {
         debug!("歌词缓存文件不存在: {:?}", path);
         return None;
     }
-    
+
     match fs::read_to_string(&path) {
-        Ok(content) => {
-            match serde_json::from_str::<LyricsCache>(&content) {
-                Ok(cache) => {
-                    if cache.is_valid() {
-                        debug!("歌词缓存有效: {:?}", path);
-                        Some(cache.data)
-                    } else {
-                        debug!("歌词缓存已过期: {:?}", path);
-                        if let Err(e) = fs::remove_file(&path) {
-                            warn!("删除过期缓存失败: {}", e);
-                        }
-                        None
+        Ok(content) => match serde_json::from_str::<LyricsCache>(&content) {
+            Ok(cache) => {
+                if cache.is_valid() {
+                    debug!("歌词缓存有效: {:?}", path);
+                    Some(cache.data)
+                } else {
+                    debug!("歌词缓存已过期: {:?}", path);
+                    if let Err(e) = fs::remove_file(&path) {
+                        warn!("删除过期缓存失败: {}", e);
                     }
-                }
-                Err(e) => {
-                    warn!("解析歌词缓存失败: {}", e);
                     None
                 }
             }
-        }
+            Err(e) => {
+                warn!("解析歌词缓存失败: {}", e);
+                None
+            }
+        },
         Err(e) => {
             warn!("读取歌词缓存失败: {}", e);
             None
@@ -291,9 +289,9 @@ mod tests {
             artist: "テストアーティスト".to_string(),
             url: "https://example.com/test".to_string(),
         }];
-        
+
         let cache = SearchCache::new(query, results);
-        
+
         assert!(cache.is_valid());
         assert_eq!(cache.results.len(), 1);
     }
@@ -305,10 +303,10 @@ mod tests {
             artist: None,
         };
         let results = vec![];
-        
+
         let mut cache = SearchCache::new(query, results);
         cache.timestamp = Utc::now() - Duration::hours(25);
-        
+
         assert!(!cache.is_valid());
     }
 
@@ -321,9 +319,9 @@ mod tests {
             url: Some("https://example.com/test".to_string()),
             lyrics: None,
         };
-        
+
         let cache = LyricsCache::new("https://example.com/test".to_string(), lyrics_output);
-        
+
         assert!(cache.is_valid());
         assert_eq!(cache.url, "https://example.com/test");
     }
@@ -337,10 +335,10 @@ mod tests {
             url: None,
             lyrics: None,
         };
-        
+
         let mut cache = LyricsCache::new("https://example.com/test".to_string(), lyrics_output);
         cache.timestamp = Utc::now() - Duration::hours(25);
-        
+
         assert!(!cache.is_valid());
     }
 
@@ -348,14 +346,14 @@ mod tests {
     fn test_url_to_cache_filename() {
         let url1 = "https://example.com/song1";
         let url2 = "https://example.com/song2";
-        
+
         let filename1 = url_to_cache_filename(url1);
         let filename2 = url_to_cache_filename(url2);
-        
+
         assert!(filename1.ends_with(".json"));
         assert!(filename2.ends_with(".json"));
         assert_ne!(filename1, filename2);
-        
+
         let filename1_again = url_to_cache_filename(url1);
         assert_eq!(filename1, filename1_again);
     }
@@ -364,7 +362,7 @@ mod tests {
     fn test_save_and_load_search_cache() {
         let temp_dir = tempdir().unwrap();
         let cache_path = PathBuf::from(temp_dir.path());
-        
+
         let query = SearchQuery {
             title: Some("テスト曲".to_string()),
             artist: Some("テストアーティスト".to_string()),
@@ -381,11 +379,11 @@ mod tests {
                 url: "https://example.com/test2".to_string(),
             },
         ];
-        
+
         save_search_cache(query.clone(), results.clone(), Some(&cache_path)).unwrap();
-        
+
         let loaded = load_search_cache(Some(&cache_path)).unwrap();
-        
+
         assert_eq!(loaded.query.title, query.title);
         assert_eq!(loaded.query.artist, query.artist);
         assert_eq!(loaded.results.len(), 2);
@@ -396,9 +394,9 @@ mod tests {
     fn test_load_nonexistent_search_cache() {
         let temp_dir = tempdir().unwrap();
         let cache_path = PathBuf::from(temp_dir.path());
-        
+
         let loaded = load_search_cache(Some(&cache_path));
-        
+
         assert!(loaded.is_none());
     }
 
@@ -406,7 +404,7 @@ mod tests {
     fn test_get_cached_result() {
         let temp_dir = tempdir().unwrap();
         let cache_path = PathBuf::from(temp_dir.path());
-        
+
         let query = SearchQuery {
             title: Some("テスト曲".to_string()),
             artist: None,
@@ -423,15 +421,15 @@ mod tests {
                 url: "https://example.com/2".to_string(),
             },
         ];
-        
+
         save_search_cache(query, results, Some(&cache_path)).unwrap();
-        
+
         let result0 = get_cached_result(0, Some(&cache_path)).unwrap();
         assert_eq!(result0.title, "曲1");
-        
+
         let result1 = get_cached_result(1, Some(&cache_path)).unwrap();
         assert_eq!(result1.title, "曲2");
-        
+
         let result_out_of_range = get_cached_result(5, Some(&cache_path));
         assert!(result_out_of_range.is_none());
     }
@@ -443,11 +441,11 @@ mod tests {
             data: serde_json::json!({"title": "テスト曲"}),
             timestamp: 1234567890,
         };
-        
+
         let json = serde_json::to_string(&entry).unwrap();
         assert!(json.contains("test_key"));
         assert!(json.contains("1234567890"));
-        
+
         let deserialized: CacheEntry = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.key, "test_key");
         assert_eq!(deserialized.timestamp, 1234567890);
@@ -459,11 +457,11 @@ mod tests {
             title: Some("曲名".to_string()),
             artist: Some("アーティスト".to_string()),
         };
-        
+
         let json = serde_json::to_string(&query).unwrap();
         assert!(json.contains("曲名"));
         assert!(json.contains("アーティスト"));
-        
+
         let deserialized: SearchQuery = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.title, Some("曲名".to_string()));
         assert_eq!(deserialized.artist, Some("アーティスト".to_string()));
@@ -476,7 +474,7 @@ mod tests {
             artist: "アーティスト".to_string(),
             url: "https://example.com/test".to_string(),
         };
-        
+
         let json = serde_json::to_string(&item).unwrap();
         assert!(json.contains("曲名"));
         assert!(json.contains("アーティスト"));

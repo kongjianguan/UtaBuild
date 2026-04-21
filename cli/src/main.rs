@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use utabuild_cli::commands::{handle_search, handle_history, HistoryAction};
+use utabuild_cli::commands::{handle_history, handle_search, HistoryAction};
 
 #[derive(Parser)]
 #[command(name = "utabuild-cli")]

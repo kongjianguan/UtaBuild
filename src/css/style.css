@@ -130,6 +130,11 @@ body {
   margin-bottom: 20px;
 }
 
+.results-summary {
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
 .result-item {
   padding: 12px 16px;
   background: var(--bg-secondary);
@@ -157,6 +162,20 @@ body {
 
 .result-item:hover .artist {
   color: rgba(255, 255, 255, 0.8);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.pagination span {
+  min-width: 180px;
+  text-align: center;
+  color: var(--text-secondary);
 }
 
 /* ==================== Lyrics View ==================== */
@@ -334,18 +353,29 @@ body {
 
 /* ==================== Buttons ==================== */
 button.secondary {
-  padding: 10px 20px;
-  background: transparent;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  background: var(--bg-secondary);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
-  margin-top: 20px;
+  transition: border-color 0.2s, color 0.2s, opacity 0.2s;
 }
 
 button.secondary:hover {
   border-color: var(--primary);
   color: var(--primary);
+}
+
+button.secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#back-btn,
+#back-to-results-btn {
+  margin-top: 20px;
 }
 
 /* ==================== Responsive ==================== */
