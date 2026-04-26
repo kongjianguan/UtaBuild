@@ -82,6 +82,65 @@ body {
   margin: 0 auto;
 }
 
+.search-settings {
+  max-width: 400px;
+  margin: 24px auto 0;
+  text-align: left;
+}
+
+.search-settings__title {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+}
+
+.settings-item--button {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.settings-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-item__label {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.settings-item__description {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.settings-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .search-form input {
   padding: 12px 16px;
   font-size: 1rem;
@@ -269,11 +328,6 @@ body {
   white-space: nowrap;
   text-align: center;
   letter-spacing: -0.001em;
-}
-
-/* 注音隐藏模式 */
-.lyricBody ruby-hidden span.rt {
-  visibility: hidden;
 }
 
 /* 三种字号 - 中（默认） */

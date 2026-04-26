@@ -1,3 +1,4 @@
+use crate::models::{LyricElement, SearchResponse};
 use crate::output::LyricsOutput;
 use crate::platform::{ensure_dir_exists, get_cache_dir, get_data_dir};
 use chrono::{DateTime, Duration, Utc};
@@ -17,6 +18,10 @@ pub struct CacheEntry {
 pub struct SearchQuery {
     pub title: Option<String>,
     pub artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +44,29 @@ impl SearchCache {
             timestamp: Utc::now(),
             query,
             results,
+        }
+    }
+
+    pub fn is_valid(&self) -> bool {
+        let now = Utc::now();
+        let duration = now - self.timestamp;
+        duration < Duration::hours(24)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResponseCache {
+    pub timestamp: DateTime<Utc>,
+    pub query: SearchQuery,
+    pub response: SearchResponse,
+}
+
+impl SearchResponseCache {
+    pub fn new(query: SearchQuery, response: SearchResponse) -> Self {
+        Self {
+            timestamp: Utc::now(),
+            query,
+            response,
         }
     }
 
@@ -115,6 +143,14 @@ fn get_search_cache_path(cache_dir: Option<&PathBuf>) -> PathBuf {
     }
 }
 
+fn get_search_response_cache_dir(cache_dir: Option<&PathBuf>) -> PathBuf {
+    if let Some(dir) = cache_dir {
+        dir.join("search_responses")
+    } else {
+        get_cache_dir().join("search_responses")
+    }
+}
+
 pub fn save_search_cache(
     query: SearchQuery,
     results: Vec<SearchResultItem>,
@@ -165,6 +201,115 @@ pub fn load_search_cache(cache_dir: Option<&PathBuf>) -> Option<SearchCache> {
     }
 }
 
+fn normalize_search_query(
+    title: &str,
+    artist: Option<&str>,
+    search_type: &str,
+    page: u32,
+) -> SearchQuery {
+    SearchQuery {
+        title: {
+            let trimmed = title.trim();
+            (!trimmed.is_empty()).then(|| trimmed.to_string())
+        },
+        artist: artist.and_then(|value| {
+            let trimmed = value.trim();
+            (!trimmed.is_empty()).then(|| trimmed.to_string())
+        }),
+        search_type: Some(search_type.trim().to_string()),
+        page: Some(page.max(1)),
+    }
+}
+
+fn search_query_to_cache_filename(query: &SearchQuery) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let encoded = serde_json::to_string(query).unwrap_or_default();
+    let mut hasher = DefaultHasher::new();
+    encoded.hash(&mut hasher);
+    format!("{:x}.json", hasher.finish())
+}
+
+pub fn save_search_response_cache(
+    title: &str,
+    artist: Option<&str>,
+    search_type: &str,
+    page: u32,
+    response: SearchResponse,
+    cache_dir: Option<&PathBuf>,
+) -> anyhow::Result<()> {
+    let query = normalize_search_query(title, artist, search_type, page);
+    let cache_dir = get_search_response_cache_dir(cache_dir);
+    fs::create_dir_all(&cache_dir)?;
+
+    let path = cache_dir.join(search_query_to_cache_filename(&query));
+    let cache = SearchResponseCache::new(query, response);
+    let content = serde_json::to_string_pretty(&cache)?;
+    fs::write(&path, content)?;
+    debug!("搜索响应缓存已保存: {:?}", path);
+
+    Ok(())
+}
+
+pub fn get_search_response_cache(
+    title: &str,
+    artist: Option<&str>,
+    search_type: &str,
+    page: u32,
+    cache_dir: Option<&PathBuf>,
+) -> Option<SearchResponse> {
+    let query = normalize_search_query(title, artist, search_type, page);
+    let cache_dir = get_search_response_cache_dir(cache_dir);
+    let path = cache_dir.join(search_query_to_cache_filename(&query));
+
+    if !path.exists() {
+        debug!("搜索响应缓存文件不存在: {:?}", path);
+        return None;
+    }
+
+    match fs::read_to_string(&path) {
+        Ok(content) => match serde_json::from_str::<SearchResponseCache>(&content) {
+            Ok(cache) => {
+                if !cache.is_valid() {
+                    debug!("搜索响应缓存已过期: {:?}", path);
+                    let _ = fs::remove_file(&path);
+                    return None;
+                }
+
+                if cache.query.title != query.title
+                    || cache.query.artist != query.artist
+                    || cache.query.search_type != query.search_type
+                    || cache.query.page != query.page
+                {
+                    warn!("搜索响应缓存键不匹配，忽略: {:?}", path);
+                    return None;
+                }
+
+                debug!("搜索响应缓存有效: {:?}", path);
+                Some(cache.response)
+            }
+            Err(e) => {
+                warn!("解析搜索响应缓存失败: {}", e);
+                None
+            }
+        },
+        Err(e) => {
+            warn!("读取搜索响应缓存失败: {}", e);
+            None
+        }
+    }
+}
+
+pub fn clear_search_response_cache(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
+    let cache_dir = get_search_response_cache_dir(cache_dir);
+    if cache_dir.exists() {
+        fs::remove_dir_all(&cache_dir)?;
+        debug!("搜索响应缓存已清除");
+    }
+    Ok(())
+}
+
 pub fn get_cached_result(index: usize, cache_dir: Option<&PathBuf>) -> Option<SearchResultItem> {
     let cache = load_search_cache(cache_dir)?;
 
@@ -201,6 +346,14 @@ impl LyricsCache {
 
 fn get_lyrics_cache_dir() -> PathBuf {
     get_cache_dir().join("lyrics")
+}
+
+fn get_lyrics_annotations_cache_dir(cache_dir: Option<&PathBuf>) -> PathBuf {
+    if let Some(dir) = cache_dir {
+        dir.join("lyrics_annotations")
+    } else {
+        get_cache_dir().join("lyrics_annotations")
+    }
 }
 
 fn url_to_cache_filename(url: &str) -> String {
@@ -264,6 +417,98 @@ pub fn get_lyrics_cache(url: &str) -> Option<LyricsOutput> {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LyricsAnnotationsCache {
+    pub timestamp: DateTime<Utc>,
+    pub url: String,
+    pub annotations: Vec<LyricElement>,
+}
+
+impl LyricsAnnotationsCache {
+    pub fn new(url: String, annotations: Vec<LyricElement>) -> Self {
+        Self {
+            timestamp: Utc::now(),
+            url,
+            annotations,
+        }
+    }
+
+    pub fn is_valid(&self) -> bool {
+        let now = Utc::now();
+        let duration = now - self.timestamp;
+        duration < Duration::hours(24)
+    }
+}
+
+pub fn save_lyrics_annotations_cache(
+    url: &str,
+    annotations: &[LyricElement],
+    cache_dir: Option<&PathBuf>,
+) -> anyhow::Result<()> {
+    let cache_dir = get_lyrics_annotations_cache_dir(cache_dir);
+    fs::create_dir_all(&cache_dir)?;
+
+    let cache = LyricsAnnotationsCache::new(url.to_string(), annotations.to_vec());
+    let filename = url_to_cache_filename(url);
+    let path = cache_dir.join(&filename);
+    let content = serde_json::to_string_pretty(&cache)?;
+    fs::write(&path, content)?;
+    debug!("歌词注释缓存已保存: {:?}", path);
+
+    Ok(())
+}
+
+pub fn get_lyrics_annotations_cache(
+    url: &str,
+    cache_dir: Option<&PathBuf>,
+) -> Option<Vec<LyricElement>> {
+    let cache_dir = get_lyrics_annotations_cache_dir(cache_dir);
+    let filename = url_to_cache_filename(url);
+    let path = cache_dir.join(&filename);
+
+    if !path.exists() {
+        debug!("歌词注释缓存文件不存在: {:?}", path);
+        return None;
+    }
+
+    match fs::read_to_string(&path) {
+        Ok(content) => match serde_json::from_str::<LyricsAnnotationsCache>(&content) {
+            Ok(cache) => {
+                if !cache.is_valid() {
+                    debug!("歌词注释缓存已过期: {:?}", path);
+                    let _ = fs::remove_file(&path);
+                    return None;
+                }
+
+                if cache.url != url {
+                    warn!("歌词注释缓存 URL 不匹配，忽略: {:?}", path);
+                    return None;
+                }
+
+                debug!("歌词注释缓存有效: {:?}", path);
+                Some(cache.annotations)
+            }
+            Err(e) => {
+                warn!("解析歌词注释缓存失败: {}", e);
+                None
+            }
+        },
+        Err(e) => {
+            warn!("读取歌词注释缓存失败: {}", e);
+            None
+        }
+    }
+}
+
+pub fn clear_lyrics_annotations_cache(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
+    let cache_dir = get_lyrics_annotations_cache_dir(cache_dir);
+    if cache_dir.exists() {
+        fs::remove_dir_all(&cache_dir)?;
+        debug!("歌词注释缓存已清除");
+    }
+    Ok(())
+}
+
 pub fn clear_lyrics_cache() -> anyhow::Result<()> {
     let cache_dir = get_lyrics_cache_dir();
     if cache_dir.exists() {
@@ -283,6 +528,8 @@ mod tests {
         let query = SearchQuery {
             title: Some("テスト曲".to_string()),
             artist: Some("テストアーティスト".to_string()),
+            search_type: None,
+            page: None,
         };
         let results = vec![SearchResultItem {
             title: "テスト曲".to_string(),
@@ -301,6 +548,8 @@ mod tests {
         let query = SearchQuery {
             title: Some("テスト曲".to_string()),
             artist: None,
+            search_type: None,
+            page: None,
         };
         let results = vec![];
 
@@ -366,6 +615,8 @@ mod tests {
         let query = SearchQuery {
             title: Some("テスト曲".to_string()),
             artist: Some("テストアーティスト".to_string()),
+            search_type: None,
+            page: None,
         };
         let results = vec![
             SearchResultItem {
@@ -408,6 +659,8 @@ mod tests {
         let query = SearchQuery {
             title: Some("テスト曲".to_string()),
             artist: None,
+            search_type: None,
+            page: None,
         };
         let results = vec![
             SearchResultItem {
@@ -456,6 +709,8 @@ mod tests {
         let query = SearchQuery {
             title: Some("曲名".to_string()),
             artist: Some("アーティスト".to_string()),
+            search_type: None,
+            page: None,
         };
 
         let json = serde_json::to_string(&query).unwrap();
@@ -479,5 +734,86 @@ mod tests {
         assert!(json.contains("曲名"));
         assert!(json.contains("アーティスト"));
         assert!(json.contains("https://example.com/test"));
+    }
+
+    #[test]
+    fn test_save_and_load_search_response_cache() {
+        let temp_dir = tempdir().unwrap();
+        let cache_dir = PathBuf::from(temp_dir.path());
+        let response = SearchResponse {
+            status: "select".to_string(),
+            query_title: Some("R".to_string()),
+            query_artist: Some("Roselia".to_string()),
+            search_type: "title".to_string(),
+            page: 2,
+            pagination: Some(crate::models::SearchPagination {
+                current_page: 2,
+                total_pages: 10,
+                has_next: true,
+            }),
+            results: vec![crate::models::SearchResult::with_artist_info(
+                "R".to_string(),
+                "Roselia".to_string(),
+                "/lyric/yb18072521/".to_string(),
+                None,
+                None,
+            )],
+            error: None,
+        };
+
+        save_search_response_cache(
+            "R",
+            Some("Roselia"),
+            "title",
+            2,
+            response.clone(),
+            Some(&cache_dir),
+        )
+        .unwrap();
+
+        let restored =
+            get_search_response_cache("R", Some("Roselia"), "title", 2, Some(&cache_dir)).unwrap();
+
+        assert_eq!(restored.status, response.status);
+        assert_eq!(restored.page, response.page);
+        assert_eq!(restored.pagination, response.pagination);
+        assert_eq!(restored.results.len(), response.results.len());
+        assert_eq!(restored.results[0].url, response.results[0].url);
+    }
+
+    #[test]
+    fn test_search_response_cache_miss_on_query_mismatch() {
+        let temp_dir = tempdir().unwrap();
+        let cache_dir = PathBuf::from(temp_dir.path());
+        let response = SearchResponse::new();
+
+        save_search_response_cache("R", Some("Roselia"), "title", 1, response, Some(&cache_dir))
+            .unwrap();
+
+        assert!(
+            get_search_response_cache("R", Some("Roselia"), "title", 2, Some(&cache_dir)).is_none()
+        );
+        assert!(
+            get_search_response_cache("R", Some("Other"), "title", 1, Some(&cache_dir)).is_none()
+        );
+    }
+
+    #[test]
+    fn test_save_and_load_lyrics_annotations_cache() {
+        let temp_dir = tempdir().unwrap();
+        let cache_dir = PathBuf::from(temp_dir.path());
+        let annotations = vec![
+            LyricElement::new_text("hello".to_string()),
+            LyricElement::new_ruby("世".to_string(), "せ".to_string()),
+        ];
+
+        save_lyrics_annotations_cache("/lyric/yb18072521/", &annotations, Some(&cache_dir))
+            .unwrap();
+
+        let restored =
+            get_lyrics_annotations_cache("/lyric/yb18072521/", Some(&cache_dir)).unwrap();
+        assert_eq!(restored.len(), annotations.len());
+        assert_eq!(restored[0].base, annotations[0].base);
+        assert_eq!(restored[1].ruby, annotations[1].ruby);
     }
 }

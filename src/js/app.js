@@ -99,6 +99,10 @@ async function initTauri() {
         ]
       };
     }
+
+    if (cmd === 'clear_cache') {
+      return null;
+    }
     
     return null;
   };
@@ -121,6 +125,8 @@ const elements = {
   searchTitle: $('#search-title'),
   searchArtist: $('#search-artist'),
   searchBtn: $('#search-btn'),
+  settingUseCache: $('#setting-use-cache'),
+  settingClearCache: $('#setting-clear-cache'),
   resultList: $('#result-list'),
   resultsContainer: $('#results-container'),
   resultsSummary: $('#results-summary'),
@@ -216,11 +222,43 @@ function showLyrics() {
 // ==================== Persistent Settings ====================
 
 const STORAGE_KEY = 'utabuild-settings';
+const VALID_FONT_SIZES = new Set(['small', 'medium', 'large']);
+const VALID_DARK_MODES = new Set(['on', 'off']);
+const DEFAULT_USE_CACHE = true;
+
+function normalizeSettings(rawSettings = {}) {
+  const settings = {};
+
+  if (VALID_FONT_SIZES.has(rawSettings.fontSize)) {
+    settings.fontSize = rawSettings.fontSize;
+  }
+
+  if (VALID_DARK_MODES.has(rawSettings.darkMode)) {
+    settings.darkMode = rawSettings.darkMode;
+  }
+
+  if (typeof rawSettings.useCache === 'boolean') {
+    settings.useCache = rawSettings.useCache;
+  }
+
+  return settings;
+}
 
 function loadSettings() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) {
+      return {};
+    }
+
+    const parsed = JSON.parse(saved);
+    const normalized = normalizeSettings(parsed);
+
+    if (JSON.stringify(parsed) !== JSON.stringify(normalized)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    }
+
+    return normalized;
   } catch {
     return {};
   }
@@ -229,10 +267,33 @@ function loadSettings() {
 function saveSettings(settings) {
   try {
     const current = loadSettings();
-    const merged = { ...current, ...settings };
+    const merged = normalizeSettings({ ...current, ...settings });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
   } catch (e) {
     console.warn('Failed to save settings:', e);
+  }
+}
+
+function shouldUseCache() {
+  const settings = loadSettings();
+  return settings.useCache ?? DEFAULT_USE_CACHE;
+}
+
+async function clearAllCaches() {
+  showLoading();
+
+  try {
+    await invoke('clear_cache');
+    currentSearchResults = null;
+    currentLyrics = null;
+    currentSearchQuery = null;
+    isLoadingMoreResults = false;
+    showError('缓存已清除');
+  } catch (err) {
+    console.error('Clear cache error:', err);
+    showError(`清除缓存失败: ${err}`);
+  } finally {
+    hideLoading();
   }
 }
 
@@ -419,6 +480,7 @@ async function loadRemainingSearchPages(searchRunId) {
       title: currentSearchQuery.title,
       artist: currentSearchQuery.artist ?? null,
       page: nextPage,
+      useCache: shouldUseCache(),
     });
 
     if (currentSearchRunId !== searchRunId) {
@@ -513,7 +575,12 @@ async function performSearch(page = 1, searchRunId = currentSearchRunId) {
   console.log('🔍 搜索:', title, '| isTauriEnv:', isTauriEnv, '| invoke:', typeof invoke);
   
   try {
-    const result = await invoke('search_lyrics', { title, artist, page });
+    const result = await invoke('search_lyrics', {
+      title,
+      artist,
+      page,
+      useCache: shouldUseCache(),
+    });
 
     if (searchRunId !== currentSearchRunId) {
       return;
@@ -581,7 +648,8 @@ async function handleSelectResult(index) {
     const result = await invoke('get_lyrics', {
       url: selectedItem.url,
       title: selectedItem.title,
-      artist: selectedItem.artist || null
+      artist: selectedItem.artist || null,
+      useCache: shouldUseCache(),
     });
     
     currentLyrics = result;
@@ -594,15 +662,6 @@ async function handleSelectResult(index) {
       elements.lyricsBody.innerHTML = '';
       const lyricsEl = renderLyrics(result.ruby_annotations);
       elements.lyricsBody.appendChild(lyricsEl);
-      
-      // 应用保存的ruby显示模式
-      const settings = loadSettings();
-      const body = elements.lyricsBody.querySelector('.lyricBody');
-      if (body && settings.rubyMode) {
-        if (settings.rubyMode === 'off') {
-          body.classList.add('ruby-hidden');
-        }
-      }
       
       // 同步按钮状态
       updateButtonStates();
@@ -629,12 +688,6 @@ function updateButtonStates() {
   const sizeBtn = document.querySelector(`[data-size="${fontSize}"]`);
   if (sizeBtn) sizeBtn.classList.add('active');
   
-  // Ruby按钮
-  const rubyMode = settings.rubyMode || 'hiragana';
-  $$('[data-ruby]').forEach(b => b.classList.remove('active'));
-  const rubyBtn = document.querySelector(`[data-ruby="${rubyMode}"]`);
-  if (rubyBtn) rubyBtn.classList.add('active');
-  
   // 暗色模式按钮
   const darkMode = settings.darkMode || 'off';
   $$('[data-dark]').forEach(b => b.classList.remove('active'));
@@ -645,6 +698,19 @@ function updateButtonStates() {
 // ==================== Lyrics Controls ====================
 
 function initControls() {
+  if (elements.settingUseCache) {
+    elements.settingUseCache.checked = shouldUseCache();
+    elements.settingUseCache.addEventListener('change', (event) => {
+      saveSettings({ useCache: event.target.checked });
+    });
+  }
+
+  if (elements.settingClearCache) {
+    elements.settingClearCache.addEventListener('click', () => {
+      void clearAllCaches();
+    });
+  }
+
   // 字号控制
   $$('[data-size]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -656,31 +722,6 @@ function initControls() {
       // 保存到localStorage
       saveSettings({ fontSize: size });
       // 更新按钮状态
-      updateButtonStates();
-    });
-  });
-  
-  // Ruby显示控制
-  $$('[data-ruby]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const mode = btn.dataset.ruby;
-      const body = elements.lyricsBody.querySelector('.lyricBody');
-      if (!body) return;
-      
-      switch (mode) {
-        case 'hiragana':
-          body.classList.remove('ruby-hidden');
-          break;
-        case 'romaji':
-          body.classList.remove('ruby-hidden');
-          break;
-        case 'off':
-          body.classList.add('ruby-hidden');
-          break;
-      }
-      
-      // 保存到localStorage
-      saveSettings({ rubyMode: mode });
       updateButtonStates();
     });
   });

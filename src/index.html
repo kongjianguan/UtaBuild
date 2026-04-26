@@ -29,6 +29,25 @@
         />
         <button id="search-btn" type="button">検索</button>
       </div>
+
+      <section class="search-settings">
+        <h2 class="search-settings__title">设置</h2>
+        <div class="settings-list">
+          <label class="settings-item" for="setting-use-cache">
+            <div class="settings-item__text">
+              <span class="settings-item__label">从缓存获取</span>
+              <span class="settings-item__description">开启后命中一天内缓存时直接使用缓存数据</span>
+            </div>
+            <input type="checkbox" id="setting-use-cache" />
+          </label>
+          <button id="setting-clear-cache" type="button" class="settings-item settings-item--button">
+            <div class="settings-item__text">
+              <span class="settings-item__label">清除缓存</span>
+              <span class="settings-item__description">清除搜索结果和歌词缓存文件及内存缓存</span>
+            </div>
+          </button>
+        </div>
+      </section>
     </header>
 
     <!-- 搜索结果列表 -->
@@ -53,19 +72,13 @@
         <div class="control-group">
           <span>文字サイズ:</span>
           <button data-size="small">小</button>
-          <button data-size="medium" disabled>中</button>
+          <button data-size="medium">中</button>
           <button data-size="large">大</button>
-        </div>
-        <div class="control-group">
-          <span>ふりがな:</span>
-          <button data-ruby="hiragana" disabled>あ</button>
-          <button data-ruby="romaji">A</button>
-          <button data-ruby="off">OFF</button>
         </div>
         <div class="control-group">
           <span>ダークモード:</span>
           <button data-dark="on">ON</button>
-          <button data-dark="off" disabled>OFF</button>
+          <button data-dark="off">OFF</button>
         </div>
       </div>
       
