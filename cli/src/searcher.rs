@@ -177,12 +177,35 @@ impl UtaTenSearcher {
             .results
     }
 
+    pub async fn search_with_options_uncached(
+        &self,
+        query: &str,
+        artist: Option<&str>,
+        search_type: &str,
+        page: u32,
+    ) -> SearchResponse {
+        self.search_with_options_internal(query, artist, search_type, page, false)
+            .await
+    }
+
     pub async fn search_with_options(
         &self,
         query: &str,
         artist: Option<&str>,
         search_type: &str,
         page: u32,
+    ) -> SearchResponse {
+        self.search_with_options_internal(query, artist, search_type, page, true)
+            .await
+    }
+
+    async fn search_with_options_internal(
+        &self,
+        query: &str,
+        artist: Option<&str>,
+        search_type: &str,
+        page: u32,
+        read_cache: bool,
     ) -> SearchResponse {
         let mut response = SearchResponse::new();
         let trimmed_query = query.trim();
@@ -192,6 +215,29 @@ impl UtaTenSearcher {
         response.query_artist = trimmed_artist.map(ToString::to_string);
         response.search_type = search_type.to_string();
         response.page = page;
+
+        if read_cache {
+            if let Some(cached_entry) = self
+                .cache
+                .search()
+                .get_with_options(trimmed_query, trimmed_artist, search_type, page)
+                .await
+            {
+                response.results = cached_entry
+                    .search_results
+                    .iter()
+                    .filter_map(|value| serde_json::from_value(value.clone()).ok())
+                    .collect();
+                response.pagination = cached_entry.pagination;
+                response.status = if response.results.is_empty() {
+                    "not_found"
+                } else {
+                    "select"
+                }
+                .to_string();
+                return response;
+            }
+        }
 
         self.rate_limit().await;
 
@@ -234,10 +280,12 @@ impl UtaTenSearcher {
         };
 
         let html_content = Self::decode_response(&bytes, &headers);
-        let document = Html::parse_document(&html_content);
-        let results = Self::extract_search_results(&document);
-
-        let pagination = self.extract_pagination(&document, page);
+        let (results, pagination) = {
+            let document = Html::parse_document(&html_content);
+            let results = Self::extract_search_results(&document);
+            let pagination = self.extract_pagination(&document, page);
+            (results, pagination)
+        };
         response.pagination = Some(pagination.clone());
 
         debug!("Returning {} unique results", results.len());
@@ -248,6 +296,39 @@ impl UtaTenSearcher {
             "select"
         }
         .to_string();
+
+        let (found_title, found_artist, lyrics_url) = response
+            .results
+            .first()
+            .map(|result| {
+                (
+                    result.title.clone(),
+                    result.artist.clone(),
+                    result.url.clone(),
+                )
+            })
+            .unwrap_or_else(|| (String::new(), String::new(), String::new()));
+        let search_results_json: Vec<serde_json::Value> = response
+            .results
+            .iter()
+            .filter_map(|result| serde_json::to_value(result).ok())
+            .collect();
+        self.cache
+            .search()
+            .insert_with_options(
+                trimmed_query,
+                trimmed_artist,
+                search_type,
+                page,
+                SearchResultEntry::new(
+                    search_results_json,
+                    found_title,
+                    found_artist,
+                    lyrics_url,
+                    response.pagination.clone(),
+                ),
+            )
+            .await;
 
         response
     }
@@ -599,6 +680,7 @@ impl UtaTenSearcher {
                         result.found_title.clone(),
                         result.found_artist.clone(),
                         result.lyrics_url.clone(),
+                        None,
                     ),
                 )
                 .await;

@@ -76,7 +76,7 @@ impl SearchResult {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SearchPagination {
     pub current_page: u32,
     pub total_pages: u32,
