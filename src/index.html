@@ -6,7 +6,7 @@
   <title>UtaBuild - 歌詞ビューア</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="has-bottom-menu">
   <div id="app">
     <!-- 搜索界面 -->
     <header id="search-header">
@@ -30,25 +30,66 @@
         <button id="search-btn" type="button">検索</button>
       </div>
 
-      <section class="search-settings">
-        <h2 class="search-settings__title">设置</h2>
-        <div class="settings-list">
-          <label class="settings-item" for="setting-use-cache">
-            <div class="settings-item__text">
-              <span class="settings-item__label">从缓存获取</span>
-              <span class="settings-item__description">开启后命中一天内缓存时直接使用缓存数据</span>
-            </div>
-            <input type="checkbox" id="setting-use-cache" />
-          </label>
-          <button id="setting-clear-cache" type="button" class="settings-item settings-item--button">
-            <div class="settings-item__text">
-              <span class="settings-item__label">清除缓存</span>
-              <span class="settings-item__description">清除搜索结果和歌词缓存文件及内存缓存</span>
-            </div>
-          </button>
-        </div>
+      <section class="search-history">
+        <h2 class="search-history__title">搜索历史</h2>
+        <div id="search-history-list" class="search-history__list"></div>
+        <p id="search-history-empty" class="search-history__empty">暂无搜索历史</p>
       </section>
     </header>
+
+    <!-- 设置页面 -->
+    <section id="settings-view" class="settings-view hidden">
+      <h2>设置</h2>
+      <div class="settings-list">
+        <label class="settings-item" for="setting-use-cache">
+          <div class="settings-item__text">
+            <span class="settings-item__label">从缓存获取</span>
+            <span class="settings-item__description">开启后命中一天内缓存时直接使用缓存数据</span>
+          </div>
+          <input type="checkbox" id="setting-use-cache" />
+        </label>
+        <button id="setting-clear-cache" type="button" class="settings-item settings-item--button">
+          <div class="settings-item__text">
+            <span class="settings-item__label">清除缓存</span>
+            <span class="settings-item__description">清除搜索结果和歌词缓存文件及内存缓存</span>
+          </div>
+        </button>
+        <div class="settings-item settings-item--stacked">
+          <label class="settings-item__row" for="setting-lsp-log">
+            <div class="settings-item__text">
+              <span class="settings-item__label">lsp日志开关</span>
+              <span class="settings-item__description">开启后可进入独立页面查看lsp日志</span>
+            </div>
+            <input type="checkbox" id="setting-lsp-log" />
+          </label>
+          <div id="lsp-log-panel" class="settings-subpanel hidden">
+            <button id="setting-view-lsp-log" type="button" class="secondary settings-subpanel__button">查看lsp日志</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LSP日志页面 -->
+    <section id="lsp-log-view" class="lsp-log-view hidden">
+      <div class="subpage-header">
+        <button id="lsp-log-back-btn" type="button" class="secondary">返回设置</button>
+        <div>
+          <h2>LSP日志</h2>
+          <p>不换行显示，可横向/纵向滑动，并支持缩放字体。</p>
+        </div>
+      </div>
+      <div class="lsp-log-toolbar">
+        <button id="lsp-log-refresh-btn" type="button" class="secondary">刷新</button>
+        <div class="lsp-log-zoom-controls" aria-label="日志缩放">
+          <button id="lsp-log-zoom-out" type="button" class="secondary" aria-label="缩小日志">−</button>
+          <span id="lsp-log-zoom-label">100%</span>
+          <button id="lsp-log-zoom-in" type="button" class="secondary" aria-label="放大日志">＋</button>
+        </div>
+      </div>
+      <div class="lsp-log-frame">
+        <pre id="lsp-log-content" class="lsp-log-content">打开页面后会读取日志...</pre>
+      </div>
+    </section>
 
     <!-- 搜索结果列表 -->
     <section id="result-list" class="hidden">
@@ -98,6 +139,15 @@
       <span id="error-message"></span>
       <button id="error-close">&times;</button>
     </div>
+
+    <!-- 底部菜单 -->
+    <nav id="bottom-menu" class="bottom-menu" data-active-tab="search" aria-label="主菜单">
+      <div class="bottom-menu__track">
+        <div class="bottom-menu__slider" aria-hidden="true"></div>
+        <button type="button" class="bottom-menu__item active" data-app-tab="search" aria-selected="true">搜索</button>
+        <button type="button" class="bottom-menu__item" data-app-tab="settings" aria-selected="false">设置</button>
+      </div>
+    </nav>
   </div>
 
   <script src="js/app.js" type="module"></script>

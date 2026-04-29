@@ -1,4 +1,9 @@
-use tauri::{Manager, State};
+use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 use utabuild_cli::cache::{
     clear_lyrics_annotations_cache, clear_search_response_cache, get_lyrics_annotations_cache,
@@ -10,6 +15,7 @@ use utabuild_cli::{CacheManager, UtaTenSearcher};
 /// 应用状态
 struct AppState {
     searcher: Mutex<UtaTenSearcher>,
+    lsp_logging_enabled: Mutex<bool>,
 }
 
 /// 初始化搜索器
@@ -23,24 +29,39 @@ fn create_searcher() -> UtaTenSearcher {
 /// 搜索歌词
 #[tauri::command]
 async fn search_lyrics(
+    app: AppHandle,
     title: String,
     artist: Option<String>,
     page: Option<u32>,
     use_cache: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
-    let searcher = state.searcher.lock().await;
     let page = page.unwrap_or(1);
     let use_cache = use_cache.unwrap_or(true);
+    write_app_lsp_log_if_enabled(
+        &app,
+        &state,
+        "search",
+        &format!(
+            "search_lyrics title=\"{}\" artist=\"{}\" page={} use_cache={}",
+            title,
+            artist.as_deref().unwrap_or(""),
+            page,
+            use_cache
+        ),
+    )
+    .await;
 
     if use_cache {
         if let Some(cached_response) =
             get_search_response_cache(&title, artist.as_deref(), "title", page, None)
         {
+            write_app_lsp_log_if_enabled(&app, &state, "search", "search_lyrics cache hit").await;
             return serde_json::to_value(cached_response).map_err(|e| e.to_string());
         }
     }
 
+    let searcher = state.searcher.lock().await;
     let result = if use_cache {
         searcher
             .search_with_options(&title, artist.as_deref(), "title", page)
@@ -50,6 +71,7 @@ async fn search_lyrics(
             .search_with_options_uncached(&title, artist.as_deref(), "title", page)
             .await
     };
+    drop(searcher);
 
     if result.error.is_none() {
         save_search_response_cache(
@@ -61,6 +83,28 @@ async fn search_lyrics(
             None,
         )
         .map_err(|e| e.to_string())?;
+        write_app_lsp_log_if_enabled(
+            &app,
+            &state,
+            "search",
+            &format!(
+                "search_lyrics success status={} results={}",
+                result.status,
+                result.results.len()
+            ),
+        )
+        .await;
+    } else {
+        write_app_lsp_log_if_enabled(
+            &app,
+            &state,
+            "search",
+            &format!(
+                "search_lyrics error={}",
+                result.error.as_deref().unwrap_or("unknown")
+            ),
+        )
+        .await;
     }
 
     serde_json::to_value(result).map_err(|e| e.to_string())
@@ -69,23 +113,42 @@ async fn search_lyrics(
 /// 选择搜索结果，获取歌词
 #[tauri::command]
 async fn get_lyrics(
+    app: AppHandle,
     url: String,
     title: String,
     artist: Option<String>,
     use_cache: Option<bool>,
+    save_salt_bridge: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
-    let searcher = state.searcher.lock().await;
     let use_cache = use_cache.unwrap_or(true);
+    let save_salt_bridge = save_salt_bridge.unwrap_or(true);
+    write_app_lsp_log_if_enabled(
+        &app,
+        &state,
+        "lyrics",
+        &format!(
+            "get_lyrics title=\"{}\" artist=\"{}\" url=\"{}\" use_cache={} save_salt_bridge={}",
+            title,
+            artist.as_deref().unwrap_or(""),
+            url,
+            use_cache,
+            save_salt_bridge
+        ),
+    )
+    .await;
 
+    let searcher = state.searcher.lock().await;
     if use_cache {
         if let Some(cached_annotations) = searcher.cache().lyrics().get(&url).await {
-            return Ok(lyrics_success_response(
-                title,
-                artist,
-                url,
-                &cached_annotations,
-            ));
+            let response = lyrics_success_response(title, artist, url, &cached_annotations);
+            if save_salt_bridge {
+                save_salt_bridge_cache(&app, &response)?;
+            }
+            drop(searcher);
+            write_app_lsp_log_if_enabled(&app, &state, "lyrics", "get_lyrics memory cache hit")
+                .await;
+            return Ok(response);
         }
 
         if let Some(cached_annotations) = get_lyrics_annotations_cache(&url, None) {
@@ -94,12 +157,13 @@ async fn get_lyrics(
                 .lyrics()
                 .insert(url.clone(), cached_annotations.clone())
                 .await;
-            return Ok(lyrics_success_response(
-                title,
-                artist,
-                url,
-                &cached_annotations,
-            ));
+            let response = lyrics_success_response(title, artist, url, &cached_annotations);
+            if save_salt_bridge {
+                save_salt_bridge_cache(&app, &response)?;
+            }
+            drop(searcher);
+            write_app_lsp_log_if_enabled(&app, &state, "lyrics", "get_lyrics disk cache hit").await;
+            return Ok(response);
         }
     }
 
@@ -113,15 +177,181 @@ async fn get_lyrics(
                 .lyrics()
                 .insert(url.clone(), elements.clone())
                 .await;
+            drop(searcher);
             save_lyrics_annotations_cache(&url, &elements, None).map_err(|e| e.to_string())?;
-            Ok(lyrics_success_response(title, artist, url, &elements))
+            let response = lyrics_success_response(title, artist, url, &elements);
+            if save_salt_bridge {
+                save_salt_bridge_cache(&app, &response)?;
+            }
+            write_app_lsp_log_if_enabled(
+                &app,
+                &state,
+                "lyrics",
+                &format!("get_lyrics success annotations={}", elements.len()),
+            )
+            .await;
+            Ok(response)
         }
-        None => serde_json::to_value(serde_json::json!({
-            "status": "error",
-            "error": "歌詞の取得に失敗しました"
-        }))
-        .map_err(|e| e.to_string()),
+        None => {
+            drop(searcher);
+            write_app_lsp_log_if_enabled(&app, &state, "lyrics", "get_lyrics failed").await;
+            serde_json::to_value(serde_json::json!({
+                "status": "error",
+                "error": "歌詞の取得に失敗しました"
+            }))
+            .map_err(|e| e.to_string())
+        }
     }
+}
+
+fn save_salt_bridge_cache(app: &AppHandle, response: &serde_json::Value) -> Result<(), String> {
+    let title = response
+        .get("found_title")
+        .and_then(|value| value.as_str())
+        .unwrap_or("untitled");
+    save_salt_bridge_cache_for_title(app, title, response)
+}
+
+fn save_salt_bridge_cache_for_title(
+    app: &AppHandle,
+    title: &str,
+    response: &serde_json::Value,
+) -> Result<(), String> {
+    if response.get("status").and_then(|value| value.as_str()) != Some("success") {
+        return Ok(());
+    }
+    if !response
+        .get("ruby_annotations")
+        .and_then(|value| value.as_array())
+        .is_some_and(|annotations| {
+            annotations.iter().any(|annotation| {
+                annotation.get("type").and_then(|value| value.as_str()) == Some("ruby")
+            })
+        })
+    {
+        return Ok(());
+    }
+
+    let path = salt_bridge_cache_path(app, title)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let json = serde_json::to_string(response).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())
+}
+
+fn salt_bridge_cache_path(app: &AppHandle, title: &str) -> Result<PathBuf, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(data_dir
+        .join("utabuild")
+        .join("ruby")
+        .join(format!("{}.json", safe_bridge_file_name(title))))
+}
+
+fn salt_pending_request_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
+    let mut candidates = Vec::new();
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    candidates.push(data_dir.join("utabuild").join("salt_pending_request.json"));
+    if let Some(parent) = data_dir.parent() {
+        candidates.push(parent.join("utabuild").join("salt_pending_request.json"));
+    }
+    if let Ok(cache_dir) = app.path().app_cache_dir() {
+        candidates.push(cache_dir.join("utabuild").join("salt_pending_request.json"));
+    }
+    candidates.sort();
+    candidates.dedup();
+    Ok(candidates)
+}
+
+fn safe_bridge_file_name(title: &str) -> String {
+    let trimmed = title.trim();
+    if trimmed.is_empty() {
+        return "untitled".to_string();
+    }
+    trimmed
+        .chars()
+        .map(|ch| match ch {
+            '\\' | '/' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+            _ => ch,
+        })
+        .collect()
+}
+
+#[tauri::command]
+async fn take_salt_launch_request(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<Option<serde_json::Value>, String> {
+    let mut found_path = None;
+    for path in salt_pending_request_paths(&app)? {
+        if path.is_file() {
+            found_path = Some(path);
+            break;
+        }
+    }
+    let Some(path) = found_path else {
+        return Ok(None);
+    };
+
+    let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    for candidate in salt_pending_request_paths(&app)? {
+        let _ = fs::remove_file(candidate);
+    }
+    let value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    write_app_lsp_log_if_enabled(
+        &app,
+        &state,
+        "salt",
+        &format!("take_salt_launch_request {}", compact_json(&value)),
+    )
+    .await;
+    Ok(Some(value))
+}
+
+#[tauri::command]
+async fn bind_salt_song_lyrics(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    salt_title: String,
+    salt_artist: Option<String>,
+    lyrics: serde_json::Value,
+) -> Result<(), String> {
+    let mut bound = lyrics;
+    if let Some(object) = bound.as_object_mut() {
+        object.insert(
+            "salt_title".to_string(),
+            serde_json::Value::String(salt_title.clone()),
+        );
+        object.insert(
+            "salt_artist".to_string(),
+            salt_artist
+                .clone()
+                .map(serde_json::Value::String)
+                .unwrap_or(serde_json::Value::Null),
+        );
+        object.insert(
+            "salt_bound_at_ms".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|e| e.to_string())?
+                    .as_millis() as u64,
+            )),
+        );
+    }
+    save_salt_bridge_cache_for_title(&app, &salt_title, &bound)?;
+    write_app_lsp_log_if_enabled(
+        &app,
+        &state,
+        "salt",
+        &format!(
+            "bind_salt_song_lyrics salt_title=\"{}\" salt_artist=\"{}\"",
+            salt_title,
+            salt_artist.as_deref().unwrap_or("")
+        ),
+    )
+    .await;
+    Ok(())
 }
 
 fn lyrics_success_response(
@@ -142,6 +372,206 @@ fn lyrics_success_response(
         "lyrics_url": url,
         "ruby_annotations": ruby_annotations
     })
+}
+
+/// 开关应用自带的轻量lsp日志系统。
+#[tauri::command]
+async fn set_lsp_logging_enabled(
+    app: AppHandle,
+    enabled: bool,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    {
+        let mut logging_enabled = state.lsp_logging_enabled.lock().await;
+        *logging_enabled = enabled;
+    }
+
+    write_app_lsp_log(
+        &app,
+        "settings",
+        if enabled {
+            "lsp logging enabled"
+        } else {
+            "lsp logging disabled"
+        },
+    )
+}
+
+/// 写入一条应用自带lsp日志。关闭日志时静默忽略。
+#[tauri::command]
+async fn append_lsp_log(
+    app: AppHandle,
+    scope: String,
+    message: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    write_app_lsp_log_if_enabled(&app, &state, &scope, &message).await;
+    Ok(())
+}
+
+/// 读取应用自带及可见LSPosed/lsp相关日志，供设置页按需查看。
+#[tauri::command]
+async fn get_lsp_logs(app: AppHandle) -> Result<String, String> {
+    let mut candidates = Vec::new();
+
+    if let Ok(data_dir) = app.path().app_data_dir() {
+        candidates.push(data_dir.join("utabuild").join("lsp.log"));
+        candidates.push(data_dir.join("utabuild").join("lsposed.log"));
+        candidates.push(data_dir.join("utabuild").join("lsposed-module.log"));
+        if let Some(parent) = data_dir.parent() {
+            candidates.push(parent.join("utabuild").join("lsp.log"));
+            candidates.push(parent.join("utabuild").join("lsposed.log"));
+            candidates.push(parent.join("utabuild").join("lsposed-module.log"));
+        }
+    }
+
+    if let Ok(cache_dir) = app.path().app_cache_dir() {
+        candidates.push(cache_dir.join("utabuild").join("lsp.log"));
+        candidates.push(cache_dir.join("utabuild").join("lsposed.log"));
+        candidates.push(cache_dir.join("utabuild").join("lsposed-module.log"));
+    }
+
+    if let Ok(current_dir) = std::env::current_dir() {
+        candidates.push(current_dir.join("2026.log"));
+
+        let logs_dir = current_dir.join("logs");
+        if let Ok(entries) = fs::read_dir(logs_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let file_name = path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("")
+                    .to_ascii_lowercase();
+                if file_name.contains("lsp")
+                    || file_name.contains("lsposed")
+                    || file_name.contains("module")
+                {
+                    candidates.push(path);
+                }
+            }
+        }
+    }
+
+    candidates.sort();
+    candidates.dedup();
+
+    let mut sections = Vec::new();
+    for path in candidates {
+        if !path.is_file() {
+            continue;
+        }
+
+        let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        if content.trim().is_empty() {
+            continue;
+        }
+
+        sections.push(format!(
+            "===== {} =====\n{}",
+            path.display(),
+            tail_chars(&content, 64 * 1024)
+        ));
+    }
+
+    if sections.is_empty() {
+        Ok("暂无lsp日志".to_string())
+    } else {
+        Ok(sections.join("\n\n"))
+    }
+}
+
+async fn write_app_lsp_log_if_enabled(
+    app: &AppHandle,
+    state: &State<'_, AppState>,
+    scope: &str,
+    message: &str,
+) {
+    if *state.lsp_logging_enabled.lock().await {
+        let _ = write_app_lsp_log(app, scope, message);
+    }
+}
+
+fn write_app_lsp_log(app: &AppHandle, scope: &str, message: &str) -> Result<(), String> {
+    let path = app_lsp_log_path(app)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(|e| e.to_string())?;
+    file.write_all(format_app_log_line(scope, message).as_bytes())
+        .map_err(|e| e.to_string())
+}
+
+fn app_lsp_log_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(data_dir.join("utabuild").join("lsp.log"))
+}
+
+fn format_app_log_line(scope: &str, message: &str) -> String {
+    format!(
+        "[{}] {}: {}\n",
+        unix_timestamp_ms(),
+        sanitize_log_token(scope),
+        sanitize_log_message(message)
+    )
+}
+
+fn unix_timestamp_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or_default()
+}
+
+fn sanitize_log_token(value: &str) -> String {
+    let sanitized: String = value
+        .chars()
+        .map(|ch| {
+            if ch.is_control() || ch.is_whitespace() {
+                '_'
+            } else {
+                ch
+            }
+        })
+        .collect();
+
+    if sanitized.is_empty() {
+        "app".to_string()
+    } else {
+        sanitized.chars().take(32).collect()
+    }
+}
+
+fn sanitize_log_message(message: &str) -> String {
+    let sanitized = message.replace('\r', "\\r").replace('\n', "\\n");
+    sanitized.chars().take(4_000).collect()
+}
+
+fn compact_json(value: &serde_json::Value) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "<invalid-json>".to_string())
+}
+
+fn tail_chars(content: &str, max_chars: usize) -> String {
+    let char_count = content.chars().count();
+    if char_count <= max_chars {
+        return content.to_string();
+    }
+
+    let start_byte = content
+        .char_indices()
+        .nth(char_count - max_chars)
+        .map(|(index, _)| index)
+        .unwrap_or(0);
+    format!(
+        "...（仅显示最后{}个字符）\n{}",
+        max_chars,
+        &content[start_byte..]
+    )
 }
 
 #[cfg(test)]
@@ -172,30 +602,84 @@ mod tests {
         assert_eq!(value["ruby_annotations"][1]["base"], "世");
         assert_eq!(value["ruby_annotations"][1]["ruby"], "せ");
     }
+
+    #[test]
+    fn safe_bridge_file_name_matches_android_provider_rules() {
+        assert_eq!(safe_bridge_file_name("  春/日:影*  "), "春_日_影_");
+        assert_eq!(safe_bridge_file_name(""), "untitled");
+        assert_eq!(safe_bridge_file_name("R"), "R");
+    }
+
+    #[test]
+    fn tail_chars_keeps_short_content_unchanged() {
+        assert_eq!(tail_chars("abc", 10), "abc");
+    }
+
+    #[test]
+    fn tail_chars_truncates_at_char_boundaries() {
+        let truncated = tail_chars("春日影abcdef", 6);
+        assert!(truncated.ends_with("abcdef"));
+        assert!(truncated.starts_with("..."));
+    }
+
+    #[test]
+    fn format_app_log_line_sanitizes_scope_and_message() {
+        let line = format_app_log_line("ui events", "first\nsecond");
+        assert!(line.contains("ui_events"));
+        assert!(line.contains("first\\nsecond"));
+    }
 }
 
 /// 一键搜索并获取歌词（如果搜索结果唯一）
 #[tauri::command]
 async fn search_and_get(
+    app: AppHandle,
     title: String,
     artist: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let searcher = state.searcher.lock().await;
+    write_app_lsp_log_if_enabled(
+        &app,
+        &state,
+        "search",
+        &format!(
+            "search_and_get title=\"{}\" artist=\"{}\"",
+            title,
+            artist.as_deref().unwrap_or("")
+        ),
+    )
+    .await;
 
     let process_result = searcher.process_song(&title, artist.as_deref()).await;
 
     // 如果有缓存的结果，直接返回
     if process_result.status == "success" {
-        return serde_json::to_value(process_result).map_err(|e| e.to_string());
+        drop(searcher);
+        let response = serde_json::to_value(process_result).map_err(|e| e.to_string())?;
+        save_salt_bridge_cache(&app, &response)?;
+        write_app_lsp_log_if_enabled(&app, &state, "search", "search_and_get direct success").await;
+        return Ok(response);
     }
 
     // 只要有搜索结果，就自动取第一条（用户已经点击选择了）
     if !process_result.search_results.is_empty() {
         let result = searcher.select_result(process_result, 0).await;
-        return serde_json::to_value(result).map_err(|e| e.to_string());
+        drop(searcher);
+        let response = serde_json::to_value(result).map_err(|e| e.to_string())?;
+        save_salt_bridge_cache(&app, &response)?;
+        write_app_lsp_log_if_enabled(
+            &app,
+            &state,
+            "search",
+            "search_and_get selected first result",
+        )
+        .await;
+        return Ok(response);
     }
 
+    drop(searcher);
+    write_app_lsp_log_if_enabled(&app, &state, "search", "search_and_get no results").await;
     serde_json::to_value(process_result).map_err(|e| e.to_string())
 }
 
@@ -234,13 +718,19 @@ pub fn run() {
         })
         .manage(AppState {
             searcher: Mutex::new(create_searcher()),
+            lsp_logging_enabled: Mutex::new(false),
         })
         .invoke_handler(tauri::generate_handler![
             search_lyrics,
             get_lyrics,
             search_and_get,
+            take_salt_launch_request,
+            bind_salt_song_lyrics,
             get_cache_stats,
             clear_cache,
+            set_lsp_logging_enabled,
+            append_lsp_log,
+            get_lsp_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

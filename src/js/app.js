@@ -100,8 +100,31 @@ async function initTauri() {
       };
     }
 
+    if (cmd === 'take_salt_launch_request') {
+      return null;
+    }
+
+    if (cmd === 'bind_salt_song_lyrics') {
+      console.log('[Mock] bind Salt song lyrics', args);
+      return null;
+    }
+
     if (cmd === 'clear_cache') {
       return null;
+    }
+
+    if (cmd === 'set_lsp_logging_enabled') {
+      console.log('[Mock] set lsp logging', args);
+      return null;
+    }
+
+    if (cmd === 'append_lsp_log') {
+      console.log('[Mock] lsp log', args);
+      return null;
+    }
+
+    if (cmd === 'get_lsp_logs') {
+      return '[Mock] 暂无lsp日志。';
     }
     
     return null;
@@ -109,7 +132,7 @@ async function initTauri() {
 }
 
 // 立即初始化
-initTauri();
+const tauriReady = initTauri();
 
 // 调试：输出Tauri全局对象
 console.log('window.__TAURI__ keys:', Object.keys(window.__TAURI__ || {}));
@@ -127,6 +150,20 @@ const elements = {
   searchBtn: $('#search-btn'),
   settingUseCache: $('#setting-use-cache'),
   settingClearCache: $('#setting-clear-cache'),
+  settingLspLog: $('#setting-lsp-log'),
+  lspLogPanel: $('#lsp-log-panel'),
+  settingViewLspLog: $('#setting-view-lsp-log'),
+  lspLogView: $('#lsp-log-view'),
+  lspLogBackBtn: $('#lsp-log-back-btn'),
+  lspLogRefreshBtn: $('#lsp-log-refresh-btn'),
+  lspLogZoomOut: $('#lsp-log-zoom-out'),
+  lspLogZoomIn: $('#lsp-log-zoom-in'),
+  lspLogZoomLabel: $('#lsp-log-zoom-label'),
+  lspLogContent: $('#lsp-log-content'),
+  settingsView: $('#settings-view'),
+  searchHistoryList: $('#search-history-list'),
+  searchHistoryEmpty: $('#search-history-empty'),
+  bottomMenu: $('#bottom-menu'),
   resultList: $('#result-list'),
   resultsContainer: $('#results-container'),
   resultsSummary: $('#results-summary'),
@@ -154,8 +191,10 @@ let currentSearchRunId = 0;
 let isLoadingMoreResults = false;
 let resultsScrollObserver = null;
 let resultsScrollEventsInitialized = false;
+let pendingSaltRequest = null;
+let lspLogZoom = 1;
 
-// 当前视图状态：'search' | 'results' | 'lyrics'
+// 当前视图状态：'search' | 'settings' | 'lspLogs' | 'results' | 'lyrics'
 let currentView = 'search';
 
 // 导航标志：区分前进(用户操作)和后退(popstate)
@@ -175,26 +214,83 @@ function showError(msg) {
   setTimeout(() => hide(elements.errorToast), 5000);
 }
 
+function syncBottomMenu(activeTab) {
+  if (!elements.bottomMenu) {
+    return;
+  }
+
+  elements.bottomMenu.dataset.activeTab = activeTab;
+  $$('[data-app-tab]').forEach((button) => {
+    const isActive = button.dataset.appTab === activeTab;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-selected', String(isActive));
+  });
+}
+
+function setBottomMenuVisible(isVisible, activeTab = 'search') {
+  if (!elements.bottomMenu) {
+    return;
+  }
+
+  elements.bottomMenu.classList.toggle('hidden', !isVisible);
+  elements.bottomMenu.setAttribute('aria-hidden', String(!isVisible));
+  document.body.classList.toggle('has-bottom-menu', isVisible);
+
+  if (isVisible) {
+    syncBottomMenu(activeTab);
+  }
+}
+
 // 内部切换视图（不pushState，用于返回按钮）
 function switchToSearch() {
   show(elements.searchHeader);
+  hide(elements.settingsView);
+  hide(elements.lspLogView);
   hide(elements.resultList);
   hide(elements.lyricsView);
   currentView = 'search';
+  setBottomMenuVisible(true, 'search');
+  renderSearchHistory();
+}
+
+function switchToSettings() {
+  hide(elements.searchHeader);
+  show(elements.settingsView);
+  hide(elements.lspLogView);
+  hide(elements.resultList);
+  hide(elements.lyricsView);
+  currentView = 'settings';
+  setBottomMenuVisible(true, 'settings');
 }
 
 function switchToResults() {
   hide(elements.searchHeader);
+  hide(elements.settingsView);
+  hide(elements.lspLogView);
   show(elements.resultList);
   hide(elements.lyricsView);
   currentView = 'results';
+  setBottomMenuVisible(false);
 }
 
 function switchToLyrics() {
   hide(elements.searchHeader);
+  hide(elements.settingsView);
+  hide(elements.lspLogView);
   hide(elements.resultList);
   show(elements.lyricsView);
   currentView = 'lyrics';
+  setBottomMenuVisible(false);
+}
+
+function switchToLspLogs() {
+  hide(elements.searchHeader);
+  hide(elements.settingsView);
+  show(elements.lspLogView);
+  hide(elements.resultList);
+  hide(elements.lyricsView);
+  currentView = 'lspLogs';
+  setBottomMenuVisible(false);
 }
 
 // 用户操作切换视图（pushState，用于前进导航）
@@ -203,6 +299,21 @@ function showSearch() {
   if (!isNavigatingBack) {
     history.pushState({ view: 'search' }, '', '');
   }
+}
+
+function showSettings() {
+  switchToSettings();
+  if (!isNavigatingBack) {
+    history.pushState({ view: 'settings' }, '', '');
+  }
+}
+
+function showLspLogs() {
+  switchToLspLogs();
+  if (!isNavigatingBack) {
+    history.pushState({ view: 'lspLogs' }, '', '');
+  }
+  void viewLspLogs();
 }
 
 function showResults() {
@@ -239,6 +350,10 @@ function normalizeSettings(rawSettings = {}) {
 
   if (typeof rawSettings.useCache === 'boolean') {
     settings.useCache = rawSettings.useCache;
+  }
+
+  if (typeof rawSettings.lspLogEnabled === 'boolean') {
+    settings.lspLogEnabled = rawSettings.lspLogEnabled;
   }
 
   return settings;
@@ -295,6 +410,144 @@ async function clearAllCaches() {
   } finally {
     hideLoading();
   }
+}
+
+// ==================== Search History ====================
+
+const SEARCH_HISTORY_KEY = 'utabuild-search-history';
+const SEARCH_HISTORY_LIMIT = 300;
+
+function normalizeHistoryEntry(entry) {
+  if (!entry || typeof entry.title !== 'string') {
+    return null;
+  }
+
+  const title = entry.title.trim();
+  if (!title) {
+    return null;
+  }
+
+  const artist = typeof entry.artist === 'string' && entry.artist.trim()
+    ? entry.artist.trim()
+    : null;
+  const searchedAt = Number.isFinite(entry.searchedAt)
+    ? entry.searchedAt
+    : Date.now();
+
+  return { title, artist, searchedAt };
+}
+
+function loadSearchHistory() {
+  try {
+    const saved = localStorage.getItem(SEARCH_HISTORY_KEY);
+    if (!saved) {
+      return [];
+    }
+
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const normalized = parsed
+      .map(normalizeHistoryEntry)
+      .filter(Boolean)
+      .sort((a, b) => b.searchedAt - a.searchedAt)
+      .slice(0, SEARCH_HISTORY_LIMIT);
+
+    if (normalized.length !== parsed.length) {
+      saveSearchHistory(normalized);
+    }
+
+    return normalized;
+  } catch {
+    return [];
+  }
+}
+
+function saveSearchHistory(historyItems) {
+  try {
+    const normalized = historyItems
+      .map(normalizeHistoryEntry)
+      .filter(Boolean)
+      .slice(0, SEARCH_HISTORY_LIMIT);
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(normalized));
+  } catch (e) {
+    console.warn('Failed to save search history:', e);
+  }
+}
+
+function historyKey(title, artist) {
+  return `${title.trim().toLocaleLowerCase()}\u0000${(artist || '').trim().toLocaleLowerCase()}`;
+}
+
+function addSearchHistory(title, artist) {
+  const entry = normalizeHistoryEntry({
+    title,
+    artist,
+    searchedAt: Date.now(),
+  });
+
+  if (!entry) {
+    return;
+  }
+
+  const newKey = historyKey(entry.title, entry.artist);
+  const existing = loadSearchHistory().filter(
+    (item) => historyKey(item.title, item.artist) !== newKey,
+  );
+  saveSearchHistory([entry, ...existing].slice(0, SEARCH_HISTORY_LIMIT));
+  renderSearchHistory();
+}
+
+function formatHistoryTime(timestamp) {
+  if (!Number.isFinite(timestamp)) {
+    return '';
+  }
+
+  try {
+    return new Date(timestamp).toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
+function fillSearchFromHistory(entry) {
+  elements.searchTitle.value = '';
+  elements.searchArtist.value = '';
+  elements.searchTitle.value = entry.title;
+  elements.searchArtist.value = entry.artist || '';
+  elements.searchTitle.focus();
+}
+
+function renderSearchHistory() {
+  if (!elements.searchHistoryList || !elements.searchHistoryEmpty) {
+    return;
+  }
+
+  const historyItems = loadSearchHistory();
+  elements.searchHistoryList.innerHTML = '';
+  elements.searchHistoryEmpty.classList.toggle('hidden', historyItems.length > 0);
+
+  historyItems.forEach((entry) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'history-item';
+    button.innerHTML = `
+      <span class="history-item__title">${escapeHtml(entry.title)}</span>
+      <span class="history-item__meta">
+        <span>${escapeHtml(entry.artist || 'アーティスト未指定')}</span>
+        <span>${escapeHtml(formatHistoryTime(entry.searchedAt))}</span>
+      </span>
+    `;
+    button.addEventListener('click', () => fillSearchFromHistory(entry));
+    elements.searchHistoryList.appendChild(button);
+  });
 }
 
 // ==================== Ruby Rendering (utaten CSS方案) ====================
@@ -589,6 +842,7 @@ async function performSearch(page = 1, searchRunId = currentSearchRunId) {
     currentSearchResults = mergeSearchResults(null, result, { loadingMore: false });
     
     if (result.status === 'select' && result.results && result.results.length > 0) {
+      void appendAppLspLog('search', `search success results=${result.results.length}`);
       renderResultList(currentSearchResults);
       if (currentView === 'results') {
         switchToResults();
@@ -597,12 +851,15 @@ async function performSearch(page = 1, searchRunId = currentSearchRunId) {
       }
       maybeLoadMoreResults();
     } else if (result.status === 'not_found') {
+      void appendAppLspLog('search', 'search not_found');
       showError('結果が見つかりませんでした');
     } else {
+      void appendAppLspLog('search', `search failed ${result.error || 'unknown error'}`);
       showError(result.error || '検索に失敗しました');
     }
   } catch (err) {
     console.error('Search error:', err);
+    void appendAppLspLog('search', `search error ${String(err)}`);
     showError(`検索エラー: ${err}`);
   } finally {
     hideLoading();
@@ -617,6 +874,8 @@ async function handleSearch() {
   currentSearchQuery = { title, artist };
   currentSearchRunId += 1;
   isLoadingMoreResults = false;
+  addSearchHistory(title, artist);
+  void appendAppLspLog('ui', `search requested title="${title}" artist="${artist || ''}"`);
   await performSearch(1, currentSearchRunId);
 }
 
@@ -640,21 +899,47 @@ function renderResultList(result) {
 
 // 选择搜索结果，获取歌词
 async function handleSelectResult(index) {
+  const selectedItem = currentSearchResults.results[index];
+  const saltRequest = pendingSaltRequest;
+
+  if (saltRequest) {
+    const confirmed = window.confirm(
+      `Salt Player の「${saltRequest.title || ''}」に UtaBuild の「${selectedItem.title}」を紐付け、今後 Ruby 表示に使用しますか？`
+    );
+    if (!confirmed) {
+      void appendAppLspLog('salt', `binding cancelled selected="${selectedItem.title}"`);
+      return;
+    }
+  }
+
   showLoading();
   
   try {
     // 按CLI逻辑：搜索 → 选择 → get_lyrics(传URL)
-    const selectedItem = currentSearchResults.results[index];
     const result = await invoke('get_lyrics', {
       url: selectedItem.url,
       title: selectedItem.title,
       artist: selectedItem.artist || null,
       useCache: shouldUseCache(),
+      saveSaltBridge: !saltRequest,
     });
     
     currentLyrics = result;
     
     if (result.status === 'success') {
+      if (saltRequest) {
+        await invoke('bind_salt_song_lyrics', {
+          saltTitle: saltRequest.title || selectedItem.title,
+          saltArtist: saltRequest.artist || null,
+          lyrics: result,
+        });
+        pendingSaltRequest = null;
+        void appendAppLspLog(
+          'salt',
+          `binding saved salt="${saltRequest.title || ''}" selected="${selectedItem.title}"`,
+        );
+      }
+
       elements.lyricsTitle.textContent = result.found_title;
       elements.lyricsArtist.textContent = result.found_artist;
       
@@ -668,10 +953,12 @@ async function handleSelectResult(index) {
       
       showLyrics();
     } else {
+      void appendAppLspLog('lyrics', `get lyrics failed selected="${selectedItem.title}"`);
       showError(result.error || '歌詞の取得に失敗しました');
     }
   } catch (err) {
     console.error('Select error:', err);
+    void appendAppLspLog('lyrics', `select error ${String(err)}`);
     showError(`エラー: ${err}`);
   } finally {
     hideLoading();
@@ -695,6 +982,84 @@ function updateButtonStates() {
   if (darkBtn) darkBtn.classList.add('active');
 }
 
+function syncLspLogVisibility() {
+  if (!elements.settingLspLog || !elements.lspLogPanel) {
+    return;
+  }
+
+  const enabled = loadSettings().lspLogEnabled === true;
+  elements.settingLspLog.checked = enabled;
+  elements.lspLogPanel.classList.toggle('hidden', !enabled);
+  if (!enabled && elements.lspLogContent) {
+    elements.lspLogContent.textContent = '';
+    if (currentView === 'lspLogs') {
+      switchToSettings();
+    }
+  }
+}
+
+async function setBackendLspLogging(enabled) {
+  try {
+    await tauriReady;
+    await invoke('set_lsp_logging_enabled', { enabled });
+  } catch (err) {
+    console.warn('Failed to sync lsp logging setting:', err);
+  }
+}
+
+async function appendAppLspLog(scope, message) {
+  if (loadSettings().lspLogEnabled !== true) {
+    return;
+  }
+
+  try {
+    await tauriReady;
+    await invoke('append_lsp_log', {
+      scope,
+      message,
+    });
+  } catch (err) {
+    console.warn('Failed to append lsp log:', err);
+  }
+}
+
+async function viewLspLogs() {
+  if (!elements.lspLogContent) {
+    return;
+  }
+
+  showLoading();
+  elements.lspLogContent.textContent = '正在读取lsp日志...';
+  void appendAppLspLog('settings', 'view lsp logs');
+
+  try {
+    await tauriReady;
+    const logs = await invoke('get_lsp_logs');
+    elements.lspLogContent.textContent = logs && String(logs).trim()
+      ? String(logs)
+      : '暂无lsp日志';
+  } catch (err) {
+    console.error('Read lsp logs error:', err);
+    elements.lspLogContent.textContent = `读取lsp日志失败: ${err}`;
+  } finally {
+    hideLoading();
+  }
+}
+
+function syncLspLogZoom() {
+  if (!elements.lspLogContent || !elements.lspLogZoomLabel) {
+    return;
+  }
+
+  elements.lspLogContent.style.setProperty('--lsp-log-font-scale', String(lspLogZoom));
+  elements.lspLogZoomLabel.textContent = `${Math.round(lspLogZoom * 100)}%`;
+}
+
+function adjustLspLogZoom(delta) {
+  lspLogZoom = Math.min(1.8, Math.max(0.7, Number((lspLogZoom + delta).toFixed(2))));
+  syncLspLogZoom();
+}
+
 // ==================== Lyrics Controls ====================
 
 function initControls() {
@@ -710,6 +1075,43 @@ function initControls() {
       void clearAllCaches();
     });
   }
+
+  if (elements.settingLspLog) {
+    elements.settingLspLog.checked = loadSettings().lspLogEnabled === true;
+    elements.settingLspLog.addEventListener('change', (event) => {
+      const enabled = event.target.checked;
+      saveSettings({ lspLogEnabled: enabled });
+      syncLspLogVisibility();
+      void setBackendLspLogging(enabled);
+    });
+    syncLspLogVisibility();
+  }
+
+  if (elements.settingViewLspLog) {
+    elements.settingViewLspLog.addEventListener('click', () => {
+      showLspLogs();
+    });
+  }
+
+  if (elements.lspLogBackBtn) {
+    elements.lspLogBackBtn.addEventListener('click', () => handleBack());
+  }
+
+  if (elements.lspLogRefreshBtn) {
+    elements.lspLogRefreshBtn.addEventListener('click', () => {
+      void viewLspLogs();
+    });
+  }
+
+  if (elements.lspLogZoomOut) {
+    elements.lspLogZoomOut.addEventListener('click', () => adjustLspLogZoom(-0.1));
+  }
+
+  if (elements.lspLogZoomIn) {
+    elements.lspLogZoomIn.addEventListener('click', () => adjustLspLogZoom(0.1));
+  }
+
+  syncLspLogZoom();
 
   // 字号控制
   $$('[data-size]').forEach(btn => {
@@ -753,6 +1155,13 @@ function initBackButton() {
         case 'search':
           switchToSearch();
           break;
+        case 'settings':
+          switchToSettings();
+          break;
+        case 'lspLogs':
+          switchToLspLogs();
+          void viewLspLogs();
+          break;
         case 'results':
           switchToResults();
           break;
@@ -777,12 +1186,114 @@ function handleBack() {
   history.back();
 }
 
+function canGestureBack() {
+  return currentView !== 'search';
+}
+
+function initBackGesture() {
+  const edgeWidth = 28;
+  const triggerDistance = 74;
+  const maxVerticalDrift = 64;
+  let gesture = null;
+
+  window.addEventListener('touchstart', (event) => {
+    if (!canGestureBack() || event.touches.length !== 1) {
+      gesture = null;
+      return;
+    }
+
+    const touch = event.touches[0];
+    if (touch.clientX > edgeWidth) {
+      gesture = null;
+      return;
+    }
+
+    gesture = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      active: true,
+      triggered: false,
+    };
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (event) => {
+    if (!gesture?.active || event.touches.length !== 1) {
+      return;
+    }
+
+    const touch = event.touches[0];
+    const dx = touch.clientX - gesture.startX;
+    const dy = touch.clientY - gesture.startY;
+
+    if (Math.abs(dy) > maxVerticalDrift && Math.abs(dy) > dx) {
+      gesture.active = false;
+      return;
+    }
+
+    if (!gesture.triggered && dx >= triggerDistance && Math.abs(dy) <= maxVerticalDrift) {
+      gesture.triggered = true;
+      gesture.active = false;
+      handleBack();
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchend', () => {
+    gesture = null;
+  }, { passive: true });
+
+  window.addEventListener('touchcancel', () => {
+    gesture = null;
+  }, { passive: true });
+}
+
+function initBottomMenu() {
+  $$('[data-app-tab]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.dataset.appTab === 'settings') {
+        if (currentView !== 'settings') {
+          showSettings();
+        }
+        return;
+      }
+
+      if (currentView !== 'search') {
+        showSearch();
+      }
+    });
+  });
+
+  setBottomMenuVisible(
+    currentView === 'search' || currentView === 'settings',
+    currentView === 'settings' ? 'settings' : 'search'
+  );
+}
+
 // ==================== Utils ====================
 
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// ==================== Salt Player Launch Flow ====================
+
+async function checkSaltLaunchRequest() {
+  if (!isTauriEnv) return;
+
+  try {
+    const request = await invoke('take_salt_launch_request');
+    if (!request || !request.title) return;
+
+    pendingSaltRequest = request;
+    elements.searchTitle.value = request.title || '';
+    elements.searchArtist.value = request.artist || '';
+    switchToSearch();
+    void appendAppLspLog('salt', `launch request received title="${request.title}" artist="${request.artist || ''}"`);
+    showError(`Salt Player から「${request.title}」を受け取りました。検索して候補を選ぶと、確認後にこの曲へ Ruby 表示を適用します。`);
+  } catch (err) {
+    console.warn('Salt launch request check failed:', err);
+  }
 }
 
 // ==================== Init ====================
@@ -813,11 +1324,18 @@ function init() {
   // 控制按钮
   initControls();
 
+  // 底部菜单
+  initBottomMenu();
+
+  // 搜索历史
+  renderSearchHistory();
+
   // 结果页无限滚动
   initInfiniteScroll();
   
   // Android返回按钮支持
   initBackButton();
+  initBackGesture();
   
   // 应用保存的暗色模式
   const settings = loadSettings();
@@ -827,6 +1345,14 @@ function init() {
   
   // 同步按钮状态
   updateButtonStates();
+
+  void setBackendLspLogging(settings.lspLogEnabled === true);
+  void tauriReady.then(checkSaltLaunchRequest);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      void checkSaltLaunchRequest();
+    }
+  });
   
   // 浏览器模式提示
   if (!isTauriEnv) {
