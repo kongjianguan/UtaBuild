@@ -338,9 +338,7 @@ impl LyricsCache {
     }
 
     pub fn is_valid(&self) -> bool {
-        let now = Utc::now();
-        let duration = now - self.timestamp;
-        duration < Duration::hours(24)
+        true
     }
 }
 
@@ -422,21 +420,42 @@ pub struct LyricsAnnotationsCache {
     pub timestamp: DateTime<Utc>,
     pub url: String,
     pub annotations: Vec<LyricElement>,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub artist: Option<String>,
+    #[serde(default)]
+    pub album: Option<String>,
+    #[serde(default)]
+    pub cover_url: Option<String>,
 }
 
 impl LyricsAnnotationsCache {
     pub fn new(url: String, annotations: Vec<LyricElement>) -> Self {
+        Self::new_with_metadata(url, annotations, None, None, None, None)
+    }
+
+    pub fn new_with_metadata(
+        url: String,
+        annotations: Vec<LyricElement>,
+        title: Option<String>,
+        artist: Option<String>,
+        album: Option<String>,
+        cover_url: Option<String>,
+    ) -> Self {
         Self {
             timestamp: Utc::now(),
             url,
             annotations,
+            title,
+            artist,
+            album,
+            cover_url,
         }
     }
 
     pub fn is_valid(&self) -> bool {
-        let now = Utc::now();
-        let duration = now - self.timestamp;
-        duration < Duration::hours(24)
+        true
     }
 }
 
@@ -445,12 +464,56 @@ pub fn save_lyrics_annotations_cache(
     annotations: &[LyricElement],
     cache_dir: Option<&PathBuf>,
 ) -> anyhow::Result<()> {
+    save_lyrics_annotations_cache_with_metadata(url, annotations, None, None, None, None, cache_dir)
+}
+
+pub fn save_lyrics_annotations_cache_with_metadata(
+    url: &str,
+    annotations: &[LyricElement],
+    title: Option<&str>,
+    artist: Option<&str>,
+    album: Option<&str>,
+    cover_url: Option<&str>,
+    cache_dir: Option<&PathBuf>,
+) -> anyhow::Result<()> {
     let cache_dir = get_lyrics_annotations_cache_dir(cache_dir);
     fs::create_dir_all(&cache_dir)?;
 
-    let cache = LyricsAnnotationsCache::new(url.to_string(), annotations.to_vec());
     let filename = url_to_cache_filename(url);
     let path = cache_dir.join(&filename);
+    let existing = fs::read_to_string(&path)
+        .ok()
+        .and_then(|content| serde_json::from_str::<LyricsAnnotationsCache>(&content).ok())
+        .filter(|cache| cache.url == url);
+
+    let choose_metadata = |incoming: Option<&str>, existing: Option<String>| {
+        incoming
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+            .or(existing)
+    };
+
+    let cache = LyricsAnnotationsCache::new_with_metadata(
+        url.to_string(),
+        annotations.to_vec(),
+        choose_metadata(
+            title,
+            existing.as_ref().and_then(|cache| cache.title.clone()),
+        ),
+        choose_metadata(
+            artist,
+            existing.as_ref().and_then(|cache| cache.artist.clone()),
+        ),
+        choose_metadata(
+            album,
+            existing.as_ref().and_then(|cache| cache.album.clone()),
+        ),
+        choose_metadata(
+            cover_url,
+            existing.as_ref().and_then(|cache| cache.cover_url.clone()),
+        ),
+    );
     let content = serde_json::to_string_pretty(&cache)?;
     fs::write(&path, content)?;
     debug!("歌词注释缓存已保存: {:?}", path);
@@ -462,6 +525,13 @@ pub fn get_lyrics_annotations_cache(
     url: &str,
     cache_dir: Option<&PathBuf>,
 ) -> Option<Vec<LyricElement>> {
+    get_lyrics_annotations_cache_entry(url, cache_dir).map(|cache| cache.annotations)
+}
+
+pub fn get_lyrics_annotations_cache_entry(
+    url: &str,
+    cache_dir: Option<&PathBuf>,
+) -> Option<LyricsAnnotationsCache> {
     let cache_dir = get_lyrics_annotations_cache_dir(cache_dir);
     let filename = url_to_cache_filename(url);
     let path = cache_dir.join(&filename);
@@ -474,19 +544,13 @@ pub fn get_lyrics_annotations_cache(
     match fs::read_to_string(&path) {
         Ok(content) => match serde_json::from_str::<LyricsAnnotationsCache>(&content) {
             Ok(cache) => {
-                if !cache.is_valid() {
-                    debug!("歌词注释缓存已过期: {:?}", path);
-                    let _ = fs::remove_file(&path);
-                    return None;
-                }
-
                 if cache.url != url {
                     warn!("歌词注释缓存 URL 不匹配，忽略: {:?}", path);
                     return None;
                 }
 
                 debug!("歌词注释缓存有效: {:?}", path);
-                Some(cache.annotations)
+                Some(cache)
             }
             Err(e) => {
                 warn!("解析歌词注释缓存失败: {}", e);
@@ -498,6 +562,47 @@ pub fn get_lyrics_annotations_cache(
             None
         }
     }
+}
+
+pub fn list_lyrics_annotations_cache(
+    cache_dir: Option<&PathBuf>,
+) -> anyhow::Result<Vec<LyricsAnnotationsCache>> {
+    let cache_dir = get_lyrics_annotations_cache_dir(cache_dir);
+    if !cache_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut caches = Vec::new();
+    for entry in fs::read_dir(cache_dir)? {
+        let path = entry?.path();
+        if path.extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+
+        match fs::read_to_string(&path) {
+            Ok(content) => match serde_json::from_str::<LyricsAnnotationsCache>(&content) {
+                Ok(cache) => caches.push(cache),
+                Err(e) => warn!("解析歌词注释缓存失败: {}", e),
+            },
+            Err(e) => warn!("读取歌词注释缓存失败: {}", e),
+        }
+    }
+
+    Ok(caches)
+}
+
+pub fn delete_lyrics_annotations_cache(
+    url: &str,
+    cache_dir: Option<&PathBuf>,
+) -> anyhow::Result<bool> {
+    let cache_dir = get_lyrics_annotations_cache_dir(cache_dir);
+    let path = cache_dir.join(url_to_cache_filename(url));
+    if path.exists() {
+        fs::remove_file(&path)?;
+        debug!("歌词注释缓存已删除: {:?}", path);
+        return Ok(true);
+    }
+    Ok(false)
 }
 
 pub fn clear_lyrics_annotations_cache(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
@@ -576,7 +681,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lyrics_cache_expired() {
+    fn test_lyrics_cache_is_permanent() {
         let lyrics_output = LyricsOutput {
             status: "success".to_string(),
             title: Some("テスト曲".to_string()),
@@ -588,7 +693,7 @@ mod tests {
         let mut cache = LyricsCache::new("https://example.com/test".to_string(), lyrics_output);
         cache.timestamp = Utc::now() - Duration::hours(25);
 
-        assert!(!cache.is_valid());
+        assert!(cache.is_valid());
     }
 
     #[test]
@@ -815,5 +920,56 @@ mod tests {
         assert_eq!(restored.len(), annotations.len());
         assert_eq!(restored[0].base, annotations[0].base);
         assert_eq!(restored[1].ruby, annotations[1].ruby);
+    }
+
+    #[test]
+    fn test_save_lyrics_annotations_cache_preserves_existing_cover_when_metadata_missing() {
+        let temp_dir = tempdir().unwrap();
+        let cache_dir = PathBuf::from(temp_dir.path());
+        let url = "/lyric/cover-preserve/";
+        let annotations = vec![LyricElement::new_text("hello".to_string())];
+
+        save_lyrics_annotations_cache_with_metadata(
+            url,
+            &annotations,
+            Some("Title"),
+            Some("Artist"),
+            Some("Album"),
+            Some("https://example.test/cover.jpg"),
+            Some(&cache_dir),
+        )
+        .unwrap();
+        save_lyrics_annotations_cache_with_metadata(
+            url,
+            &annotations,
+            Some("Title"),
+            Some("Artist"),
+            None,
+            None,
+            Some(&cache_dir),
+        )
+        .unwrap();
+
+        let restored = get_lyrics_annotations_cache_entry(url, Some(&cache_dir)).unwrap();
+        assert_eq!(restored.album.as_deref(), Some("Album"));
+        assert_eq!(
+            restored.cover_url.as_deref(),
+            Some("https://example.test/cover.jpg")
+        );
+    }
+
+    #[test]
+    fn test_delete_lyrics_annotations_cache() {
+        let temp_dir = tempdir().unwrap();
+        let cache_dir = PathBuf::from(temp_dir.path());
+        let url = "/lyric/delete-test/";
+        let annotations = vec![LyricElement::new_text("削除テスト".to_string())];
+
+        save_lyrics_annotations_cache(url, &annotations, Some(&cache_dir)).unwrap();
+        assert!(get_lyrics_annotations_cache(url, Some(&cache_dir)).is_some());
+
+        assert!(delete_lyrics_annotations_cache(url, Some(&cache_dir)).unwrap());
+        assert!(get_lyrics_annotations_cache(url, Some(&cache_dir)).is_none());
+        assert!(!delete_lyrics_annotations_cache(url, Some(&cache_dir)).unwrap());
     }
 }

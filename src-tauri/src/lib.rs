@@ -6,8 +6,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 use utabuild_cli::cache::{
-    clear_lyrics_annotations_cache, clear_search_response_cache, get_lyrics_annotations_cache,
-    get_search_response_cache, save_lyrics_annotations_cache, save_search_response_cache,
+    clear_lyrics_annotations_cache, clear_search_response_cache, delete_lyrics_annotations_cache,
+    get_lyrics_annotations_cache_entry, get_search_response_cache, list_lyrics_annotations_cache,
+    save_lyrics_annotations_cache_with_metadata, save_search_response_cache,
 };
 use utabuild_cli::LyricElement;
 use utabuild_cli::{CacheManager, UtaTenSearcher};
@@ -141,7 +142,25 @@ async fn get_lyrics(
     let searcher = state.searcher.lock().await;
     if use_cache {
         if let Some(cached_annotations) = searcher.cache().lyrics().get(&url).await {
-            let response = lyrics_success_response(title, artist, url, &cached_annotations);
+            let existing_entry = get_lyrics_annotations_cache_entry(&url, None);
+            let album = existing_entry
+                .as_ref()
+                .and_then(|entry| entry.album.clone());
+            let cover_url = existing_entry
+                .as_ref()
+                .and_then(|entry| entry.cover_url.clone());
+            save_lyrics_annotations_cache_with_metadata(
+                &url,
+                &cached_annotations,
+                Some(&title),
+                artist.as_deref(),
+                album.as_deref(),
+                cover_url.as_deref(),
+                None,
+            )
+            .map_err(|e| e.to_string())?;
+            let response =
+                lyrics_success_response(title, artist, url, &cached_annotations, album, cover_url);
             if save_salt_bridge {
                 save_salt_bridge_cache(&app, &response)?;
             }
@@ -151,13 +170,42 @@ async fn get_lyrics(
             return Ok(response);
         }
 
-        if let Some(cached_annotations) = get_lyrics_annotations_cache(&url, None) {
+        if let Some(cached_entry) = get_lyrics_annotations_cache_entry(&url, None) {
+            let cached_annotations = cached_entry.annotations;
+            let response_title = if title.trim().is_empty() {
+                cached_entry
+                    .title
+                    .clone()
+                    .unwrap_or_else(|| "未命名歌曲".to_string())
+            } else {
+                title.clone()
+            };
+            let response_artist = artist.clone().or(cached_entry.artist.clone());
+            let album = cached_entry.album.clone();
+            let cover_url = cached_entry.cover_url.clone();
             searcher
                 .cache()
                 .lyrics()
                 .insert(url.clone(), cached_annotations.clone())
                 .await;
-            let response = lyrics_success_response(title, artist, url, &cached_annotations);
+            save_lyrics_annotations_cache_with_metadata(
+                &url,
+                &cached_annotations,
+                Some(&response_title),
+                response_artist.as_deref(),
+                album.as_deref(),
+                cover_url.as_deref(),
+                None,
+            )
+            .map_err(|e| e.to_string())?;
+            let response = lyrics_success_response(
+                response_title,
+                response_artist,
+                url,
+                &cached_annotations,
+                album,
+                cover_url,
+            );
             if save_salt_bridge {
                 save_salt_bridge_cache(&app, &response)?;
             }
@@ -170,6 +218,7 @@ async fn get_lyrics(
     // 按CLI逻辑：直接用URL获取歌词，返回前端期望的格式
     match searcher.get_lyrics_with_ruby(&url).await {
         Some(html_content) => {
+            let metadata = UtaTenSearcher::extract_song_page_metadata(&html_content);
             // 解析歌词和ruby
             let elements = searcher.extract_ruby_lyrics(&html_content);
             searcher
@@ -178,8 +227,24 @@ async fn get_lyrics(
                 .insert(url.clone(), elements.clone())
                 .await;
             drop(searcher);
-            save_lyrics_annotations_cache(&url, &elements, None).map_err(|e| e.to_string())?;
-            let response = lyrics_success_response(title, artist, url, &elements);
+            save_lyrics_annotations_cache_with_metadata(
+                &url,
+                &elements,
+                Some(&title),
+                artist.as_deref(),
+                metadata.album.as_deref(),
+                metadata.cover_url.as_deref(),
+                None,
+            )
+            .map_err(|e| e.to_string())?;
+            let response = lyrics_success_response(
+                title,
+                artist,
+                url,
+                &elements,
+                metadata.album,
+                metadata.cover_url,
+            );
             if save_salt_bridge {
                 save_salt_bridge_cache(&app, &response)?;
             }
@@ -210,6 +275,38 @@ fn save_salt_bridge_cache(app: &AppHandle, response: &serde_json::Value) -> Resu
         .and_then(|value| value.as_str())
         .unwrap_or("untitled");
     save_salt_bridge_cache_for_title(app, title, response)
+}
+
+fn save_saved_lyrics_from_response(response: &serde_json::Value) -> Result<(), String> {
+    if response.get("status").and_then(|value| value.as_str()) != Some("success") {
+        return Ok(());
+    }
+
+    let Some(url) = response.get("lyrics_url").and_then(|value| value.as_str()) else {
+        return Ok(());
+    };
+
+    let annotations = response
+        .get("ruby_annotations")
+        .cloned()
+        .and_then(|value| serde_json::from_value::<Vec<LyricElement>>(value).ok())
+        .unwrap_or_default();
+    if annotations.is_empty() {
+        return Ok(());
+    }
+
+    save_lyrics_annotations_cache_with_metadata(
+        url,
+        &annotations,
+        response.get("found_title").and_then(|value| value.as_str()),
+        response
+            .get("found_artist")
+            .and_then(|value| value.as_str()),
+        response.get("found_album").and_then(|value| value.as_str()),
+        response.get("cover_url").and_then(|value| value.as_str()),
+        None,
+    )
+    .map_err(|e| e.to_string())
 }
 
 fn save_salt_bridge_cache_for_title(
@@ -359,6 +456,8 @@ fn lyrics_success_response(
     artist: Option<String>,
     url: String,
     elements: &[LyricElement],
+    album: Option<String>,
+    cover_url: Option<String>,
 ) -> serde_json::Value {
     let ruby_annotations: Vec<serde_json::Value> = elements
         .iter()
@@ -369,6 +468,8 @@ fn lyrics_success_response(
         "status": "success",
         "found_title": title,
         "found_artist": artist,
+        "found_album": album,
+        "cover_url": cover_url,
         "lyrics_url": url,
         "ruby_annotations": ruby_annotations
     })
@@ -590,12 +691,16 @@ mod tests {
             Some("Roselia".to_string()),
             "/lyric/yb18072521/".to_string(),
             &elements,
+            Some("Wahl".to_string()),
+            Some("https://example.test/cover.jpg".to_string()),
         );
 
         assert_eq!(value["status"], "success");
         assert_eq!(value["found_title"], "R");
         assert_eq!(value["found_artist"], "Roselia");
         assert_eq!(value["lyrics_url"], "/lyric/yb18072521/");
+        assert_eq!(value["found_album"], "Wahl");
+        assert_eq!(value["cover_url"], "https://example.test/cover.jpg");
         assert_eq!(value["ruby_annotations"][0]["type"], "text");
         assert_eq!(value["ruby_annotations"][0]["base"], "hello");
         assert_eq!(value["ruby_annotations"][1]["type"], "ruby");
@@ -657,6 +762,7 @@ async fn search_and_get(
     if process_result.status == "success" {
         drop(searcher);
         let response = serde_json::to_value(process_result).map_err(|e| e.to_string())?;
+        save_saved_lyrics_from_response(&response)?;
         save_salt_bridge_cache(&app, &response)?;
         write_app_lsp_log_if_enabled(&app, &state, "search", "search_and_get direct success").await;
         return Ok(response);
@@ -667,6 +773,7 @@ async fn search_and_get(
         let result = searcher.select_result(process_result, 0).await;
         drop(searcher);
         let response = serde_json::to_value(result).map_err(|e| e.to_string())?;
+        save_saved_lyrics_from_response(&response)?;
         save_salt_bridge_cache(&app, &response)?;
         write_app_lsp_log_if_enabled(
             &app,
@@ -681,6 +788,124 @@ async fn search_and_get(
     drop(searcher);
     write_app_lsp_log_if_enabled(&app, &state, "search", "search_and_get no results").await;
     serde_json::to_value(process_result).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn list_saved_lyrics(sort_by: Option<String>) -> Result<serde_json::Value, String> {
+    let mut entries = list_lyrics_annotations_cache(None).map_err(|e| e.to_string())?;
+    let sort_by = sort_by.unwrap_or_else(|| "title".to_string());
+
+    entries.sort_by(|a, b| {
+        let left = if sort_by == "artist" {
+            a.artist.as_deref().unwrap_or("")
+        } else {
+            a.title.as_deref().unwrap_or("")
+        };
+        let right = if sort_by == "artist" {
+            b.artist.as_deref().unwrap_or("")
+        } else {
+            b.title.as_deref().unwrap_or("")
+        };
+        left.to_lowercase()
+            .cmp(&right.to_lowercase())
+            .then_with(|| {
+                a.title
+                    .as_deref()
+                    .unwrap_or("")
+                    .to_lowercase()
+                    .cmp(&b.title.as_deref().unwrap_or("").to_lowercase())
+            })
+    });
+
+    let summaries: Vec<serde_json::Value> = entries
+        .into_iter()
+        .map(|entry| {
+            serde_json::json!({
+                "title": entry.title.unwrap_or_else(|| "未命名歌曲".to_string()),
+                "artist": entry.artist.unwrap_or_default(),
+                "album": entry.album.unwrap_or_default(),
+                "cover_url": entry.cover_url.unwrap_or_default(),
+                "lyrics_url": entry.url,
+                "saved_at": entry.timestamp.to_rfc3339(),
+                "annotation_count": entry.annotations.len(),
+            })
+        })
+        .collect();
+
+    Ok(serde_json::json!({
+        "status": "success",
+        "sort_by": sort_by,
+        "songs": summaries,
+    }))
+}
+
+#[tauri::command]
+async fn get_saved_lyrics(url: String) -> Result<serde_json::Value, String> {
+    let entry = get_lyrics_annotations_cache_entry(&url, None)
+        .ok_or_else(|| "已保存歌词不存在".to_string())?;
+    Ok(lyrics_success_response(
+        entry.title.unwrap_or_else(|| "未命名歌曲".to_string()),
+        entry.artist,
+        entry.url,
+        &entry.annotations,
+        entry.album,
+        entry.cover_url,
+    ))
+}
+
+#[tauri::command]
+async fn hydrate_saved_lyrics_metadata(
+    url: String,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    let entry = get_lyrics_annotations_cache_entry(&url, None)
+        .ok_or_else(|| "已保存歌词不存在".to_string())?;
+
+    if entry
+        .cover_url
+        .as_deref()
+        .is_some_and(|value| !value.trim().is_empty())
+    {
+        return Ok(serde_json::json!({
+            "status": "success",
+            "lyrics_url": entry.url,
+            "album": entry.album.unwrap_or_default(),
+            "cover_url": entry.cover_url.unwrap_or_default(),
+        }));
+    }
+
+    let searcher = state.searcher.lock().await;
+    let html = searcher
+        .get_lyrics_with_ruby(&url)
+        .await
+        .ok_or_else(|| "无法从UtaTen读取歌曲页面".to_string())?;
+    let metadata = UtaTenSearcher::extract_song_page_metadata(&html);
+    drop(searcher);
+
+    let album = metadata.album.or(entry.album);
+    let cover_url = metadata.cover_url.or(entry.cover_url);
+    save_lyrics_annotations_cache_with_metadata(
+        &entry.url,
+        &entry.annotations,
+        entry.title.as_deref(),
+        entry.artist.as_deref(),
+        album.as_deref(),
+        cover_url.as_deref(),
+        None,
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(serde_json::json!({
+        "status": "success",
+        "lyrics_url": entry.url,
+        "album": album.unwrap_or_default(),
+        "cover_url": cover_url.unwrap_or_default(),
+    }))
+}
+
+#[tauri::command]
+async fn delete_saved_lyrics(url: String) -> Result<bool, String> {
+    delete_lyrics_annotations_cache(&url, None).map_err(|e| e.to_string())
 }
 
 /// 获取缓存统计
@@ -727,6 +952,10 @@ pub fn run() {
             take_salt_launch_request,
             bind_salt_song_lyrics,
             get_cache_stats,
+            list_saved_lyrics,
+            get_saved_lyrics,
+            hydrate_saved_lyrics_metadata,
+            delete_saved_lyrics,
             clear_cache,
             set_lsp_logging_enabled,
             append_lsp_log,

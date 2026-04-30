@@ -44,6 +44,10 @@ pub struct SearchResult {
     pub lyricist: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub composer: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover_url: Option<String>,
 }
 
 impl SearchResult {
@@ -55,6 +59,8 @@ impl SearchResult {
             matched: false,
             lyricist: None,
             composer: None,
+            album: None,
+            cover_url: None,
         }
     }
 
@@ -72,6 +78,8 @@ impl SearchResult {
             matched: false,
             lyricist,
             composer,
+            album: None,
+            cover_url: None,
         }
     }
 }
@@ -132,6 +140,10 @@ pub struct LyricsSearchResponse {
     pub found_title: String,
     pub found_artist: String,
     pub from_cache: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub found_album: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover_url: Option<String>,
 }
 
 impl LyricsSearchResponse {
@@ -150,6 +162,8 @@ impl LyricsSearchResponse {
             found_title: String::new(),
             found_artist: String::new(),
             from_cache: false,
+            found_album: None,
+            cover_url: None,
         }
     }
 }

@@ -37,6 +37,22 @@
       </section>
     </header>
 
+    <!-- 歌曲页面 -->
+    <section id="songs-view" class="songs-view hidden">
+      <div class="songs-header">
+        <div>
+          <h2>歌曲</h2>
+          <p>已永久缓存的歌词</p>
+        </div>
+        <div class="songs-sort" aria-label="歌曲排序">
+          <button type="button" class="secondary active" data-song-sort="title">歌曲名称</button>
+          <button type="button" class="secondary" data-song-sort="artist">歌手名称</button>
+        </div>
+      </div>
+      <div id="songs-list" class="songs-list"></div>
+      <p id="songs-empty" class="songs-empty">暂无已保存歌词。搜索并打开歌词后会永久保存到这里。</p>
+    </section>
+
     <!-- 设置页面 -->
     <section id="settings-view" class="settings-view hidden">
       <h2>设置</h2>
@@ -145,6 +161,7 @@
       <div class="bottom-menu__track">
         <div class="bottom-menu__slider" aria-hidden="true"></div>
         <button type="button" class="bottom-menu__item active" data-app-tab="search" aria-selected="true">搜索</button>
+        <button type="button" class="bottom-menu__item" data-app-tab="songs" aria-selected="false">歌曲</button>
         <button type="button" class="bottom-menu__item" data-app-tab="settings" aria-selected="false">设置</button>
       </div>
     </nav>

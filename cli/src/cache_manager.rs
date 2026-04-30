@@ -3,7 +3,6 @@ use moka::future::Cache;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-const LYRICS_CACHE_TTL_SECS: u64 = 604800;
 const LYRICS_CACHE_MAX_CAPACITY: u64 = 1000;
 const SEARCH_CACHE_TTL_SECS: u64 = 86400;
 const SEARCH_CACHE_MAX_CAPACITY: u64 = 500;
@@ -50,7 +49,6 @@ impl LyricsCache {
     pub fn new() -> Self {
         let cache = Cache::builder()
             .max_capacity(LYRICS_CACHE_MAX_CAPACITY)
-            .time_to_live(Duration::from_secs(LYRICS_CACHE_TTL_SECS))
             .build();
         Self { cache }
     }
