@@ -856,15 +856,17 @@ async fn get_saved_lyrics(url: String) -> Result<serde_json::Value, String> {
 #[tauri::command]
 async fn hydrate_saved_lyrics_metadata(
     url: String,
+    force_refresh: Option<bool>,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let entry = get_lyrics_annotations_cache_entry(&url, None)
         .ok_or_else(|| "已保存歌词不存在".to_string())?;
 
-    if entry
-        .cover_url
-        .as_deref()
-        .is_some_and(|value| !value.trim().is_empty())
+    if !force_refresh.unwrap_or(false)
+        && entry
+            .cover_url
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty())
     {
         return Ok(serde_json::json!({
             "status": "success",
