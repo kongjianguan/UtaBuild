@@ -11,4 +11,4 @@ pub use cache_manager::{CacheManager, CacheStats, LyricsCache, SearchCache, Sear
 pub use models::{
     LyricElement, LyricsSearchResponse, SearchPagination, SearchResponse, SearchResult,
 };
-pub use searcher::{parse_artist_info, ArtistInfo, UtaTenSearcher};
+pub use searcher::{parse_artist_info, ArtistInfo, ArtworkSourcePreference, UtaTenSearcher};

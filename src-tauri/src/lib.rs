@@ -11,7 +11,7 @@ use utabuild_cli::cache::{
     save_lyrics_annotations_cache_with_metadata, save_search_response_cache,
 };
 use utabuild_cli::LyricElement;
-use utabuild_cli::{CacheManager, UtaTenSearcher};
+use utabuild_cli::{ArtworkSourcePreference, CacheManager, UtaTenSearcher};
 
 /// 应用状态
 struct AppState {
@@ -120,10 +120,13 @@ async fn get_lyrics(
     artist: Option<String>,
     use_cache: Option<bool>,
     save_salt_bridge: Option<bool>,
+    artwork_source: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let use_cache = use_cache.unwrap_or(true);
     let save_salt_bridge = save_salt_bridge.unwrap_or(true);
+    let artwork_source_preference =
+        ArtworkSourcePreference::from_setting(artwork_source.as_deref());
     write_app_lsp_log_if_enabled(
         &app,
         &state,
@@ -218,7 +221,14 @@ async fn get_lyrics(
     // 按CLI逻辑：直接用URL获取歌词，返回前端期望的格式
     match searcher.get_lyrics_with_ruby(&url).await {
         Some(html_content) => {
-            let metadata = UtaTenSearcher::extract_song_page_metadata(&html_content);
+            let metadata = searcher
+                .resolve_artwork_metadata(
+                    &title,
+                    artist.as_deref(),
+                    UtaTenSearcher::extract_song_page_metadata(&html_content),
+                    artwork_source_preference,
+                )
+                .await;
             // 解析歌词和ruby
             let elements = searcher.extract_ruby_lyrics(&html_content);
             searcher
@@ -857,6 +867,7 @@ async fn get_saved_lyrics(url: String) -> Result<serde_json::Value, String> {
 async fn hydrate_saved_lyrics_metadata(
     url: String,
     force_refresh: Option<bool>,
+    artwork_source: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let entry = get_lyrics_annotations_cache_entry(&url, None)
@@ -881,7 +892,14 @@ async fn hydrate_saved_lyrics_metadata(
         .get_lyrics_with_ruby(&url)
         .await
         .ok_or_else(|| "无法从UtaTen读取歌曲页面".to_string())?;
-    let metadata = UtaTenSearcher::extract_song_page_metadata(&html);
+    let metadata = searcher
+        .resolve_artwork_metadata(
+            entry.title.as_deref().unwrap_or(""),
+            entry.artist.as_deref(),
+            UtaTenSearcher::extract_song_page_metadata(&html),
+            ArtworkSourcePreference::from_setting(artwork_source.as_deref()),
+        )
+        .await;
     drop(searcher);
 
     let album = metadata.album.or(entry.album);
@@ -936,9 +954,9 @@ async fn clear_cache(state: State<'_, AppState>) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .setup(|app| {
+        .setup(|_app| {
             #[cfg(debug_assertions)]
-            if let Some(window) = app.get_webview_window("main") {
+            if let Some(window) = _app.get_webview_window("main") {
                 window.open_devtools();
             }
             Ok(())

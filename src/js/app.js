@@ -187,6 +187,7 @@ const elements = {
   searchArtist: $('#search-artist'),
   searchBtn: $('#search-btn'),
   settingUseCache: $('#setting-use-cache'),
+  settingArtworkSource: $('#setting-artwork-source'),
   settingClearCache: $('#setting-clear-cache'),
   settingLspLog: $('#setting-lsp-log'),
   lspLogPanel: $('#lsp-log-panel'),
@@ -522,7 +523,9 @@ function showLyrics() {
 const STORAGE_KEY = 'utabuild-settings';
 const VALID_FONT_SIZES = new Set(['small', 'medium', 'large']);
 const VALID_DARK_MODES = new Set(['on', 'off']);
+const VALID_ARTWORK_SOURCES = new Set(['auto', 'utaten', 'qq', 'netease']);
 const DEFAULT_USE_CACHE = true;
+const DEFAULT_ARTWORK_SOURCE = 'auto';
 
 function normalizeSettings(rawSettings = {}) {
   const settings = {};
@@ -537,6 +540,10 @@ function normalizeSettings(rawSettings = {}) {
 
   if (typeof rawSettings.useCache === 'boolean') {
     settings.useCache = rawSettings.useCache;
+  }
+
+  if (VALID_ARTWORK_SOURCES.has(rawSettings.artworkSource)) {
+    settings.artworkSource = rawSettings.artworkSource;
   }
 
   if (typeof rawSettings.lspLogEnabled === 'boolean') {
@@ -579,6 +586,13 @@ function saveSettings(settings) {
 function shouldUseCache() {
   const settings = loadSettings();
   return settings.useCache ?? DEFAULT_USE_CACHE;
+}
+
+function selectedArtworkSource() {
+  const settings = loadSettings();
+  return VALID_ARTWORK_SOURCES.has(settings.artworkSource)
+    ? settings.artworkSource
+    : DEFAULT_ARTWORK_SOURCE;
 }
 
 async function clearAllCaches() {
@@ -832,7 +846,10 @@ async function hydrateMissingSongMetadata(songs) {
 
     hydratingSongMetadataUrls.add(song.lyrics_url);
     try {
-      const metadata = await invoke('hydrate_saved_lyrics_metadata', { url: song.lyrics_url });
+      const metadata = await invoke('hydrate_saved_lyrics_metadata', {
+        url: song.lyrics_url,
+        artworkSource: selectedArtworkSource(),
+      });
       if (metadata?.status === 'success') {
         updateRenderedSongMetadata(metadata);
       }
@@ -888,6 +905,7 @@ async function refreshSavedSongArtwork(song) {
     const metadata = await invoke('hydrate_saved_lyrics_metadata', {
       url: song.lyrics_url,
       forceRefresh: true,
+      artworkSource: selectedArtworkSource(),
     });
 
     if (metadata?.status === 'success') {
@@ -1474,6 +1492,7 @@ async function handleSelectResult(index) {
       artist: selectedItem.artist || null,
       useCache: shouldUseCache(),
       saveSaltBridge: !saltRequest,
+      artworkSource: selectedArtworkSource(),
     });
     
     currentLyrics = result;
@@ -1619,6 +1638,19 @@ function initControls() {
     elements.settingUseCache.checked = shouldUseCache();
     elements.settingUseCache.addEventListener('change', (event) => {
       saveSettings({ useCache: event.target.checked });
+    });
+  }
+
+  if (elements.settingArtworkSource) {
+    elements.settingArtworkSource.value = selectedArtworkSource();
+    elements.settingArtworkSource.addEventListener('change', (event) => {
+      const artworkSource = VALID_ARTWORK_SOURCES.has(event.target.value)
+        ? event.target.value
+        : DEFAULT_ARTWORK_SOURCE;
+      saveSettings({ artworkSource });
+      if (currentView === 'songs') {
+        void loadSavedLyrics();
+      }
     });
   }
 
