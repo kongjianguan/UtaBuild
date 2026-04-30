@@ -64,6 +64,18 @@
           </div>
           <input type="checkbox" id="setting-use-cache" />
         </label>
+        <label class="settings-item settings-item--select" for="setting-artwork-source">
+          <div class="settings-item__text">
+            <span class="settings-item__label">歌曲图片源</span>
+            <span class="settings-item__description">默认先用UtaTen；无图时自动尝试QQ音乐和网易云</span>
+          </div>
+          <select id="setting-artwork-source" class="settings-select">
+            <option value="auto">自动</option>
+            <option value="utaten">UtaTen</option>
+            <option value="qq">QQ音乐</option>
+            <option value="netease">网易云音乐</option>
+          </select>
+        </label>
         <button id="setting-clear-cache" type="button" class="settings-item settings-item--button">
           <div class="settings-item__text">
             <span class="settings-item__label">清除缓存</span>

@@ -508,6 +508,7 @@ body,
 }
 
 .settings-item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -615,6 +616,52 @@ body,
 .settings-item input[type="checkbox"]:checked::before {
   transform: translateX(22px);
   box-shadow: 0 8px 18px rgba(18, 48, 80, 0.22);
+}
+
+.settings-select {
+  min-width: 126px;
+  max-width: 42vw;
+  padding: 9px 34px 9px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.46), transparent 44%),
+    linear-gradient(135deg, rgba(74, 144, 217, 0.16), rgba(125, 196, 255, 0.08)),
+    var(--glass-bg);
+  box-shadow:
+    0 9px 20px rgba(35, 63, 99, 0.10),
+    0 1px 0 rgba(255, 255, 255, 0.62) inset;
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.settings-item--select {
+  cursor: default;
+}
+
+.settings-item--select::after {
+  content: "⌄";
+  position: absolute;
+  right: 26px;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  pointer-events: none;
+}
+
+.settings-select:focus-visible {
+  border-color: rgba(74, 144, 217, 0.54);
+  box-shadow:
+    0 0 0 3px rgba(74, 144, 217, 0.18),
+    0 12px 26px rgba(35, 63, 99, 0.14);
 }
 
 .settings-subpanel {

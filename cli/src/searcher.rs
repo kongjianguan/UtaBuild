@@ -16,6 +16,25 @@ pub struct SongPageMetadata {
     pub cover_url: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArtworkSourcePreference {
+    Auto,
+    UtaTen,
+    QqMusic,
+    Netease,
+}
+
+impl ArtworkSourcePreference {
+    pub fn from_setting(value: Option<&str>) -> Self {
+        match value.map(str::trim).map(str::to_ascii_lowercase).as_deref() {
+            Some("utaten") => Self::UtaTen,
+            Some("qq") | Some("qqmusic") | Some("qq_music") => Self::QqMusic,
+            Some("netease") | Some("neteasecloud") | Some("netease_cloud") => Self::Netease,
+            _ => Self::Auto,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ArtistInfo {
     pub artist: String,
@@ -552,6 +571,379 @@ impl UtaTenSearcher {
         SongPageMetadata { album, cover_url }
     }
 
+    fn merge_album_cover(
+        primary: SongPageMetadata,
+        fallback: SongPageMetadata,
+    ) -> SongPageMetadata {
+        SongPageMetadata {
+            album: primary.album.or(fallback.album),
+            cover_url: primary.cover_url.or(fallback.cover_url),
+        }
+    }
+
+    fn song_query(title: &str, artist: Option<&str>) -> String {
+        match artist.map(str::trim).filter(|value| !value.is_empty()) {
+            Some(artist) => format!("{} {}", title.trim(), artist),
+            None => title.trim().to_string(),
+        }
+    }
+
+    fn score_artwork_candidate(
+        candidate_title: Option<&str>,
+        candidate_artist: Option<&str>,
+        title: &str,
+        artist: Option<&str>,
+    ) -> i32 {
+        let normalize = |value: &str| {
+            value.to_ascii_lowercase().replace(
+                [' ', '　', '-', '_', '・', '／', '/', '(', ')', '[', ']'],
+                "",
+            )
+        };
+        let expected_title = normalize(title);
+        let expected_artist = artist.map(normalize).unwrap_or_default();
+        let candidate_title = candidate_title.map(normalize).unwrap_or_default();
+        let candidate_artist = candidate_artist.map(normalize).unwrap_or_default();
+
+        let mut score = 0;
+        if !expected_title.is_empty() && candidate_title == expected_title {
+            score += 80;
+        } else if !expected_title.is_empty() && candidate_title.contains(&expected_title) {
+            score += 45;
+        } else if !candidate_title.is_empty() && expected_title.contains(&candidate_title) {
+            score += 25;
+        }
+
+        if !expected_artist.is_empty() && candidate_artist == expected_artist {
+            score += 35;
+        } else if !expected_artist.is_empty() && candidate_artist.contains(&expected_artist) {
+            score += 18;
+        }
+
+        score
+    }
+
+    fn extract_qq_music_artwork_from_json(
+        value: &serde_json::Value,
+        title: &str,
+        artist: Option<&str>,
+    ) -> Option<SongPageMetadata> {
+        let songs = value
+            .pointer("/data/song/list")
+            .and_then(|value| value.as_array())
+            .or_else(|| {
+                value
+                    .pointer("/req_0/data/body/item_song")
+                    .and_then(|value| value.as_array())
+            })?;
+
+        songs
+            .iter()
+            .filter_map(|song| {
+                let album = song
+                    .pointer("/album/name")
+                    .and_then(|value| value.as_str())
+                    .or_else(|| song.get("albumname").and_then(|value| value.as_str()))
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string);
+                let album_mid = song
+                    .pointer("/album/mid")
+                    .and_then(|value| value.as_str())
+                    .or_else(|| song.get("albummid").and_then(|value| value.as_str()))
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())?;
+                let song_title = song
+                    .get("name")
+                    .and_then(|value| value.as_str())
+                    .or_else(|| song.get("songname").and_then(|value| value.as_str()))
+                    .or_else(|| song.get("title").and_then(|value| value.as_str()));
+                let singer = song
+                    .get("singer")
+                    .and_then(|value| value.as_array())
+                    .map(|singers| {
+                        singers
+                            .iter()
+                            .filter_map(|value| value.get("name").and_then(|name| name.as_str()))
+                            .collect::<Vec<_>>()
+                            .join("/")
+                    })
+                    .filter(|value| !value.is_empty());
+                let score =
+                    Self::score_artwork_candidate(song_title, singer.as_deref(), title, artist);
+                let cover_url = format!(
+                    "https://y.gtimg.cn/music/photo_new/T002R1200x1200M000{}.jpg?max_age=2592000",
+                    album_mid
+                );
+                Some((
+                    score,
+                    SongPageMetadata {
+                        album,
+                        cover_url: Some(cover_url),
+                    },
+                ))
+            })
+            .max_by_key(|(score, _)| *score)
+            .map(|(_, metadata)| metadata)
+    }
+
+    fn extract_netease_album_artwork_from_json(
+        value: &serde_json::Value,
+        title: &str,
+        artist: Option<&str>,
+    ) -> Option<SongPageMetadata> {
+        let albums = value
+            .pointer("/result/albums")
+            .and_then(|value| value.as_array())?;
+
+        albums
+            .iter()
+            .filter_map(|album_value| {
+                let album = album_value
+                    .get("name")
+                    .and_then(|value| value.as_str())
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string);
+                let cover_url = album_value
+                    .get("picUrl")
+                    .or_else(|| album_value.get("blurPicUrl"))
+                    .and_then(|value| value.as_str())
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string)?;
+                let album_artist = album_value
+                    .get("artist")
+                    .and_then(|value| value.get("name"))
+                    .and_then(|value| value.as_str())
+                    .map(str::to_string)
+                    .or_else(|| {
+                        album_value
+                            .get("artists")
+                            .and_then(|value| value.as_array())
+                            .map(|artists| {
+                                artists
+                                    .iter()
+                                    .filter_map(|value| {
+                                        value.get("name").and_then(|name| name.as_str())
+                                    })
+                                    .collect::<Vec<_>>()
+                                    .join("/")
+                            })
+                            .filter(|value| !value.is_empty())
+                    });
+                let score = Self::score_artwork_candidate(
+                    album.as_deref(),
+                    album_artist.as_deref(),
+                    title,
+                    artist,
+                );
+                Some((
+                    score,
+                    SongPageMetadata {
+                        album,
+                        cover_url: Some(cover_url),
+                    },
+                ))
+            })
+            .max_by_key(|(score, _)| *score)
+            .map(|(_, metadata)| metadata)
+    }
+
+    fn extract_netease_artwork_from_json(
+        value: &serde_json::Value,
+        title: &str,
+        artist: Option<&str>,
+    ) -> Option<SongPageMetadata> {
+        let songs = value
+            .pointer("/result/songs")
+            .and_then(|value| value.as_array())?;
+
+        songs
+            .iter()
+            .filter_map(|song| {
+                let album_value = song.get("album").or_else(|| song.get("al"))?;
+                let album = album_value
+                    .get("name")
+                    .and_then(|value| value.as_str())
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string);
+                let cover_url = album_value
+                    .get("picUrl")
+                    .or_else(|| album_value.get("pic_url"))
+                    .and_then(|value| value.as_str())
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string)?;
+                let song_title = song.get("name").and_then(|value| value.as_str());
+                let artists = song
+                    .get("artists")
+                    .or_else(|| song.get("ar"))
+                    .and_then(|value| value.as_array())
+                    .map(|artists| {
+                        artists
+                            .iter()
+                            .filter_map(|value| value.get("name").and_then(|name| name.as_str()))
+                            .collect::<Vec<_>>()
+                            .join("/")
+                    })
+                    .filter(|value| !value.is_empty());
+                let score =
+                    Self::score_artwork_candidate(song_title, artists.as_deref(), title, artist);
+                Some((
+                    score,
+                    SongPageMetadata {
+                        album,
+                        cover_url: Some(cover_url),
+                    },
+                ))
+            })
+            .max_by_key(|(score, _)| *score)
+            .map(|(_, metadata)| metadata)
+    }
+
+    async fn fetch_qq_music_artwork(
+        &self,
+        title: &str,
+        artist: Option<&str>,
+    ) -> Option<SongPageMetadata> {
+        let query = Self::song_query(title, artist);
+        if query.is_empty() {
+            return None;
+        }
+
+        let search_id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| format!("{}0000", duration.as_millis()))
+            .unwrap_or_else(|_| "10000000000000000".to_string());
+        let request_body = serde_json::json!({
+            "comm": {
+                "ct": "11",
+                "cv": "1003006",
+                "v": "1003006",
+                "os_ver": "15",
+                "phonetype": "24122RKC7C",
+                "tmeAppID": "qqmusiclight",
+                "nettype": "NETWORK_WIFI"
+            },
+            "req_0": {
+                "method": "DoSearchForQQMusicLite",
+                "module": "music.search.SearchCgiService",
+                "param": {
+                    "search_id": search_id,
+                    "remoteplace": "search.android.keyboard",
+                    "query": query,
+                    "search_type": 0,
+                    "num_per_page": 8,
+                    "page_num": 1,
+                    "highlight": 0,
+                    "nqc_flag": 0,
+                    "page_id": 1,
+                    "grp": 1
+                }
+            }
+        });
+
+        let response = self
+            .client
+            .post("https://u.y.qq.com/cgi-bin/musicu.fcg")
+            .header(reqwest::header::REFERER, "https://y.qq.com/")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(request_body.to_string())
+            .send()
+            .await
+            .ok()?;
+        let body = response.text().await.ok()?;
+        let json = serde_json::from_str::<serde_json::Value>(&body).ok()?;
+        Self::extract_qq_music_artwork_from_json(&json, title, artist)
+    }
+
+    async fn fetch_netease_artwork(
+        &self,
+        title: &str,
+        artist: Option<&str>,
+    ) -> Option<SongPageMetadata> {
+        let query = Self::song_query(title, artist);
+        if query.is_empty() {
+            return None;
+        }
+
+        let response = self
+            .client
+            .post("https://music.163.com/api/search/get/web")
+            .header(reqwest::header::REFERER, "https://music.163.com/")
+            .form(&[
+                ("s", query.as_str()),
+                ("type", "1"),
+                ("limit", "8"),
+                ("offset", "0"),
+            ])
+            .send()
+            .await
+            .ok()?;
+        let body = response.text().await.ok()?;
+        let json = serde_json::from_str::<serde_json::Value>(&body).ok()?;
+        if let Some(metadata) = Self::extract_netease_artwork_from_json(&json, title, artist) {
+            return Some(metadata);
+        }
+
+        let response = self
+            .client
+            .post("https://music.163.com/api/search/get/web")
+            .header(reqwest::header::REFERER, "https://music.163.com/")
+            .form(&[
+                ("s", query.as_str()),
+                ("type", "10"),
+                ("limit", "8"),
+                ("offset", "0"),
+            ])
+            .send()
+            .await
+            .ok()?;
+        let body = response.text().await.ok()?;
+        let json = serde_json::from_str::<serde_json::Value>(&body).ok()?;
+        Self::extract_netease_album_artwork_from_json(&json, title, artist)
+    }
+
+    pub async fn resolve_artwork_metadata(
+        &self,
+        title: &str,
+        artist: Option<&str>,
+        utaten_metadata: SongPageMetadata,
+        preference: ArtworkSourcePreference,
+    ) -> SongPageMetadata {
+        match preference {
+            ArtworkSourcePreference::UtaTen => utaten_metadata,
+            ArtworkSourcePreference::QqMusic => {
+                if let Some(metadata) = self.fetch_qq_music_artwork(title, artist).await {
+                    Self::merge_album_cover(metadata, utaten_metadata)
+                } else {
+                    utaten_metadata
+                }
+            }
+            ArtworkSourcePreference::Netease => {
+                if let Some(metadata) = self.fetch_netease_artwork(title, artist).await {
+                    Self::merge_album_cover(metadata, utaten_metadata)
+                } else {
+                    utaten_metadata
+                }
+            }
+            ArtworkSourcePreference::Auto => {
+                if utaten_metadata.cover_url.is_some() {
+                    return utaten_metadata;
+                }
+                if let Some(metadata) = self.fetch_qq_music_artwork(title, artist).await {
+                    return Self::merge_album_cover(metadata, utaten_metadata);
+                }
+                if let Some(metadata) = self.fetch_netease_artwork(title, artist).await {
+                    return Self::merge_album_cover(metadata, utaten_metadata);
+                }
+                utaten_metadata
+            }
+        }
+    }
+
     pub async fn get_lyrics_with_ruby(&self, lyric_url: &str) -> Option<String> {
         self.rate_limit().await;
 
@@ -856,7 +1248,14 @@ impl UtaTenSearcher {
         );
 
         if let Some(html) = self.get_lyrics_with_ruby(&lyrics_url).await {
-            let metadata = Self::extract_song_page_metadata(&html);
+            let metadata = self
+                .resolve_artwork_metadata(
+                    &found_title,
+                    Some(&found_artist),
+                    Self::extract_song_page_metadata(&html),
+                    ArtworkSourcePreference::Auto,
+                )
+                .await;
             let annotations = self.extract_ruby_lyrics(&html);
             self.cache
                 .lyrics()
@@ -924,6 +1323,158 @@ mod tests {
             Some("https://cdn.utaten.com/img/jacket/firebird.jpg")
         );
         assert_eq!(metadata.album.as_deref(), Some("Wahl"));
+    }
+
+    #[test]
+    fn parses_artwork_source_preference_from_setting() {
+        assert_eq!(
+            ArtworkSourcePreference::from_setting(Some("qqmusic")),
+            ArtworkSourcePreference::QqMusic
+        );
+        assert_eq!(
+            ArtworkSourcePreference::from_setting(Some("NetEase_Cloud")),
+            ArtworkSourcePreference::Netease
+        );
+        assert_eq!(
+            ArtworkSourcePreference::from_setting(Some("utaten")),
+            ArtworkSourcePreference::UtaTen
+        );
+        assert_eq!(
+            ArtworkSourcePreference::from_setting(Some("unknown")),
+            ArtworkSourcePreference::Auto
+        );
+    }
+
+    #[test]
+    fn extracts_best_qq_music_artwork_candidate() {
+        let json = serde_json::json!({
+            "data": {
+                "song": {
+                    "list": [
+                        {
+                            "name": "Other Song",
+                            "singer": [{ "name": "Other" }],
+                            "album": { "name": "Other Album", "mid": "IGNORE" }
+                        },
+                        {
+                            "name": "FIRE BIRD",
+                            "singer": [{ "name": "Roselia" }],
+                            "album": { "name": "Wahl", "mid": "003abcXYZ" }
+                        }
+                    ]
+                }
+            }
+        });
+
+        let metadata =
+            UtaTenSearcher::extract_qq_music_artwork_from_json(&json, "FIRE BIRD", Some("Roselia"))
+                .expect("QQ Music artwork should parse");
+
+        assert_eq!(metadata.album.as_deref(), Some("Wahl"));
+        assert_eq!(
+            metadata.cover_url.as_deref(),
+            Some(
+                "https://y.gtimg.cn/music/photo_new/T002R1200x1200M000003abcXYZ.jpg?max_age=2592000"
+            )
+        );
+    }
+
+    #[test]
+    fn extracts_qq_musicu_artwork_candidate() {
+        let json = serde_json::json!({
+            "req_0": {
+                "code": 0,
+                "data": {
+                    "body": {
+                        "item_song": [
+                            {
+                                "title": "FIRE BIRD",
+                                "singer": [{ "name": "Roselia" }],
+                                "album": { "name": "FIRE BIRD", "mid": "001mfjtg0LrzhN" }
+                            }
+                        ]
+                    }
+                }
+            }
+        });
+
+        let metadata =
+            UtaTenSearcher::extract_qq_music_artwork_from_json(&json, "FIRE BIRD", Some("Roselia"))
+                .expect("QQ musicu artwork should parse");
+
+        assert_eq!(metadata.album.as_deref(), Some("FIRE BIRD"));
+        assert_eq!(
+            metadata.cover_url.as_deref(),
+            Some(
+                "https://y.gtimg.cn/music/photo_new/T002R1200x1200M000001mfjtg0LrzhN.jpg?max_age=2592000"
+            )
+        );
+    }
+
+    #[test]
+    fn extracts_best_netease_artwork_candidate() {
+        let json = serde_json::json!({
+            "result": {
+                "songs": [
+                    {
+                        "name": "Other Song",
+                        "artists": [{ "name": "Other" }],
+                        "album": { "name": "Other Album", "picUrl": "https://example.com/other.jpg" }
+                    },
+                    {
+                        "name": "BLACK SHOUT",
+                        "artists": [{ "name": "Roselia" }],
+                        "album": { "name": "Für immer", "picUrl": "https://p2.music.126.net/cover.jpg" }
+                    }
+                ]
+            }
+        });
+
+        let metadata = UtaTenSearcher::extract_netease_artwork_from_json(
+            &json,
+            "BLACK SHOUT",
+            Some("Roselia"),
+        )
+        .expect("NetEase artwork should parse");
+
+        assert_eq!(metadata.album.as_deref(), Some("Für immer"));
+        assert_eq!(
+            metadata.cover_url.as_deref(),
+            Some("https://p2.music.126.net/cover.jpg")
+        );
+    }
+
+    #[test]
+    fn extracts_best_netease_album_artwork_candidate() {
+        let json = serde_json::json!({
+            "result": {
+                "albums": [
+                    {
+                        "name": "Other Album",
+                        "artist": { "name": "Other" },
+                        "picUrl": "https://p1.music.126.net/other.jpg"
+                    },
+                    {
+                        "name": "FIRE BIRD",
+                        "artist": { "name": "Roselia" },
+                        "picUrl": "https://p1.music.126.net/firebird.jpg"
+                    }
+                ]
+            }
+        });
+
+        let metadata = UtaTenSearcher::extract_netease_album_artwork_from_json(
+            &json,
+            "FIRE BIRD",
+            Some("Roselia"),
+        )
+        .expect("NetEase album artwork should parse");
+
+        assert_eq!(metadata.album.as_deref(), Some("FIRE BIRD"));
+        assert_eq!(
+            metadata.cover_url.as_deref(),
+            Some("https://p1.music.126.net/firebird.jpg")
+        );
     }
 
     #[test]
