@@ -10,6 +10,12 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info};
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SongPageMetadata {
+    pub album: Option<String>,
+    pub cover_url: Option<String>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ArtistInfo {
     pub artist: String,
@@ -112,6 +118,9 @@ impl UtaTenSearcher {
                 );
                 headers
             })
+            // UtaTen is directly reachable on supported networks; avoid inheriting
+            // desktop/WSL proxy settings that can misroute this Japan-hosted site.
+            .no_proxy()
             .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
             .build()
             .unwrap_or_else(|_| Client::new());
@@ -341,7 +350,7 @@ impl UtaTenSearcher {
         let row_selector = Selector::parse("tr").unwrap();
         let artist_cell_selector =
             Selector::parse("td.searchResult__artist, td.lyricList__artist").unwrap();
-        let link_selector = Selector::parse("a[href*=\"/lyric/\"]").unwrap();
+        let link_selector = Selector::parse(r#"a[href*="/lyric/"]"#).unwrap();
 
         let mut results: Vec<SearchResult> = Vec::new();
         let mut seen_urls: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -426,7 +435,7 @@ impl UtaTenSearcher {
 
     fn extract_pagination(&self, document: &Html, current_page: u32) -> SearchPagination {
         let pager_selector = Selector::parse(".pager").unwrap();
-        let link_selector = Selector::parse("a[href*=\"page=\"]").unwrap();
+        let link_selector = Selector::parse(r#"a[href*="page="]"#).unwrap();
 
         let mut total_pages = current_page;
         let mut has_next = false;
@@ -461,6 +470,86 @@ impl UtaTenSearcher {
         } else {
             digits.parse::<u32>().ok()
         }
+    }
+
+    fn normalize_utaten_asset_url(raw_url: &str) -> Option<String> {
+        let value = raw_url.trim();
+        if value.is_empty() || value.starts_with("data:") {
+            return None;
+        }
+
+        if value.starts_with("https://") || value.starts_with("http://") {
+            return Some(value.to_string());
+        }
+
+        if value.starts_with("//") {
+            return Some(format!("https:{}", value));
+        }
+
+        if value.starts_with('/') {
+            return Some(format!("{}{}", BASE_URL, value));
+        }
+
+        Some(format!("{}/{}", BASE_URL, value.trim_start_matches("./")))
+    }
+
+    pub fn extract_song_page_metadata(html_content: &str) -> SongPageMetadata {
+        let document = Html::parse_document(html_content);
+
+        let image_meta_selector = Selector::parse(
+            r#"meta[property="og:image"], meta[name="twitter:image"], meta[itemprop="image"]"#,
+        )
+        .unwrap();
+        let image_selector = Selector::parse(
+            r#"img[src*="/img/"], img[src*="jacket"], img[data-src*="/img/"], img[data-src*="jacket"]"#,
+        )
+        .unwrap();
+        let album_meta_selector = Selector::parse(
+            r#"meta[property="music:album"], meta[name="music:album"], meta[itemprop="inAlbum"]"#,
+        )
+        .unwrap();
+        let album_link_selector =
+            Selector::parse(r#"a[href*="/album/"], .album a, .songAlbum a"#).unwrap();
+
+        let cover_url = document
+            .select(&image_meta_selector)
+            .filter_map(|element| element.value().attr("content"))
+            .filter_map(Self::normalize_utaten_asset_url)
+            .find(|url| {
+                let lower = url.to_ascii_lowercase();
+                !lower.contains("logo") && !lower.contains("noimage")
+            })
+            .or_else(|| {
+                document
+                    .select(&image_selector)
+                    .filter_map(|element| {
+                        element
+                            .value()
+                            .attr("data-src")
+                            .or_else(|| element.value().attr("src"))
+                    })
+                    .filter_map(Self::normalize_utaten_asset_url)
+                    .find(|url| {
+                        let lower = url.to_ascii_lowercase();
+                        !lower.contains("logo") && !lower.contains("noimage")
+                    })
+            });
+
+        let album = document
+            .select(&album_meta_selector)
+            .filter_map(|element| element.value().attr("content"))
+            .map(str::trim)
+            .find(|value| !value.is_empty())
+            .map(str::to_string)
+            .or_else(|| {
+                document
+                    .select(&album_link_selector)
+                    .map(|element| element.text().collect::<String>())
+                    .map(|text| text.trim().to_string())
+                    .find(|text| !text.is_empty())
+            });
+
+        SongPageMetadata { album, cover_url }
     }
 
     pub async fn get_lyrics_with_ruby(&self, lyric_url: &str) -> Option<String> {
@@ -627,11 +716,17 @@ impl UtaTenSearcher {
             LyricsSearchResponse::new(title.to_string(), artist.map(|s| s.to_string()));
 
         if let Some(cached_entry) = self.cache.search().get(title, artist).await {
-            info!("\n=== [SEARCH CACHE HIT] ===");
+            info!(
+                "
+=== [SEARCH CACHE HIT] ==="
+            );
             info!("  Title: {}", title);
             info!("  Artist: {:?}", artist);
             info!("  Results: {}", cached_entry.search_results.len());
-            info!("===================\n");
+            info!(
+                "===================
+"
+            );
 
             result.search_results = cached_entry
                 .search_results
@@ -647,11 +742,17 @@ impl UtaTenSearcher {
             return result;
         }
 
-        info!("\n=== [SEARCH CACHE MISS] ===");
+        info!(
+            "
+=== [SEARCH CACHE MISS] ==="
+        );
         info!("  Title: {}", title);
         info!("  Artist: {:?}", artist);
         info!("  Fetching from UtaTen...");
-        info!("===================\n");
+        info!(
+            "===================
+"
+        );
 
         let search_results = self.search(title, artist).await;
         result.search_results = search_results.clone();
@@ -719,12 +820,18 @@ impl UtaTenSearcher {
         debug!("select_result: checking cache...");
 
         if let Some(cached_annotations) = self.cache.lyrics().get(&lyrics_url).await {
-            info!("\n=== [CACHE HIT] ===");
+            info!(
+                "
+=== [CACHE HIT] ==="
+            );
             info!("  URL: {}", lyrics_url);
             info!("  Title: {}", found_title);
             info!("  Artist: {}", found_artist);
             info!("  Elements: {}", cached_annotations.len());
-            info!("===================\n");
+            info!(
+                "===================
+"
+            );
 
             result.ruby_annotations = cached_annotations;
             result.status = "success".to_string();
@@ -735,32 +842,47 @@ impl UtaTenSearcher {
             return result;
         }
 
-        info!("\n=== [CACHE MISS] ===");
+        info!(
+            "
+=== [CACHE MISS] ==="
+        );
         info!("  URL: {}", lyrics_url);
         info!("  Title: {}", found_title);
         info!("  Artist: {}", found_artist);
         info!("  Fetching from UtaTen...");
-        info!("===================\n");
+        info!(
+            "===================
+"
+        );
 
         if let Some(html) = self.get_lyrics_with_ruby(&lyrics_url).await {
+            let metadata = Self::extract_song_page_metadata(&html);
             let annotations = self.extract_ruby_lyrics(&html);
             self.cache
                 .lyrics()
                 .insert(lyrics_url.clone(), annotations.clone())
                 .await;
 
-            info!("\n=== [CACHE STORED] ===");
+            info!(
+                "
+=== [CACHE STORED] ==="
+            );
             info!("  URL: {}", lyrics_url);
             info!("  Title: {}", found_title);
             info!("  Artist: {}", found_artist);
             info!("  Elements: {}", annotations.len());
-            info!("===================\n");
+            info!(
+                "===================
+"
+            );
 
             result.ruby_annotations = annotations;
             result.status = "success".to_string();
             result.found_title = found_title;
             result.found_artist = found_artist;
             result.lyrics_url = lyrics_url;
+            result.found_album = metadata.album;
+            result.cover_url = metadata.cover_url;
             result.selected_index = index as i32;
         } else {
             result.status = "error".to_string();
@@ -784,6 +906,25 @@ impl Default for UtaTenSearcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn extracts_song_page_metadata_from_og_and_album_link() {
+        let html = r#"
+            <html><head>
+              <meta property="og:image" content="//cdn.utaten.com/img/jacket/firebird.jpg">
+            </head><body>
+              <a href="/album/test/">Wahl</a>
+            </body></html>
+        "#;
+
+        let metadata = UtaTenSearcher::extract_song_page_metadata(html);
+
+        assert_eq!(
+            metadata.cover_url.as_deref(),
+            Some("https://cdn.utaten.com/img/jacket/firebird.jpg")
+        );
+        assert_eq!(metadata.album.as_deref(), Some("Wahl"));
+    }
 
     #[test]
     fn builds_quick_title_search_request_without_artist_filter() {
