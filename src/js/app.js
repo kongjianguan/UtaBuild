@@ -119,11 +119,12 @@ async function initTauri() {
     }
 
     if (cmd === 'hydrate_saved_lyrics_metadata') {
+      const refreshSuffix = args?.forceRefresh ? '+R' : '';
       return {
         status: 'success',
         lyrics_url: args.url,
         album: args.url === '/lyric/mock2' ? 'Für immer' : '',
-        cover_url: args.url === '/lyric/mock2' ? 'https://placehold.co/160x160/111827/d1d5db?text=BS' : '',
+        cover_url: args.url === '/lyric/mock2' || args?.forceRefresh ? `https://placehold.co/160x160/111827/d1d5db?text=BS${refreshSuffix}` : '',
       };
     }
 
@@ -773,6 +774,7 @@ function buildSongItem(song) {
   button.type = 'button';
   button.className = 'song-item';
   button.dataset.lyricsUrl = song.lyrics_url || '';
+  button.draggable = false;
 
   const art = document.createElement('span');
   art.className = 'song-item__art';
@@ -868,6 +870,47 @@ function positionSongContextMenu(menu, clientX, clientY) {
   menu.style.top = `${y}px`;
 }
 
+
+async function refreshSavedSongArtwork(song) {
+  if (!song?.lyrics_url) {
+    showError('已保存歌词缺少URL');
+    return;
+  }
+
+  if (hydratingSongMetadataUrls.has(song.lyrics_url)) {
+    showError('正在刷新图片...');
+    return;
+  }
+
+  hydratingSongMetadataUrls.add(song.lyrics_url);
+  showLoading();
+  try {
+    const metadata = await invoke('hydrate_saved_lyrics_metadata', {
+      url: song.lyrics_url,
+      forceRefresh: true,
+    });
+
+    if (metadata?.status === 'success') {
+      song.cover_url = metadata.cover_url || song.cover_url || '';
+      song.album = metadata.album || song.album || '';
+      updateRenderedSongMetadata({
+        ...metadata,
+        cover_url: song.cover_url,
+        album: song.album,
+      });
+      showError(song.cover_url ? '图片已刷新' : '未从UtaTen找到歌曲图片');
+    } else {
+      showError(metadata?.error || '刷新图片失败');
+    }
+  } catch (err) {
+    console.error('Refresh saved song artwork error:', err);
+    showError(`刷新图片失败: ${err}`);
+  } finally {
+    hydratingSongMetadataUrls.delete(song.lyrics_url);
+    hideLoading();
+  }
+}
+
 async function deleteSavedSong(song) {
   if (!song?.lyrics_url) {
     showError('已保存歌词缺少URL');
@@ -899,10 +942,16 @@ function showSongContextMenu(song, trigger, event) {
   menu.className = 'long-press-menu';
   menu.setAttribute('role', 'menu');
   menu.innerHTML = `
-    <button class="long-press-menu__item long-press-menu__item--danger" type="button" role="menuitem">删除</button>
+    <button class="long-press-menu__item long-press-menu__item--refresh" type="button" role="menuitem" data-song-action="refresh-art">刷新图片</button>
+    <button class="long-press-menu__item long-press-menu__item--danger" type="button" role="menuitem" data-song-action="delete">删除</button>
   `;
 
-  menu.querySelector('button').addEventListener('click', async () => {
+  menu.querySelector('[data-song-action="refresh-art"]').addEventListener('click', async () => {
+    closeSongContextMenu();
+    await refreshSavedSongArtwork(song);
+  });
+
+  menu.querySelector('[data-song-action="delete"]').addEventListener('click', async () => {
     closeSongContextMenu();
     await deleteSavedSong(song);
   });

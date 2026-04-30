@@ -298,6 +298,19 @@ body,
   backdrop-filter: blur(20px) saturate(170%);
   -webkit-backdrop-filter: blur(20px) saturate(170%);
   transition: transform 0.18s, border-color 0.2s, box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.song-item,
+.song-item *,
+.bottom-menu,
+.bottom-menu * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .song-item:hover {
@@ -364,7 +377,7 @@ body,
 .long-press-menu {
   position: fixed;
   z-index: 1200;
-  min-width: 132px;
+  min-width: 148px;
   padding: 7px;
   opacity: 0;
   transform: translateY(8px) scale(0.96);
@@ -399,16 +412,28 @@ body,
   font-weight: 700;
   text-align: left;
   cursor: pointer;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   transition: background 0.16s, color 0.16s, transform 0.12s;
 }
 
 .long-press-menu__item:hover,
 .long-press-menu__item:focus-visible {
-  background: rgba(231, 76, 60, 0.12);
+  background: rgba(74, 144, 217, 0.12);
+}
+
+.long-press-menu__item--refresh {
+  color: var(--primary);
 }
 
 .long-press-menu__item--danger {
   color: var(--danger);
+}
+
+.long-press-menu__item--danger:hover,
+.long-press-menu__item--danger:focus-visible {
+  background: rgba(231, 76, 60, 0.12);
 }
 
 .search-history__title {
@@ -1111,6 +1136,10 @@ button.secondary:disabled {
   cursor: pointer;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.24);
   transition: color 0.22s, transform 0.22s;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .bottom-menu__item.active {
