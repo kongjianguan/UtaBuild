@@ -192,6 +192,9 @@ const elements = {
   settingLspLog: $('#setting-lsp-log'),
   lspLogPanel: $('#lsp-log-panel'),
   settingViewLspLog: $('#setting-view-lsp-log'),
+  lspSettingsView: $('#lsp-settings-view'),
+  lspSettingsBackBtn: $('#lsp-settings-back-btn'),
+  settingGotoLsp: $('#setting-goto-lsp'),
   lspLogView: $('#lsp-log-view'),
   lspLogBackBtn: $('#lsp-log-back-btn'),
   lspLogRefreshBtn: $('#lsp-log-refresh-btn'),
@@ -256,7 +259,7 @@ let lastSongsScrollY = 0;
 let clearCacheConfirmationActive = false;
 let activeConfirmationCleanup = null;
 
-// 当前视图状态：'search' | 'songs' | 'settings' | 'lspLogs' | 'results' | 'lyrics'
+// 当前视图状态：'search' | 'songs' | 'settings' | 'lspSettings' | 'lspLogs' | 'results' | 'lyrics'
 let currentView = 'search';
 const SONGS_FIRST_LEVEL_SCROLLBAR_DISABLED_CLASS = 'songs-first-level-scrollbar-disabled';
 
@@ -401,6 +404,7 @@ function switchToSearch(options = {}) {
   show(elements.searchHeader);
   hide(elements.songsView);
   hide(elements.settingsView);
+  hide(elements.lspSettingsView);
   hide(elements.lspLogView);
   hide(elements.resultList);
   hide(elements.lyricsView);
@@ -416,6 +420,7 @@ function switchToSettings(options = {}) {
   hide(elements.searchHeader);
   hide(elements.songsView);
   show(elements.settingsView);
+  hide(elements.lspSettingsView);
   hide(elements.lspLogView);
   hide(elements.resultList);
   hide(elements.lyricsView);
@@ -431,6 +436,7 @@ function switchToSongs(options = {}) {
   hide(elements.searchHeader);
   show(elements.songsView);
   hide(elements.settingsView);
+  hide(elements.lspSettingsView);
   hide(elements.lspLogView);
   hide(elements.resultList);
   hide(elements.lyricsView);
@@ -447,6 +453,7 @@ function switchToResults() {
   hide(elements.searchHeader);
   hide(elements.songsView);
   hide(elements.settingsView);
+  hide(elements.lspSettingsView);
   hide(elements.lspLogView);
   show(elements.resultList);
   hide(elements.lyricsView);
@@ -458,6 +465,7 @@ function switchToLyrics(options = {}) {
   hide(elements.searchHeader);
   hide(elements.songsView);
   hide(elements.settingsView);
+  hide(elements.lspSettingsView);
   hide(elements.lspLogView);
   hide(elements.resultList);
   show(elements.lyricsView);
@@ -472,11 +480,28 @@ function switchToLspLogs() {
   hide(elements.searchHeader);
   hide(elements.songsView);
   hide(elements.settingsView);
+  hide(elements.lspSettingsView);
   show(elements.lspLogView);
   hide(elements.resultList);
   hide(elements.lyricsView);
   setCurrentView('lspLogs');
   setBottomMenuVisible(false);
+}
+
+function switchToLspSettings(options = {}) {
+  hide(elements.searchHeader);
+  hide(elements.songsView);
+  hide(elements.settingsView);
+  show(elements.lspSettingsView);
+  hide(elements.lspLogView);
+  hide(elements.resultList);
+  hide(elements.lyricsView);
+  setCurrentView('lspSettings');
+  setBottomMenuVisible(false);
+  syncLspLogVisibility();
+  if (options.resetScroll !== false) {
+    resetViewportToTop();
+  }
 }
 
 // 用户操作切换视图（pushState，用于前进导航）
@@ -519,6 +544,14 @@ function showLspLogs() {
     history.pushState({ view: 'lspLogs' }, '', '');
   }
   void viewLspLogs();
+}
+
+function showLspSettings() {
+  saveCurrentScrollPosition();
+  switchToLspSettings({ resetScroll: true });
+  if (!isNavigatingBack) {
+    history.pushState({ view: 'lspSettings' }, '', '');
+  }
 }
 
 function showResults() {
@@ -1752,6 +1785,9 @@ function syncLspLogVisibility() {
       switchToSettings();
     }
   }
+  if (!enabled && currentView === 'lspSettings') {
+    elements.lspLogPanel.classList.add('hidden');
+  }
 }
 
 async function setBackendLspLogging(enabled) {
@@ -1899,6 +1935,16 @@ function initControls() {
     elements.lspLogBackBtn.addEventListener('click', () => handleBack());
   }
 
+  if (elements.lspSettingsBackBtn) {
+    elements.lspSettingsBackBtn.addEventListener('click', () => handleBack());
+  }
+
+  if (elements.settingGotoLsp) {
+    elements.settingGotoLsp.addEventListener('click', () => {
+      showLspSettings();
+    });
+  }
+
   if (elements.lspLogRefreshBtn) {
     elements.lspLogRefreshBtn.addEventListener('click', () => {
       void viewLspLogs();
@@ -1972,6 +2018,10 @@ function initBackButton() {
           switchToSongs();
           restoreViewScrollPosition(targetView);
           await loadSavedLyrics();
+          restoreViewScrollPosition(targetView);
+          break;
+        case 'lspSettings':
+          switchToLspSettings({ resetScroll: false });
           restoreViewScrollPosition(targetView);
           break;
         case 'lspLogs':

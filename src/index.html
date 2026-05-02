@@ -86,9 +86,25 @@
             <span class="settings-item__description">清除搜索结果、歌词缓存文件和内存缓存。</span>
           </div>
         </button>
-        <!-- ── LSP設定 ── -->
-        <div class="settings-section-title">LSP設定</div>
+        <button id="setting-goto-lsp" type="button" class="settings-item settings-item--button">
+          <div class="settings-item__text">
+            <span class="settings-item__label">LSP相关</span>
+            <span class="settings-item__description">配置LSP日志、Hi UtaBuild通知和自动跳转行为。</span>
+          </div>
+        </button>
+      </div>
+    </section>
 
+    <!-- LSP设置页面 -->
+    <section id="lsp-settings-view" class="lsp-settings-view hidden">
+      <div class="subpage-header">
+        <button id="lsp-settings-back-btn" type="button" class="secondary">設定に戻る</button>
+        <div>
+          <h2>LSP設定</h2>
+          <p>配置 LSPosed 模块的行为。</p>
+        </div>
+      </div>
+      <div class="settings-list">
         <label class="settings-item" for="setting-lsp-log">
           <div class="settings-item__text">
             <span class="settings-item__label">LSPログ</span>
