@@ -623,6 +623,11 @@ fn app_lsp_log_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(data_dir.join("utabuild").join("lsp.log"))
 }
 
+fn lsp_settings_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(data_dir.join("utabuild").join("lsp_settings.json"))
+}
+
 fn format_app_log_line(scope: &str, message: &str) -> String {
     format!(
         "[{}] {}: {}\n",
@@ -950,15 +955,63 @@ async fn clear_cache(state: State<'_, AppState>) -> Result<(), String> {
     Ok(())
 }
 
+/// Write LSP settings to a JSON file that the ContentProvider can serve.
+#[tauri::command]
+async fn set_lsp_settings(
+    app: AppHandle,
+    settings: serde_json::Value,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    // Sync lspLogEnabled to AppState
+    if let Some(enabled) = settings.get("lspLogEnabled").and_then(|v| v.as_bool()) {
+        let mut logging_enabled = state.lsp_logging_enabled.lock().await;
+        *logging_enabled = enabled;
+    }
+
+    // Write settings to file
+    let path = lsp_settings_path(&app)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let json = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+    fs::write(&path, json).map_err(|e| e.to_string())?;
+
+    write_app_lsp_log(
+        &app,
+        "settings",
+        &format!("lsp settings saved: {}", compact_json(&settings)),
+    )
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .setup(|_app| {
+        .setup(|app| {
             #[cfg(debug_assertions)]
-            if let Some(window) = _app.get_webview_window("main") {
+            if let Some(window) = app.get_webview_window("main") {
                 window.open_devtools();
             }
+
+            // Initialize LSP settings file if it doesn't exist
+            if let Ok(data_dir) = app.path().app_data_dir() {
+                let settings_path = data_dir.join("utabuild").join("lsp_settings.json");
+                if !settings_path.exists() {
+                    if let Some(parent) = settings_path.parent() {
+                        let _ = fs::create_dir_all(parent);
+                    }
+                    let defaults = serde_json::json!({
+                        "lspLogEnabled": false,
+                        "showProofPopup": true,
+                        "autoLaunchUtaBuild": true
+                    });
+                    let _ = fs::write(
+                        &settings_path,
+                        serde_json::to_string_pretty(&defaults).unwrap_or_default(),
+                    );
+                }
+            }
+
             Ok(())
         })
         .manage(AppState {
@@ -980,6 +1033,7 @@ pub fn run() {
             set_lsp_logging_enabled,
             append_lsp_log,
             get_lsp_logs,
+            set_lsp_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
