@@ -162,7 +162,7 @@ async function initTauri() {
     }
 
     if (cmd === 'get_lsp_logs') {
-      return '[Mock] 暂无lsp日志。';
+      return '[Mock] LSPログはまだありません。';
     }
     
     return null;
@@ -219,9 +219,17 @@ const elements = {
   errorToast: $('#error-toast'),
   errorMessage: $('#error-message'),
   errorClose: $('#error-close'),
+  confirmDialog: $('#confirm-dialog'),
+  confirmDialogStep: $('#confirm-dialog-step'),
+  confirmDialogTitle: $('#confirm-dialog-title'),
+  confirmDialogMessage: $('#confirm-dialog-message'),
+  confirmDialogCancel: $('#confirm-dialog-cancel'),
+  confirmDialogConfirm: $('#confirm-dialog-confirm'),
   backBtn: $('#back-btn'),
   backToResultsBtn: $('#back-to-results-btn'),
   searchHeader: $('#search-header'),
+  settingShowPopup: $('#setting-show-popup'),
+  settingAutoLaunch: $('#setting-auto-launch'),
 };
 
 // ==================== State ====================
@@ -245,9 +253,12 @@ const hydratingSongMetadataUrls = new Set();
 const viewScrollPositions = new Map();
 let isBottomMenuAutoHidden = false;
 let lastSongsScrollY = 0;
+let clearCacheConfirmationActive = false;
+let activeConfirmationCleanup = null;
 
 // 当前视图状态：'search' | 'songs' | 'settings' | 'lspLogs' | 'results' | 'lyrics'
 let currentView = 'search';
+const SONGS_FIRST_LEVEL_SCROLLBAR_DISABLED_CLASS = 'songs-first-level-scrollbar-disabled';
 
 // 导航标志：区分前进(用户操作)和后退(popstate)
 let isNavigatingBack = false;
@@ -256,6 +267,13 @@ let isNavigatingBack = false;
 
 function show(el) { el.classList.remove('hidden'); }
 function hide(el) { el.classList.add('hidden'); }
+
+function setCurrentView(view) {
+  currentView = view;
+  const isSongsFirstLevel = view === 'songs';
+  document.documentElement.classList.toggle(SONGS_FIRST_LEVEL_SCROLLBAR_DISABLED_CLASS, isSongsFirstLevel);
+  document.body.classList.toggle(SONGS_FIRST_LEVEL_SCROLLBAR_DISABLED_CLASS, isSongsFirstLevel);
+}
 
 function currentPageScrollY() {
   return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
@@ -312,6 +330,11 @@ function syncBottomMenu(activeTab) {
     const isActive = button.dataset.appTab === activeTab;
     button.classList.toggle('active', isActive);
     button.setAttribute('aria-selected', String(isActive));
+    if (isActive) {
+      button.setAttribute('aria-current', 'page');
+    } else {
+      button.removeAttribute('aria-current');
+    }
   });
 }
 
@@ -339,9 +362,7 @@ function setBottomMenuVisible(isVisible, activeTab = 'search') {
   }
 
   syncBottomMenu(activeTab);
-  if (activeTab !== 'songs') {
-    setBottomMenuAutoHidden(false);
-  }
+  setBottomMenuAutoHidden(false);
 }
 
 function firstLevelIndex(view) {
@@ -383,7 +404,7 @@ function switchToSearch(options = {}) {
   hide(elements.lspLogView);
   hide(elements.resultList);
   hide(elements.lyricsView);
-  currentView = 'search';
+  setCurrentView('search');
   setBottomMenuVisible(true, 'search');
   renderSearchHistory();
   if (options.animate) {
@@ -398,7 +419,7 @@ function switchToSettings(options = {}) {
   hide(elements.lspLogView);
   hide(elements.resultList);
   hide(elements.lyricsView);
-  currentView = 'settings';
+  setCurrentView('settings');
   setBottomMenuVisible(true, 'settings');
   if (options.animate) {
     animateFirstLevelEntry('settings', options.direction);
@@ -413,12 +434,10 @@ function switchToSongs(options = {}) {
   hide(elements.lspLogView);
   hide(elements.resultList);
   hide(elements.lyricsView);
-  currentView = 'songs';
+  setCurrentView('songs');
   setBottomMenuVisible(true, 'songs');
   lastSongsScrollY = currentPageScrollY();
-  if (lastSongsScrollY <= 24) {
-    setBottomMenuAutoHidden(false);
-  }
+  setBottomMenuAutoHidden(false);
   if (options.animate) {
     animateFirstLevelEntry('songs', options.direction);
   }
@@ -431,7 +450,7 @@ function switchToResults() {
   hide(elements.lspLogView);
   show(elements.resultList);
   hide(elements.lyricsView);
-  currentView = 'results';
+  setCurrentView('results');
   setBottomMenuVisible(false);
 }
 
@@ -442,7 +461,7 @@ function switchToLyrics(options = {}) {
   hide(elements.lspLogView);
   hide(elements.resultList);
   show(elements.lyricsView);
-  currentView = 'lyrics';
+  setCurrentView('lyrics');
   setBottomMenuVisible(false);
   if (options.resetScroll !== false) {
     resetViewportToTop();
@@ -456,7 +475,7 @@ function switchToLspLogs() {
   show(elements.lspLogView);
   hide(elements.resultList);
   hide(elements.lyricsView);
-  currentView = 'lspLogs';
+  setCurrentView('lspLogs');
   setBottomMenuVisible(false);
 }
 
@@ -526,6 +545,24 @@ const VALID_DARK_MODES = new Set(['on', 'off']);
 const VALID_ARTWORK_SOURCES = new Set(['auto', 'utaten', 'qq', 'netease']);
 const DEFAULT_USE_CACHE = true;
 const DEFAULT_ARTWORK_SOURCE = 'auto';
+const CLEAR_CACHE_CONFIRMATION_COOLDOWN_MS = 3000;
+const CLEAR_CACHE_CONFIRMATION_STEPS = [
+  {
+    title: 'キャッシュを削除',
+    message: '検索結果と歌詞キャッシュを削除します。保存済みの表示状態もリセットされます。',
+    confirmLabel: '1回目の確認',
+  },
+  {
+    title: 'もう一度確認',
+    message: 'この操作はすぐに実行され、削除したキャッシュは復元できません。',
+    confirmLabel: '2回目の確認',
+  },
+  {
+    title: '最後の確認',
+    message: '本当にキャッシュを削除する場合のみ、最後の確認を押してください。',
+    confirmLabel: '削除を実行',
+  },
+];
 
 function normalizeSettings(rawSettings = {}) {
   const settings = {};
@@ -548,6 +585,14 @@ function normalizeSettings(rawSettings = {}) {
 
   if (typeof rawSettings.lspLogEnabled === 'boolean') {
     settings.lspLogEnabled = rawSettings.lspLogEnabled;
+  }
+
+  if (typeof rawSettings.showProofPopup === 'boolean') {
+    settings.showProofPopup = rawSettings.showProofPopup;
+  }
+
+  if (typeof rawSettings.autoLaunchUtaBuild === 'boolean') {
+    settings.autoLaunchUtaBuild = rawSettings.autoLaunchUtaBuild;
   }
 
   return settings;
@@ -604,12 +649,121 @@ async function clearAllCaches() {
     currentLyrics = null;
     currentSearchQuery = null;
     isLoadingMoreResults = false;
-    showError('缓存已清除');
+    showError('キャッシュを削除しました');
   } catch (err) {
     console.error('Clear cache error:', err);
-    showError(`清除缓存失败: ${err}`);
+    showError(`キャッシュの削除に失敗しました: ${err}`);
   } finally {
     hideLoading();
+  }
+}
+
+function closeConfirmationDialog() {
+  if (activeConfirmationCleanup) {
+    activeConfirmationCleanup();
+    activeConfirmationCleanup = null;
+  }
+  if (elements.confirmDialog) {
+    hide(elements.confirmDialog);
+  }
+}
+
+function requestConfirmationStep(step, stepIndex, totalSteps) {
+  return new Promise((resolve) => {
+    if (
+      !elements.confirmDialog ||
+      !elements.confirmDialogStep ||
+      !elements.confirmDialogTitle ||
+      !elements.confirmDialogMessage ||
+      !elements.confirmDialogCancel ||
+      !elements.confirmDialogConfirm
+    ) {
+      resolve(window.confirm(step.message));
+      return;
+    }
+
+    let remainingSeconds = Math.ceil(CLEAR_CACHE_CONFIRMATION_COOLDOWN_MS / 1000);
+    let isResolved = false;
+    const confirmButton = elements.confirmDialogConfirm;
+    const cancelButton = elements.confirmDialogCancel;
+
+    const updateConfirmLabel = () => {
+      confirmButton.textContent = remainingSeconds > 0
+        ? `${step.confirmLabel}（${remainingSeconds}）`
+        : step.confirmLabel;
+    };
+
+    const finish = (confirmed) => {
+      if (isResolved) {
+        return;
+      }
+      isResolved = true;
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+      document.removeEventListener('keydown', handleKeydown);
+      confirmButton.removeEventListener('click', handleConfirm);
+      cancelButton.removeEventListener('click', handleCancel);
+      hide(elements.confirmDialog);
+      activeConfirmationCleanup = null;
+      resolve(confirmed);
+    };
+
+    const handleConfirm = () => finish(true);
+    const handleCancel = () => finish(false);
+    const handleKeydown = (event) => {
+      if (event.key === 'Escape') {
+        finish(false);
+      }
+    };
+
+    elements.confirmDialogStep.textContent = `${stepIndex + 1}/${totalSteps}`;
+    elements.confirmDialogTitle.textContent = step.title;
+    elements.confirmDialogMessage.textContent = step.message;
+    confirmButton.disabled = true;
+    updateConfirmLabel();
+    show(elements.confirmDialog);
+    cancelButton.focus();
+
+    const intervalId = setInterval(() => {
+      remainingSeconds -= 1;
+      updateConfirmLabel();
+    }, 1000);
+
+    const timeoutId = setTimeout(() => {
+      remainingSeconds = 0;
+      confirmButton.disabled = false;
+      clearInterval(intervalId);
+      updateConfirmLabel();
+    }, CLEAR_CACHE_CONFIRMATION_COOLDOWN_MS);
+
+    confirmButton.addEventListener('click', handleConfirm);
+    cancelButton.addEventListener('click', handleCancel);
+    document.addEventListener('keydown', handleKeydown);
+    activeConfirmationCleanup = () => finish(false);
+  });
+}
+
+async function confirmClearAllCaches() {
+  if (clearCacheConfirmationActive) {
+    return false;
+  }
+
+  clearCacheConfirmationActive = true;
+  try {
+    for (let index = 0; index < CLEAR_CACHE_CONFIRMATION_STEPS.length; index += 1) {
+      const confirmed = await requestConfirmationStep(
+        CLEAR_CACHE_CONFIRMATION_STEPS[index],
+        index,
+        CLEAR_CACHE_CONFIRMATION_STEPS.length,
+      );
+      if (!confirmed) {
+        return false;
+      }
+    }
+    return true;
+  } finally {
+    closeConfirmationDialog();
+    clearCacheConfirmationActive = false;
   }
 }
 
@@ -755,7 +909,7 @@ function renderSearchHistory() {
 // ==================== Saved Songs ====================
 
 function formatSongSubtitle(song) {
-  const artist = song.artist || '未知歌手';
+  const artist = song.artist || 'アーティスト不明';
   return song.album ? `${artist} - ${song.album}` : artist;
 }
 
@@ -800,7 +954,7 @@ function buildSongItem(song) {
 
   const title = document.createElement('span');
   title.className = 'song-item__title';
-  title.textContent = song.title || '未命名歌曲';
+  title.textContent = song.title || 'タイトル未設定';
 
   const meta = document.createElement('span');
   meta.className = 'song-item__meta';
@@ -830,7 +984,7 @@ function updateRenderedSongMetadata(metadata) {
   if (metadata.album) {
     const meta = item.querySelector('.song-item__meta');
     if (meta) {
-      const artist = item.__songArtist || '未知歌手';
+      const artist = item.__songArtist || 'アーティスト不明';
       meta.textContent = `${artist} - ${metadata.album}`;
     }
   }
@@ -890,12 +1044,12 @@ function positionSongContextMenu(menu, clientX, clientY) {
 
 async function refreshSavedSongArtwork(song) {
   if (!song?.lyrics_url) {
-    showError('已保存歌词缺少URL');
+    showError('保存済み歌詞の URL がありません');
     return;
   }
 
   if (hydratingSongMetadataUrls.has(song.lyrics_url)) {
-    showError('正在刷新图片...');
+    showError('ジャケット画像を更新中です...');
     return;
   }
 
@@ -916,13 +1070,13 @@ async function refreshSavedSongArtwork(song) {
         cover_url: song.cover_url,
         album: song.album,
       });
-      showError(song.cover_url ? '图片已刷新' : '未从UtaTen找到歌曲图片');
+      showError(song.cover_url ? 'ジャケット画像を更新しました' : 'UtaTen でジャケット画像が見つかりませんでした');
     } else {
-      showError(metadata?.error || '刷新图片失败');
+      showError(metadata?.error || 'ジャケット画像の更新に失敗しました');
     }
   } catch (err) {
     console.error('Refresh saved song artwork error:', err);
-    showError(`刷新图片失败: ${err}`);
+    showError(`ジャケット画像の更新に失敗しました: ${err}`);
   } finally {
     hydratingSongMetadataUrls.delete(song.lyrics_url);
     hideLoading();
@@ -931,23 +1085,23 @@ async function refreshSavedSongArtwork(song) {
 
 async function deleteSavedSong(song) {
   if (!song?.lyrics_url) {
-    showError('已保存歌词缺少URL');
+    showError('保存済み歌詞の URL がありません');
     return;
   }
 
-  const label = song.title || '这首歌曲';
-  if (!window.confirm(`删除「${label}」的已保存歌词？`)) {
+  const label = song.title || 'この曲';
+  if (!window.confirm(`「${label}」の保存済み歌詞を削除しますか？`)) {
     return;
   }
 
   showLoading();
   try {
     await invoke('delete_saved_lyrics', { url: song.lyrics_url });
-    showError('已删除已保存歌词');
+    showError('保存済み歌詞を削除しました');
     await loadSavedLyrics();
   } catch (err) {
     console.error('Delete saved lyrics error:', err);
-    showError(`删除失败: ${err}`);
+    showError(`削除に失敗しました: ${err}`);
   } finally {
     hideLoading();
   }
@@ -960,8 +1114,8 @@ function showSongContextMenu(song, trigger, event) {
   menu.className = 'long-press-menu';
   menu.setAttribute('role', 'menu');
   menu.innerHTML = `
-    <button class="long-press-menu__item long-press-menu__item--refresh" type="button" role="menuitem" data-song-action="refresh-art">刷新图片</button>
-    <button class="long-press-menu__item long-press-menu__item--danger" type="button" role="menuitem" data-song-action="delete">删除</button>
+    <button class="long-press-menu__item long-press-menu__item--refresh" type="button" role="menuitem" data-song-action="refresh-art">画像を更新</button>
+    <button class="long-press-menu__item long-press-menu__item--danger" type="button" role="menuitem" data-song-action="delete">削除</button>
   `;
 
   menu.querySelector('[data-song-action="refresh-art"]').addEventListener('click', async () => {
@@ -984,7 +1138,10 @@ function showSongContextMenu(song, trigger, event) {
   const clientY = event?.clientY ?? rect.top + rect.height / 2;
   positionSongContextMenu(menu, clientX, clientY);
 
-  requestAnimationFrame(() => menu.classList.add('is-visible'));
+  requestAnimationFrame(() => {
+    menu.classList.add('is-visible');
+    menu.querySelector('[role="menuitem"]')?.focus();
+  });
 }
 
 function attachSongLongPressMenu(button, song) {
@@ -1031,7 +1188,7 @@ function renderSavedLyrics(songs) {
 
   songs.forEach((song) => {
     const button = buildSongItem(song);
-    button.__songArtist = song.artist || '未知歌手';
+    button.__songArtist = song.artist || 'アーティスト不明';
     attachSongLongPressMenu(button, song);
     button.addEventListener('click', () => {
       if (songLongPressTriggered) {
@@ -1052,23 +1209,23 @@ async function loadSavedLyrics() {
   }
 
   elements.songsList.innerHTML = '';
-  elements.songsEmpty.textContent = '正在读取已保存歌词...';
+  elements.songsEmpty.textContent = '保存済み歌詞を読み込み中です...';
   elements.songsEmpty.classList.remove('hidden');
 
   try {
     const result = await invoke('list_saved_lyrics', { sortBy: songsSortBy });
     const songs = Array.isArray(result?.songs) ? result.songs : [];
-    elements.songsEmpty.textContent = '暂无已保存歌词。搜索并打开歌词后会永久保存到这里。';
+    elements.songsEmpty.textContent = '保存済みの歌詞はまだありません。搜索并打开歌词后会永久保存到这里。';
     renderSavedLyrics(songs);
   } catch (err) {
     console.error('Load saved lyrics error:', err);
-    elements.songsEmpty.textContent = `读取已保存歌词失败: ${err}`;
+    elements.songsEmpty.textContent = `保存済み歌詞の読み込みに失敗しました: ${err}`;
   }
 }
 
 async function openSavedLyrics(url) {
   if (!url) {
-    showError('已保存歌词缺少URL');
+    showError('保存済み歌詞の URL がありません');
     return;
   }
 
@@ -1077,7 +1234,7 @@ async function openSavedLyrics(url) {
     const result = await invoke('get_saved_lyrics', { url });
     currentLyrics = result;
     if (result.status !== 'success') {
-      showError(result.error || '读取已保存歌词失败');
+      showError(result.error || '保存済み歌詞の読み込みに失敗しました');
       return;
     }
 
@@ -1089,7 +1246,7 @@ async function openSavedLyrics(url) {
     showLyrics();
   } catch (err) {
     console.error('Open saved lyrics error:', err);
-    showError(`读取已保存歌词失败: ${err}`);
+    showError(`保存済み歌詞の読み込みに失敗しました: ${err}`);
   } finally {
     hideLoading();
   }
@@ -1100,7 +1257,9 @@ function initSongsControls() {
     button.addEventListener('click', () => {
       songsSortBy = button.dataset.songSort === 'artist' ? 'artist' : 'title';
       $$('[data-song-sort]').forEach((item) => {
-        item.classList.toggle('active', item.dataset.songSort === songsSortBy);
+        const isActive = item.dataset.songSort === songsSortBy;
+        item.classList.toggle('active', isActive);
+        item.setAttribute('aria-pressed', String(isActive));
       });
       void loadSavedLyrics();
     });
@@ -1112,9 +1271,26 @@ function initSongsControls() {
     }
   });
   document.addEventListener('keydown', (event) => {
+    if (!activeSongContextMenu) {
+      return;
+    }
+
     if (event.key === 'Escape') {
       closeSongContextMenu();
+      return;
     }
+
+    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+    const items = Array.from(activeSongContextMenu.querySelectorAll('[role="menuitem"]'));
+    const currentIndex = Math.max(0, items.indexOf(document.activeElement));
+    const nextIndex = event.key === 'ArrowDown'
+      ? (currentIndex + 1) % items.length
+      : (currentIndex - 1 + items.length) % items.length;
+    items[nextIndex]?.focus();
   });
   window.addEventListener('scroll', closeSongContextMenu, { passive: true });
   window.addEventListener('resize', closeSongContextMenu);
@@ -1456,14 +1632,15 @@ function renderResultList(result) {
   updatePagination(result);
   
   result.results.forEach((item, index) => {
-    const div = document.createElement('div');
-    div.className = 'result-item';
-    div.innerHTML = `
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'result-item';
+    button.innerHTML = `
       <div class="title">${escapeHtml(item.title)}</div>
       <div class="artist">${escapeHtml(item.artist)}</div>
     `;
-    div.addEventListener('click', () => handleSelectResult(index));
-    elements.resultsContainer.appendChild(div);
+    button.addEventListener('click', () => handleSelectResult(index));
+    elements.resultsContainer.appendChild(button);
   });
 }
 
@@ -1542,13 +1719,21 @@ function updateButtonStates() {
   
   // 字号按钮
   const fontSize = settings.fontSize || 'medium';
-  $$('[data-size]').forEach(b => b.classList.remove('active'));
+  $$('[data-size]').forEach((button) => {
+    const isActive = button.dataset.size === fontSize;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
   const sizeBtn = document.querySelector(`[data-size="${fontSize}"]`);
   if (sizeBtn) sizeBtn.classList.add('active');
   
   // 暗色模式按钮
   const darkMode = settings.darkMode || 'off';
-  $$('[data-dark]').forEach(b => b.classList.remove('active'));
+  $$('[data-dark]').forEach((button) => {
+    const isActive = button.dataset.dark === darkMode;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
   const darkBtn = document.querySelector(`[data-dark="${darkMode}"]`);
   if (darkBtn) darkBtn.classList.add('active');
 }
@@ -1578,6 +1763,21 @@ async function setBackendLspLogging(enabled) {
   }
 }
 
+async function syncLspSettings() {
+  const settings = loadSettings();
+  const lspSettings = {
+    lspLogEnabled: settings.lspLogEnabled === true,
+    showProofPopup: settings.showProofPopup !== false,
+    autoLaunchUtaBuild: settings.autoLaunchUtaBuild !== false,
+  };
+  try {
+    await tauriReady;
+    await invoke('set_lsp_settings', { settings: lspSettings });
+  } catch (err) {
+    console.warn('Failed to sync lsp settings:', err);
+  }
+}
+
 async function appendAppLspLog(scope, message) {
   if (loadSettings().lspLogEnabled !== true) {
     return;
@@ -1600,7 +1800,7 @@ async function viewLspLogs() {
   }
 
   showLoading();
-  elements.lspLogContent.textContent = '正在读取lsp日志...';
+  elements.lspLogContent.textContent = 'LSPログを読み込み中です...';
   void appendAppLspLog('settings', 'view lsp logs');
 
   try {
@@ -1608,10 +1808,10 @@ async function viewLspLogs() {
     const logs = await invoke('get_lsp_logs');
     elements.lspLogContent.textContent = logs && String(logs).trim()
       ? String(logs)
-      : '暂无lsp日志';
+      : 'LSPログはまだありません';
   } catch (err) {
     console.error('Read lsp logs error:', err);
-    elements.lspLogContent.textContent = `读取lsp日志失败: ${err}`;
+    elements.lspLogContent.textContent = `LSPログの読み込みに失敗しました: ${err}`;
   } finally {
     hideLoading();
   }
@@ -1655,8 +1855,10 @@ function initControls() {
   }
 
   if (elements.settingClearCache) {
-    elements.settingClearCache.addEventListener('click', () => {
-      void clearAllCaches();
+    elements.settingClearCache.addEventListener('click', async () => {
+      if (await confirmClearAllCaches()) {
+        await clearAllCaches();
+      }
     });
   }
 
@@ -1667,8 +1869,25 @@ function initControls() {
       saveSettings({ lspLogEnabled: enabled });
       syncLspLogVisibility();
       void setBackendLspLogging(enabled);
+      void syncLspSettings();
     });
     syncLspLogVisibility();
+  }
+
+  if (elements.settingShowPopup) {
+    elements.settingShowPopup.checked = loadSettings().showProofPopup !== false;
+    elements.settingShowPopup.addEventListener('change', (event) => {
+      saveSettings({ showProofPopup: event.target.checked });
+      void syncLspSettings();
+    });
+  }
+
+  if (elements.settingAutoLaunch) {
+    elements.settingAutoLaunch.checked = loadSettings().autoLaunchUtaBuild !== false;
+    elements.settingAutoLaunch.addEventListener('change', (event) => {
+      saveSettings({ autoLaunchUtaBuild: event.target.checked });
+      void syncLspSettings();
+    });
   }
 
   if (elements.settingViewLspLog) {
@@ -1850,31 +2069,11 @@ function initBackGesture() {
 
 
 function handleSongsDockAutoHide() {
-  if (currentView !== 'songs' || !elements.bottomMenu || elements.bottomMenu.classList.contains('hidden')) {
-    setBottomMenuAutoHidden(false);
-    return;
-  }
-
-  const scrollY = currentPageScrollY();
-  const delta = scrollY - lastSongsScrollY;
-  lastSongsScrollY = scrollY;
-
-  if (scrollY <= 24) {
-    setBottomMenuAutoHidden(false);
-    return;
-  }
-
-  if (delta > 8) {
-    setBottomMenuAutoHidden(true);
-  } else if (delta < -8) {
-    setBottomMenuAutoHidden(false);
-  }
+  setBottomMenuAutoHidden(false);
 }
 
 function initSongsDockAutoHide() {
   lastSongsScrollY = currentPageScrollY();
-  window.addEventListener('scroll', handleSongsDockAutoHide, { passive: true });
-  window.addEventListener('resize', handleSongsDockAutoHide, { passive: true });
 }
 
 function initBottomMenu() {
@@ -1983,6 +2182,7 @@ function init() {
   updateButtonStates();
 
   void setBackendLspLogging(settings.lspLogEnabled === true);
+  void syncLspSettings();
   void tauriReady.then(checkSaltLaunchRequest);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
