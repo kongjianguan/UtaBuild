@@ -1868,7 +1868,6 @@ function initControls() {
       const enabled = event.target.checked;
       saveSettings({ lspLogEnabled: enabled });
       syncLspLogVisibility();
-      void setBackendLspLogging(enabled);
       void syncLspSettings();
     });
     syncLspLogVisibility();
