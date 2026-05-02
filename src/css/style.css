@@ -229,6 +229,7 @@ body.songs-first-level-scrollbar-disabled::-webkit-scrollbar {
 .search-history,
 .songs-view,
 .settings-view,
+.lsp-settings-view,
 .lsp-log-view {
   max-width: 400px;
   margin: 24px auto 0;
@@ -237,12 +238,14 @@ body.songs-first-level-scrollbar-disabled::-webkit-scrollbar {
 
 .songs-view,
 .settings-view,
+.lsp-settings-view,
 .lsp-log-view {
   padding: 40px 0;
 }
 
 .songs-view h2,
 .settings-view h2,
+.lsp-settings-view h2,
 .lsp-log-view h2 {
   margin-bottom: 16px;
   text-align: center;
