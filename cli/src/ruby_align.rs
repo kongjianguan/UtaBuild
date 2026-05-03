@@ -7,10 +7,9 @@ enum CharType {
     Other,
 }
 
+#[inline]
 fn classify_char(ch: char) -> CharType {
-    if ('\u{4e00}'..='\u{9fff}').contains(&ch)
-        || ('\u{3400}'..='\u{4dbf}').contains(&ch)
-    {
+    if ('\u{4e00}'..='\u{9fff}').contains(&ch) || ('\u{3400}'..='\u{4dbf}').contains(&ch) {
         CharType::Kanji
     } else if ('\u{3040}'..='\u{30ff}').contains(&ch) {
         CharType::Kana
@@ -24,6 +23,16 @@ struct RawBlock {
     char_type: CharType,
 }
 
+/// Align original Japanese text with hiragana reading to produce `Vec<LyricElement>`.
+///
+/// The algorithm:
+/// 1. Classifies characters into Kanji, Kana, or Other blocks
+/// 2. For each kanji block, uses the next kana block as an anchor to find reading boundaries
+/// 3. Kana blocks are verified against and consume matching hiragana
+/// 4. Adjacent same-type elements are merged (e.g., consecutive ruby elements)
+///
+/// If no kana anchor is found (all-kanji text or mismatched input), falls back to
+/// a heuristic of 2 kana characters per kanji.
 pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
     let original_chars: Vec<char> = original.chars().collect();
     let hiragana_chars: Vec<char> = hiragana.chars().collect();
@@ -40,7 +49,10 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                 text.push(original_chars[i]);
                 i += 1;
             }
-            raw_blocks.push(RawBlock { text, char_type: ct });
+            raw_blocks.push(RawBlock {
+                text,
+                char_type: ct,
+            });
         } else {
             raw_blocks.push(RawBlock {
                 text: original_chars[i].to_string(),
@@ -53,17 +65,50 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
     // Step 2: Assign readings
     let mut elements: Vec<LyricElement> = Vec::new();
 
-    for block in &raw_blocks {
+    for (block_idx, block) in raw_blocks.iter().enumerate() {
         match block.char_type {
             CharType::Kanji => {
-                let kanji_len = block.text.chars().count();
-                let max_consume = (kanji_len * 2).min(hiragana_chars.len().saturating_sub(hira_idx));
-                if max_consume > 0 && hira_idx < hiragana_chars.len() {
-                    let reading: String = hiragana_chars[hira_idx..hira_idx + max_consume]
+                // Find where this kanji block's reading ends by searching
+                // for the next kana block in the remaining hiragana.
+                let consume = if hira_idx < hiragana_chars.len() {
+                    // Look for next kana block as anchor
+                    let next_kana = raw_blocks[block_idx + 1..]
+                        .iter()
+                        .find(|b| b.char_type == CharType::Kana)
+                        .map(|b| b.text.as_str());
+
+                    if let Some(kana_text) = next_kana {
+                        // Search for the kana block text in remaining hiragana
+                        let remaining = &hiragana_chars[hira_idx..];
+                        let kana_chars: Vec<char> = kana_text.chars().collect();
+                        // Search for the kana substring
+                        let pos = remaining
+                            .windows(kana_chars.len())
+                            .position(|w| w == kana_chars.as_slice());
+                        match pos {
+                            Some(p) => p, // Consume up to the kana anchor
+                            None => {
+                                // Fallback heuristic if anchor not found
+                                let kanji_len = block.text.chars().count();
+                                (kanji_len * 2).min(remaining.len())
+                            }
+                        }
+                    } else {
+                        // No more kana blocks -> fall back to heuristic
+                        let kanji_len = block.text.chars().count();
+                        let remaining = &hiragana_chars[hira_idx..];
+                        (kanji_len * 2).min(remaining.len())
+                    }
+                } else {
+                    0
+                };
+
+                if consume > 0 {
+                    let reading: String = hiragana_chars[hira_idx..hira_idx + consume]
                         .iter()
                         .collect();
                     elements.push(LyricElement::new_ruby(block.text.clone(), reading));
-                    hira_idx += max_consume;
+                    hira_idx += consume;
                 } else {
                     elements.push(LyricElement::new_text(block.text.clone()));
                 }
@@ -119,9 +164,9 @@ fn merge_adjacent(elements: &[LyricElement]) -> Vec<LyricElement> {
                             std::mem::take(&mut current_base),
                             std::mem::take(&mut current_ruby),
                         )),
-                        "text" => merged.push(LyricElement::new_text(
-                            std::mem::take(&mut current_base),
-                        )),
+                        "text" => {
+                            merged.push(LyricElement::new_text(std::mem::take(&mut current_base)))
+                        }
                         _ => {}
                     }
                 }
