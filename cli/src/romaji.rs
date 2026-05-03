@@ -8,7 +8,16 @@ pub fn romaji_to_hiragana(input: &str) -> String {
         let mut i = 0;
         let chars: Vec<char> = word.chars().collect();
         while i < chars.len() {
-            // Try 3-char match first (youon like "kya", "shu", "cho")
+            // Try 4-char match first (for sokuon like "sshi", "tchi", "ttsu")
+            if i + 3 < chars.len() {
+                let four: String = chars[i..i + 4].iter().collect();
+                if let Some(h) = map.get(&four) {
+                    result.push_str(h);
+                    i += 4;
+                    continue;
+                }
+            }
+            // Try 3-char match (youon like "kya", "shu", "cho")
             if i + 2 < chars.len() {
                 let three: String = chars[i..i + 3].iter().collect();
                 if let Some(h) = map.get(&three) {
@@ -117,6 +126,9 @@ mod tests {
         assert_eq!(romaji_to_hiragana("tta"), "った");
         assert_eq!(romaji_to_hiragana("ssa"), "っさ");
         assert_eq!(romaji_to_hiragana("ppi"), "っぴ");
+        assert_eq!(romaji_to_hiragana("sshi"), "っし");
+        assert_eq!(romaji_to_hiragana("tchi"), "っち");
+        assert_eq!(romaji_to_hiragana("ttsu"), "っつ");
     }
 
     #[test]
