@@ -1403,8 +1403,22 @@ impl UtaTenSearcher {
         let found_title = selected.title.clone();
         let found_artist = selected.artist.clone();
 
-        // Check cache first
-        if let Some(cached_annotations) = self.cache.lyrics().get(&lyrics_url).await {
+        // Check cache first (source-aware keys)
+        let qq_cache_key = format!("qq:{}:{}", found_title, found_artist);
+        let cache_hit = match lyric_preference {
+            LyricSourcePreference::QqMusic => self.cache.lyrics().get(&qq_cache_key).await,
+            LyricSourcePreference::UtaTen => self.cache.lyrics().get(&lyrics_url).await,
+            LyricSourcePreference::Auto => {
+                let qq_hit = self.cache.lyrics().get(&qq_cache_key).await;
+                if qq_hit.is_some() {
+                    qq_hit
+                } else {
+                    self.cache.lyrics().get(&lyrics_url).await
+                }
+            }
+        };
+
+        if let Some(cached_annotations) = cache_hit {
             result.ruby_annotations = cached_annotations;
             result.status = "success".to_string();
             result.found_title = found_title;
@@ -1428,7 +1442,7 @@ impl UtaTenSearcher {
                 if !annotations.is_empty() {
                     self.cache
                         .lyrics()
-                        .insert(lyrics_url.clone(), annotations.clone())
+                        .insert(qq_cache_key.clone(), annotations.clone())
                         .await;
 
                     result.ruby_annotations = annotations;
