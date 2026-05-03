@@ -1,3 +1,6 @@
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::needless_range_loop)]
+
 use flate2::read::ZlibDecoder;
 use std::io::Read;
 
@@ -59,11 +62,11 @@ fn bitnum(data: &[u8], b: usize, c: u32) -> u32 {
 }
 
 fn bitnum_intr(a: u32, b: usize, c: u32) -> u32 {
-    (((a >> (31 - b)) & 1) as u32) << c
+    ((a >> (31 - b)) & 1) << c
 }
 
 fn bitnum_intl(a: u32, b: usize, c: u32) -> u32 {
-    let shifted = (a << b) & 0xFFFF_FFFF;
+    let shifted = a << b;
     let masked = shifted & 0x8000_0000;
     masked >> c
 }
@@ -81,8 +84,6 @@ fn initial_permutation(input_data: &[u8; 8]) -> (u32, u32) {
 }
 
 fn inverse_permutation(s0: u32, s1: u32) -> [u8; 8] {
-    let s0 = s0 & 0xFFFF_FFFF;
-    let s1 = s1 & 0xFFFF_FFFF;
     let mut data = [0u8; 8];
     data[3] = ((bitnum_intr(s1, 7, 7) | bitnum_intr(s0, 7, 6) | bitnum_intr(s1, 15, 5) |
                 bitnum_intr(s0, 15, 4) | bitnum_intr(s1, 23, 3) | bitnum_intr(s0, 23, 2) |
@@ -112,7 +113,7 @@ fn inverse_permutation(s0: u32, s1: u32) -> [u8; 8] {
 }
 
 fn f(state: u32, key: &[u8; 6]) -> u32 {
-    let s = state & 0xFFFF_FFFF;
+    let s = state;
 
     let t1 = bitnum_intl(s, 31, 0) | ((s & 0xF000_0000) >> 1) | bitnum_intl(s, 4, 5) |
               bitnum_intl(s, 3, 6) | ((s & 0x0F00_0000) >> 3) | bitnum_intl(s, 8, 11) |
@@ -149,10 +150,10 @@ fn f(state: u32, key: &[u8; 6]) -> u32 {
     let p = [15,6,19,20,28,11,27,16,0,14,22,25,4,17,30,9,
              1,7,23,13,31,26,2,8,18,12,29,5,21,10,3,24];
     let mut result: u32 = 0;
-    for i in 0..32 {
-        result |= bitnum_intl(res, p[i], i as u32);
+    for (i, &p_i) in p.iter().enumerate() {
+        result |= bitnum_intl(res, p_i, i as u32);
     }
-    result & 0xFFFF_FFFF
+    result
 }
 
 fn crypt_block(input_data: &[u8; 8], key: &[[u8; 6]; 16]) -> [u8; 8] {
@@ -160,10 +161,10 @@ fn crypt_block(input_data: &[u8; 8], key: &[[u8; 6]; 16]) -> [u8; 8] {
 
     for idx in 0..15 {
         let prev_s1 = s1;
-        s1 = (f(s1, &key[idx]) ^ s0) & 0xFFFF_FFFF;
+        s1 = f(s1, &key[idx]) ^ s0;
         s0 = prev_s1;
     }
-    s0 = (f(s1, &key[15]) ^ s0) & 0xFFFF_FFFF;
+    s0 ^= f(s1, &key[15]);
 
     inverse_permutation(s0, s1)
 }
@@ -228,8 +229,8 @@ fn triple_des_crypt_ede(data: &[u8], key: &[u8; 24], encrypt: bool) -> Vec<u8> {
             let arr: [u8; 8] = slice.try_into().unwrap();
             arr
         };
-        for k in 0..3 {
-            block = crypt_block(&block, &schedules[k]);
+        for schedule in &schedules {
+            block = crypt_block(&block, schedule);
         }
         result[i..i + 8].copy_from_slice(&block);
     }
