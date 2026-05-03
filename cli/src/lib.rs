@@ -5,6 +5,7 @@ pub mod logger;
 pub mod models;
 pub mod output;
 pub mod platform;
+pub mod romaji;
 pub mod searcher;
 
 pub use cache_manager::{CacheManager, CacheStats, LyricsCache, SearchCache, SearchResultEntry};
