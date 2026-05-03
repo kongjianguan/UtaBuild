@@ -35,6 +35,23 @@ impl ArtworkSourcePreference {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LyricSourcePreference {
+    Auto,
+    UtaTen,
+    QqMusic,
+}
+
+impl LyricSourcePreference {
+    pub fn from_setting(value: Option<&str>) -> Self {
+        match value.map(str::trim).map(str::to_ascii_lowercase).as_deref() {
+            Some("utaten") => Self::UtaTen,
+            Some("qq") | Some("qqmusic") | Some("qq_music") => Self::QqMusic,
+            _ => Self::Auto,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ArtistInfo {
     pub artist: String,
@@ -906,6 +923,179 @@ impl UtaTenSearcher {
         Self::extract_netease_album_artwork_from_json(&json, title, artist)
     }
 
+    /// Fetch encrypted QRC data from QQ Music API.
+    /// Returns (original lyric XML, romaji XML) on success.
+    async fn fetch_qq_music_qrc(
+        &self,
+        title: &str,
+        artist: Option<&str>,
+    ) -> Option<(String, String)> {
+        let query = Self::song_query(title, artist);
+        if query.is_empty() {
+            return None;
+        }
+
+        // Step 1: Search for song to get music_id
+        let search_id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| format!("{}0000", d.as_millis()))
+            .unwrap_or_else(|_| "10000000000000000".to_string());
+
+        let search_body = serde_json::json!({
+            "comm": {
+                "ct": "11", "cv": "1003006", "v": "1003006",
+                "os_ver": "15", "phonetype": "24122RKC7C",
+                "tmeAppID": "qqmusiclight", "nettype": "NETWORK_WIFI"
+            },
+            "req_0": {
+                "method": "DoSearchForQQMusicLite",
+                "module": "music.search.SearchCgiService",
+                "param": {
+                    "search_id": search_id,
+                    "remoteplace": "search.android.keyboard",
+                    "query": query,
+                    "search_type": 0,
+                    "num_per_page": 3,
+                    "page_num": 1,
+                    "highlight": 0, "nqc_flag": 0,
+                    "page_id": 1, "grp": 1
+                }
+            }
+        });
+
+        let response = self
+            .client
+            .post("https://u.y.qq.com/cgi-bin/musicu.fcg")
+            .header(reqwest::header::REFERER, "https://y.qq.com/")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(search_body.to_string())
+            .send()
+            .await
+            .ok()?;
+        let body = response.text().await.ok()?;
+        let json: serde_json::Value = serde_json::from_str(&body).ok()?;
+
+        let songs = json
+            .pointer("/req_0/data/body/item_song")
+            .and_then(|v| v.as_array())?;
+
+        let song_mid = songs
+            .iter()
+            .filter_map(|song| {
+                let song_title = song
+                    .get("name")
+                    .or_else(|| song.get("title"))
+                    .and_then(|v| v.as_str())?;
+                let singer = song
+                    .get("singer")
+                    .and_then(|v| v.as_array())
+                    .map(|singers| {
+                        singers
+                            .iter()
+                            .filter_map(|s| s.get("name").and_then(|n| n.as_str()))
+                            .collect::<Vec<_>>()
+                            .join("/")
+                    })
+                    .filter(|v| !v.is_empty());
+                let score = Self::score_artwork_candidate(
+                    Some(song_title),
+                    singer.as_deref(),
+                    title,
+                    artist,
+                );
+                let mid = song.get("mid").and_then(|v| v.as_str())?;
+                Some((score, mid.to_string()))
+            })
+            .max_by_key(|(score, _)| *score)
+            .map(|(_, mid)| mid)?;
+
+        // Step 2: Fetch lyrics
+        let lyric_body = serde_json::json!({
+            "comm": {
+                "ct": "11", "cv": "1003006", "v": "1003006",
+                "os_ver": "15", "phonetype": "24122RKC7C",
+                "tmeAppID": "qqmusiclight", "nettype": "NETWORK_WIFI"
+            },
+            "req_0": {
+                "method": "music.musichallSong.PlayLyricInfo",
+                "module": "music.musichallSong.PlayLyricInfo",
+                "param": {
+                    "songID": song_mid,
+                    "crypt": 1, "qrc": 1,
+                    "roma": 1, "trans": 0
+                }
+            }
+        });
+
+        let response = self
+            .client
+            .post("https://u.y.qq.com/cgi-bin/musicu.fcg")
+            .header(reqwest::header::REFERER, "https://y.qq.com/")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(lyric_body.to_string())
+            .send()
+            .await
+            .ok()?;
+        let body = response.text().await.ok()?;
+        let json: serde_json::Value = serde_json::from_str(&body).ok()?;
+
+        let lyric_hex = json.pointer("/req_0/data/lyric").and_then(|v| v.as_str())?;
+        let roma_hex = json.pointer("/req_0/data/roma").and_then(|v| v.as_str())?;
+
+        let lyric_xml = crate::qm_decrypt::decrypt_qm_lyrics(lyric_hex)?;
+        let roma_xml = crate::qm_decrypt::decrypt_qm_lyrics(roma_hex)?;
+
+        Some((lyric_xml, roma_xml))
+    }
+
+    /// Fetch lyrics from QQ Music, convert to Vec<LyricElement>.
+    async fn fetch_qq_music_lyrics(
+        &self,
+        title: &str,
+        artist: Option<&str>,
+    ) -> Option<Vec<LyricElement>> {
+        let (lyric_xml, roma_xml) = self.fetch_qq_music_qrc(title, artist).await?;
+
+        let original_lines = crate::qrc_parser::parse_qrc(&lyric_xml)?;
+        let romaji_lines = crate::qrc_parser::parse_qrc(&roma_xml)?;
+
+        let aligned = crate::qrc_parser::align_romaji_to_original(&original_lines, &romaji_lines);
+
+        let mut elements: Vec<LyricElement> = Vec::new();
+
+        for (i, (orig_words, roma_words)) in aligned.iter().enumerate() {
+            let orig_text: String = orig_words.iter().map(|w| w.text.as_str()).collect();
+            let hiragana: String = roma_words
+                .as_ref()
+                .map(|words| {
+                    let romaji_str: String = words
+                        .iter()
+                        .map(|w| w.text.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    crate::romaji::romaji_to_hiragana(&romaji_str)
+                })
+                .unwrap_or_default();
+
+            if orig_text.trim().is_empty() {
+                continue;
+            }
+
+            if hiragana.is_empty() {
+                elements.push(LyricElement::new_text(orig_text));
+            } else {
+                let line_elements = crate::ruby_align::align_ruby_to_text(&orig_text, &hiragana);
+                elements.extend(line_elements);
+            }
+
+            if i + 1 < aligned.len() {
+                elements.push(LyricElement::new_linebreak());
+            }
+        }
+
+        Some(elements)
+    }
+
     pub async fn resolve_artwork_metadata(
         &self,
         title: &str,
@@ -1190,14 +1380,19 @@ impl UtaTenSearcher {
         process_result: LyricsSearchResponse,
         index: usize,
     ) -> LyricsSearchResponse {
+        self.select_result_with_preference(process_result, index, LyricSourcePreference::Auto)
+            .await
+    }
+
+    pub async fn select_result_with_preference(
+        &self,
+        process_result: LyricsSearchResponse,
+        index: usize,
+        lyric_preference: LyricSourcePreference,
+    ) -> LyricsSearchResponse {
         let mut result = process_result.clone();
 
         if index >= result.search_results.len() {
-            debug!(
-                "select_result: index out of range, index={}, len={}",
-                index,
-                result.search_results.len()
-            );
             result.status = "error".to_string();
             result.error = Some("无效的选择".to_string());
             return result;
@@ -1208,23 +1403,8 @@ impl UtaTenSearcher {
         let found_title = selected.title.clone();
         let found_artist = selected.artist.clone();
 
-        debug!("select_result: selected URL='{}'", lyrics_url);
-        debug!("select_result: checking cache...");
-
+        // Check cache first
         if let Some(cached_annotations) = self.cache.lyrics().get(&lyrics_url).await {
-            info!(
-                "
-=== [CACHE HIT] ==="
-            );
-            info!("  URL: {}", lyrics_url);
-            info!("  Title: {}", found_title);
-            info!("  Artist: {}", found_artist);
-            info!("  Elements: {}", cached_annotations.len());
-            info!(
-                "===================
-"
-            );
-
             result.ruby_annotations = cached_annotations;
             result.status = "success".to_string();
             result.found_title = found_title;
@@ -1234,19 +1414,41 @@ impl UtaTenSearcher {
             return result;
         }
 
-        info!(
-            "
-=== [CACHE MISS] ==="
-        );
-        info!("  URL: {}", lyrics_url);
-        info!("  Title: {}", found_title);
-        info!("  Artist: {}", found_artist);
-        info!("  Fetching from UtaTen...");
-        info!(
-            "===================
-"
-        );
+        let use_qq = match lyric_preference {
+            LyricSourcePreference::QqMusic => true,
+            LyricSourcePreference::UtaTen => false,
+            LyricSourcePreference::Auto => true,
+        };
 
+        if use_qq {
+            if let Some(annotations) = self
+                .fetch_qq_music_lyrics(&found_title, Some(&found_artist))
+                .await
+            {
+                if !annotations.is_empty() {
+                    self.cache
+                        .lyrics()
+                        .insert(lyrics_url.clone(), annotations.clone())
+                        .await;
+
+                    result.ruby_annotations = annotations;
+                    result.status = "success".to_string();
+                    result.found_title = found_title;
+                    result.found_artist = found_artist;
+                    result.lyrics_url = lyrics_url;
+                    result.selected_index = index as i32;
+                    return result;
+                }
+            }
+
+            if lyric_preference == LyricSourcePreference::QqMusic {
+                result.status = "error".to_string();
+                result.error = Some("QQ Music 歌词获取失败".to_string());
+                return result;
+            }
+        }
+
+        // Fallback to UtaTen
         if let Some(html) = self.get_lyrics_with_ruby(&lyrics_url).await {
             let metadata = self
                 .resolve_artwork_metadata(
@@ -1261,19 +1463,6 @@ impl UtaTenSearcher {
                 .lyrics()
                 .insert(lyrics_url.clone(), annotations.clone())
                 .await;
-
-            info!(
-                "
-=== [CACHE STORED] ==="
-            );
-            info!("  URL: {}", lyrics_url);
-            info!("  Title: {}", found_title);
-            info!("  Artist: {}", found_artist);
-            info!("  Elements: {}", annotations.len());
-            info!(
-                "===================
-"
-            );
 
             result.ruby_annotations = annotations;
             result.status = "success".to_string();
@@ -1635,5 +1824,25 @@ mod tests {
         assert_eq!(results[1].title, "R");
         assert_eq!(results[1].artist, "Roselia");
         assert_eq!(results[1].url, "/lyric/yb18072521/");
+    }
+
+    #[test]
+    fn parses_lyric_source_preference_from_setting() {
+        assert_eq!(
+            LyricSourcePreference::from_setting(Some("qqmusic")),
+            LyricSourcePreference::QqMusic
+        );
+        assert_eq!(
+            LyricSourcePreference::from_setting(Some("utaten")),
+            LyricSourcePreference::UtaTen
+        );
+        assert_eq!(
+            LyricSourcePreference::from_setting(Some("unknown")),
+            LyricSourcePreference::Auto
+        );
+        assert_eq!(
+            LyricSourcePreference::from_setting(None),
+            LyricSourcePreference::Auto
+        );
     }
 }
