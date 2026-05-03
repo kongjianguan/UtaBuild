@@ -4,6 +4,7 @@ pub mod commands;
 pub mod logger;
 pub mod models;
 pub mod output;
+pub mod qm_decrypt;
 pub mod platform;
 pub mod romaji;
 pub mod ruby_align;
