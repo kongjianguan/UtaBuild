@@ -6,6 +6,7 @@ pub mod models;
 pub mod output;
 pub mod platform;
 pub mod romaji;
+pub mod ruby_align;
 pub mod searcher;
 
 pub use cache_manager::{CacheManager, CacheStats, LyricsCache, SearchCache, SearchResultEntry};
