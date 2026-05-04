@@ -982,29 +982,14 @@ impl UtaTenSearcher {
         let song_mid = songs
             .iter()
             .filter_map(|song| {
-                let song_title = song
-                    .get("name")
-                    .or_else(|| song.get("title"))
-                    .and_then(|v| v.as_str())?;
-                let singer = song
-                    .get("singer")
-                    .and_then(|v| v.as_array())
-                    .map(|singers| {
-                        singers
-                            .iter()
-                            .filter_map(|s| s.get("name").and_then(|n| n.as_str()))
-                            .collect::<Vec<_>>()
-                            .join("/")
-                    })
-                    .filter(|v| !v.is_empty());
+                let result = Self::qq_song_to_search_result(song, title, artist)?;
                 let score = Self::score_artwork_candidate(
-                    Some(song_title),
-                    singer.as_deref(),
+                    Some(&result.title),
+                    Some(&result.artist),
                     title,
                     artist,
                 );
-                let mid = song.get("mid").and_then(|v| v.as_str())?;
-                Some((score, mid.to_string()))
+                Some((score, result.url.strip_prefix("qq_music:").unwrap_or(&result.url).to_string()))
             })
             .max_by_key(|(score, _)| *score)
             .map(|(_, mid)| mid)?;
@@ -1048,8 +1033,170 @@ impl UtaTenSearcher {
         Some((lyric_xml, roma_xml))
     }
 
+    /// Convert a QQ Music song JSON item to a SearchResult.
+    fn qq_song_to_search_result(
+        song: &serde_json::Value,
+        _title: &str,
+        artist: Option<&str>,
+    ) -> Option<SearchResult> {
+        let song_title = song
+            .get("name")
+            .or_else(|| song.get("title"))
+            .and_then(|v| v.as_str())?;
+        let singer = song
+            .get("singer")
+            .and_then(|v| v.as_array())
+            .map(|singers| {
+                singers
+                    .iter()
+                    .filter_map(|s| s.get("name").and_then(|n| n.as_str()))
+                    .collect::<Vec<_>>()
+                    .join("/")
+            })
+            .unwrap_or_default();
+        let mid = song.get("mid").and_then(|v| v.as_str())?;
+        let album = song
+            .get("album")
+            .and_then(|v| v.get("name"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        Some(
+            SearchResult::new(
+                song_title.to_string(),
+                if singer.is_empty() {
+                    artist.unwrap_or("").to_string()
+                } else {
+                    singer
+                },
+                format!("qq_music:{}", mid),
+            )
+            .with_source("qq_music"),
+        )
+        .map(|mut r| {
+            r.album = album;
+            r
+        })
+    }
+
+    /// Search QQ Music for songs matching the given title/artist.
+    /// Returns a SearchResponse containing all matching songs.
+    pub async fn search_qq_music(
+        &self,
+        title: &str,
+        artist: Option<&str>,
+        page: u32,
+    ) -> SearchResponse {
+        let query = Self::song_query(title, artist);
+        let mut response = SearchResponse::new();
+        response.query_title = Some(title.to_string());
+        response.query_artist = artist.map(|a| a.to_string());
+        response.search_type = "qq_music".to_string();
+        response.page = page;
+
+        if query.is_empty() {
+            response.status = "not_found".to_string();
+            return response;
+        }
+
+        let search_id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| format!("{}0000", d.as_millis()))
+            .unwrap_or_else(|_| "10000000000000000".to_string());
+
+        let search_body = serde_json::json!({
+            "comm": {
+                "ct": "11", "cv": "1003006", "v": "1003006",
+                "os_ver": "15", "phonetype": "24122RKC7C",
+                "tmeAppID": "qqmusiclight", "nettype": "NETWORK_WIFI"
+            },
+            "req_0": {
+                "method": "DoSearchForQQMusicLite",
+                "module": "music.search.SearchCgiService",
+                "param": {
+                    "search_id": search_id,
+                    "remoteplace": "search.android.keyboard",
+                    "query": query,
+                    "search_type": 0,
+                    "num_per_page": 8,
+                    "page_num": page,
+                    "highlight": 0, "nqc_flag": 0,
+                    "page_id": page, "grp": 1
+                }
+            }
+        });
+
+        let resp = match self
+            .client
+            .post("https://u.y.qq.com/cgi-bin/musicu.fcg")
+            .header(reqwest::header::REFERER, "https://y.qq.com/")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(search_body.to_string())
+            .send()
+            .await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                error!("QQ Music search request failed: {}", e);
+                response.status = "error".to_string();
+                response.error = Some(format!("QQ Music 搜索请求失败: {}", e));
+                return response;
+            }
+        };
+
+        let body = match resp.text().await {
+            Ok(b) => b,
+            Err(e) => {
+                error!("QQ Music search response read failed: {}", e);
+                response.status = "error".to_string();
+                response.error = Some(format!("QQ Music 搜索响应读取失败: {}", e));
+                return response;
+            }
+        };
+
+        let json: serde_json::Value = match serde_json::from_str(&body) {
+            Ok(j) => j,
+            Err(e) => {
+                error!("QQ Music search JSON parse failed: {}", e);
+                response.status = "error".to_string();
+                response.error = Some(format!("QQ Music 搜索解析失败: {}", e));
+                return response;
+            }
+        };
+
+        let songs = match json
+            .pointer("/req_0/data/body/item_song")
+            .and_then(|v| v.as_array())
+        {
+            Some(s) => s,
+            None => {
+                response.status = "not_found".to_string();
+                return response;
+            }
+        };
+
+        let results: Vec<SearchResult> = songs
+            .iter()
+            .filter_map(|song| Self::qq_song_to_search_result(song, title, artist))
+            .collect();
+
+        if results.is_empty() {
+            response.status = "not_found".to_string();
+            return response;
+        }
+
+        response.status = "select".to_string();
+        response.pagination = Some(SearchPagination {
+            current_page: page,
+            total_pages: 1,
+            has_next: false,
+        });
+        response.results = results;
+        response
+    }
+
     /// Fetch lyrics from QQ Music, convert to Vec<LyricElement>.
-    async fn fetch_qq_music_lyrics(
+    pub async fn fetch_qq_music_lyrics(
         &self,
         title: &str,
         artist: Option<&str>,

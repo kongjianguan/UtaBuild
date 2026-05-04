@@ -48,6 +48,8 @@ pub struct SearchResult {
     pub album: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cover_url: Option<String>,
+    #[serde(default)]
+    pub source: String,
 }
 
 impl SearchResult {
@@ -61,6 +63,7 @@ impl SearchResult {
             composer: None,
             album: None,
             cover_url: None,
+            source: String::new(),
         }
     }
 
@@ -80,7 +83,13 @@ impl SearchResult {
             composer,
             album: None,
             cover_url: None,
+            source: String::new(),
         }
+    }
+
+    pub fn with_source(mut self, source: &str) -> Self {
+        self.source = source.to_string();
+        self
     }
 }
 

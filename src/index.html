@@ -160,6 +160,11 @@
     <!-- 搜索结果列表 -->
     <section id="result-list" class="hidden">
       <h2>検索結果</h2>
+      <div id="source-tabs" class="source-tabs" role="tablist" aria-label="検索ソース">
+        <button type="button" class="source-tab active" data-source="all" role="tab" aria-selected="true">全部</button>
+        <button type="button" class="source-tab" data-source="utaten" role="tab" aria-selected="false">UtaTen</button>
+        <button type="button" class="source-tab" data-source="qq_music" role="tab" aria-selected="false">QQ音楽</button>
+      </div>
       <p id="results-summary" class="results-summary hidden"></p>
       <div id="results-container"></div>
       <div id="results-pagination" class="pagination hidden">

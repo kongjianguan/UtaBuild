@@ -11,7 +11,7 @@ use utabuild_cli::cache::{
     save_lyrics_annotations_cache_with_metadata, save_search_response_cache,
 };
 use utabuild_cli::LyricElement;
-use utabuild_cli::{ArtworkSourcePreference, CacheManager, UtaTenSearcher};
+use utabuild_cli::{ArtworkSourcePreference, CacheManager, LyricSourcePreference, UtaTenSearcher};
 
 /// 应用状态
 struct AppState {
@@ -35,27 +35,32 @@ async fn search_lyrics(
     artist: Option<String>,
     page: Option<u32>,
     use_cache: Option<bool>,
+    lyric_source: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let page = page.unwrap_or(1);
     let use_cache = use_cache.unwrap_or(true);
+    let is_qq = lyric_source.as_deref() == Some("qq_music");
+    let search_type = if is_qq { "qq_music" } else { "title" };
+
     write_app_lsp_log_if_enabled(
         &app,
         &state,
         "search",
         &format!(
-            "search_lyrics title=\"{}\" artist=\"{}\" page={} use_cache={}",
+            "search_lyrics title=\"{}\" artist=\"{}\" page={} use_cache={} source={}",
             title,
             artist.as_deref().unwrap_or(""),
             page,
-            use_cache
+            use_cache,
+            search_type
         ),
     )
     .await;
 
     if use_cache {
         if let Some(cached_response) =
-            get_search_response_cache(&title, artist.as_deref(), "title", page, None)
+            get_search_response_cache(&title, artist.as_deref(), search_type, page, None)
         {
             write_app_lsp_log_if_enabled(&app, &state, "search", "search_lyrics cache hit").await;
             return serde_json::to_value(cached_response).map_err(|e| e.to_string());
@@ -63,13 +68,17 @@ async fn search_lyrics(
     }
 
     let searcher = state.searcher.lock().await;
-    let result = if use_cache {
+    let result = if is_qq {
         searcher
-            .search_with_options(&title, artist.as_deref(), "title", page)
+            .search_qq_music(&title, artist.as_deref(), page)
+            .await
+    } else if use_cache {
+        searcher
+            .search_with_options(&title, artist.as_deref(), search_type, page)
             .await
     } else {
         searcher
-            .search_with_options_uncached(&title, artist.as_deref(), "title", page)
+            .search_with_options_uncached(&title, artist.as_deref(), search_type, page)
             .await
     };
     drop(searcher);
@@ -78,7 +87,7 @@ async fn search_lyrics(
         save_search_response_cache(
             &title,
             artist.as_deref(),
-            "title",
+            search_type,
             page,
             result.clone(),
             None,
@@ -121,28 +130,112 @@ async fn get_lyrics(
     use_cache: Option<bool>,
     save_salt_bridge: Option<bool>,
     artwork_source: Option<String>,
+    lyric_source: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let use_cache = use_cache.unwrap_or(true);
     let save_salt_bridge = save_salt_bridge.unwrap_or(true);
     let artwork_source_preference =
         ArtworkSourcePreference::from_setting(artwork_source.as_deref());
+    let lyric_preference = LyricSourcePreference::from_setting(lyric_source.as_deref());
+
     write_app_lsp_log_if_enabled(
         &app,
         &state,
         "lyrics",
         &format!(
-            "get_lyrics title=\"{}\" artist=\"{}\" url=\"{}\" use_cache={} save_salt_bridge={}",
+            "get_lyrics title=\"{}\" artist=\"{}\" url=\"{}\" use_cache={} save_salt_bridge={} source={:?}",
             title,
             artist.as_deref().unwrap_or(""),
             url,
             use_cache,
-            save_salt_bridge
+            save_salt_bridge,
+            lyric_preference
         ),
     )
     .await;
 
     let searcher = state.searcher.lock().await;
+
+    // QQ Music path
+    if lyric_preference == LyricSourcePreference::QqMusic {
+        let qq_cache_key = format!("qq:{}:{}", title, artist.as_deref().unwrap_or(""));
+
+        if use_cache {
+            if let Some(cached_annotations) = searcher.cache().lyrics().get(&qq_cache_key).await {
+                drop(searcher);
+                let response = lyrics_success_response(
+                    title.clone(),
+                    artist.clone(),
+                    qq_cache_key.clone(),
+                    &cached_annotations,
+                    None,
+                    None,
+                );
+                if save_salt_bridge {
+                    save_salt_bridge_cache(&app, &response)?;
+                }
+                write_app_lsp_log_if_enabled(
+                    &app,
+                    &state,
+                    "lyrics",
+                    "get_lyrics QQ Music cache hit",
+                )
+                .await;
+                return Ok(response);
+            }
+        }
+
+        let annotations = searcher
+            .fetch_qq_music_lyrics(&title, artist.as_deref())
+            .await
+            .unwrap_or_default();
+
+        if annotations.is_empty() {
+            drop(searcher);
+            write_app_lsp_log_if_enabled(
+                &app,
+                &state,
+                "lyrics",
+                "get_lyrics QQ Music failed",
+            )
+            .await;
+            return serde_json::to_value(serde_json::json!({
+                "status": "error",
+                "error": "QQ Music 歌词获取失败"
+            }))
+            .map_err(|e| e.to_string());
+        }
+
+        searcher
+            .cache()
+            .lyrics()
+            .insert(qq_cache_key.clone(), annotations.clone())
+            .await;
+        drop(searcher);
+
+        let response = lyrics_success_response(
+            title,
+            artist,
+            qq_cache_key,
+            &annotations,
+            None,
+            None,
+        );
+        if save_salt_bridge {
+            save_salt_bridge_cache(&app, &response)?;
+        }
+        write_app_lsp_log_if_enabled(
+            &app,
+            &state,
+            "lyrics",
+            &format!("get_lyrics QQ Music success annotations={}", annotations.len()),
+        )
+        .await;
+        return Ok(response);
+    }
+
+    // UtaTen path (existing logic)
     if use_cache {
         if let Some(cached_annotations) = searcher.cache().lyrics().get(&url).await {
             let existing_entry = get_lyrics_annotations_cache_entry(&url, None);

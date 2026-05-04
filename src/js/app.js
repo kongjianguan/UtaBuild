@@ -50,6 +50,28 @@ async function initTauri() {
     // Mock搜索结果
     if (cmd === 'search_lyrics') {
       const page = Number(args.page || 1);
+      const lyricSource = args.lyricSource || 'utaten';
+
+      if (lyricSource === 'qq_music') {
+        return {
+          status: 'select',
+          query_title: args.title,
+          query_artist: args.artist || null,
+          page,
+          pagination: {
+            current_page: page,
+            total_pages: 1,
+            has_next: false,
+          },
+          results: Array.from({ length: 3 }, (_, i) => ({
+            title: `${args.title || '春日影'} Q${page}-${i + 1}`,
+            artist: i === 0 ? 'MyGO!!!!!' : i === 1 ? 'Ave Mujica' : 'Other',
+            url: `qq_music:mock${page}-${i + 1}`,
+            source: 'qq_music',
+          })),
+        };
+      }
+
       return {
         status: 'select',
         query_title: args.title,
@@ -65,6 +87,7 @@ async function initTauri() {
           title: `${args.title || '春日影'} P${page}-${index + 1}`,
           artist: index === 0 ? 'MyGO!!!!!' : index === 1 ? 'Ave Mujica' : 'Other',
           url: `/lyric/mock${page}-${index + 1}`,
+          source: 'utaten',
           lyricist: index === 2 ? null : ['織田', 'CRYCHIC'][index],
           composer: index === 2 ? null : ['北澤', '祥子'][index],
         })),
@@ -228,6 +251,7 @@ const elements = {
   confirmDialogMessage: $('#confirm-dialog-message'),
   confirmDialogCancel: $('#confirm-dialog-cancel'),
   confirmDialogConfirm: $('#confirm-dialog-confirm'),
+  sourceTabs: $('#source-tabs'),
   backBtn: $('#back-btn'),
   backToResultsBtn: $('#back-to-results-btn'),
   searchHeader: $('#search-header'),
@@ -237,11 +261,13 @@ const elements = {
 
 // ==================== State ====================
 
-let currentSearchResults = null;
+let currentSearchData = null;
+let currentActiveTab = 'all';
 let currentLyrics = null;
 let currentSearchQuery = null;
 let currentSearchRunId = 0;
 let isLoadingMoreResults = false;
+let utatenPageState = { currentPage: 1, totalPages: 1, hasNext: false, loadedPages: 1, loadingMore: false };
 let resultsScrollObserver = null;
 let resultsScrollEventsInitialized = false;
 let pendingSaltRequest = null;
@@ -678,7 +704,7 @@ async function clearAllCaches() {
 
   try {
     await invoke('clear_cache');
-    currentSearchResults = null;
+    currentSearchData = null;
     currentLyrics = null;
     currentSearchQuery = null;
     isLoadingMoreResults = false;
@@ -1395,17 +1421,18 @@ function renderLyrics(elements) {
 
 // ==================== Event Handlers ====================
 
-function getPaginationInfo(result) {
-  const currentPage = result?.pagination?.current_page ?? result?.page ?? 1;
-  const totalPages = result?.pagination?.total_pages ?? currentPage;
-  const hasNext = result?.pagination?.has_next ?? (currentPage < totalPages);
-  const loadedPages = result?.pagination?.loaded_pages ?? currentPage;
-  const loadingMore = Boolean(result?.pagination?.loading_more);
-  return { currentPage, totalPages, hasNext, loadedPages, loadingMore };
+function getPaginationInfo(_data) {
+  return {
+    currentPage: utatenPageState.currentPage,
+    totalPages: utatenPageState.totalPages,
+    hasNext: utatenPageState.hasNext,
+    loadedPages: utatenPageState.loadedPages,
+    loadingMore: utatenPageState.loadingMore,
+  };
 }
 
-function updatePagination(result) {
-  const { totalPages, loadedPages, hasNext, loadingMore } = getPaginationInfo(result);
+function updatePagination(_data) {
+  const { totalPages, loadedPages, hasNext, loadingMore } = getPaginationInfo();
   const showPagination = totalPages > 1;
 
   if (showPagination) {
@@ -1421,11 +1448,13 @@ function updatePagination(result) {
   syncInfiniteScrollObserver();
 }
 
-function updateResultsSummary(result) {
-  const resultCount = result?.results?.length ?? 0;
-  const { loadedPages, totalPages, loadingMore } = getPaginationInfo(result);
-  const title = result?.query_title ?? currentSearchQuery?.title ?? '';
-  const artist = result?.query_artist ?? currentSearchQuery?.artist;
+function updateResultsSummary(data) {
+  const utatenCount = data?.sources?.utaten?.results?.length ?? 0;
+  const qqCount = data?.sources?.qq_music?.results?.length ?? 0;
+  const totalCount = utatenCount + qqCount;
+  const { loadedPages, totalPages, loadingMore } = getPaginationInfo(data);
+  const title = data?.query?.title ?? currentSearchQuery?.title ?? '';
+  const artist = data?.query?.artist ?? currentSearchQuery?.artist;
   const queryLabel = artist ? `${title} / ${artist}` : title;
 
   if (!queryLabel) {
@@ -1434,78 +1463,33 @@ function updateResultsSummary(result) {
   }
 
   const loadingSuffix = loadingMore ? '・続きを取得中' : '';
-  elements.resultsSummary.textContent = `「${queryLabel}」の検索結果 ${resultCount}件（${loadedPages}/${totalPages}ページ読み込み済み${loadingSuffix}）`;
+  const perSource = totalCount > 0 ? `（UtaTen: ${utatenCount} / QQ: ${qqCount}）` : '';
+  elements.resultsSummary.textContent = `「${queryLabel}」の検索結果 ${totalCount}件${perSource}（${loadedPages}/${totalPages}ページ読み込み済み${loadingSuffix}）`;
   show(elements.resultsSummary);
-}
-
-function getResultItemKey(item) {
-  return item?.url || `${item?.title || ''}::${item?.artist || ''}`;
-}
-
-function mergeSearchResults(existingResult, nextResult, { loadingMore = false } = {}) {
-  const existingItems = existingResult?.results ?? [];
-  const nextItems = nextResult?.results ?? [];
-  const mergedItems = [...existingItems];
-  const seenKeys = new Set(existingItems.map(getResultItemKey));
-
-  nextItems.forEach((item) => {
-    const key = getResultItemKey(item);
-    if (!seenKeys.has(key)) {
-      seenKeys.add(key);
-      mergedItems.push(item);
-    }
-  });
-
-  const totalPages =
-    nextResult?.pagination?.total_pages ??
-    existingResult?.pagination?.total_pages ??
-    nextResult?.page ??
-    existingResult?.page ??
-    1;
-  const loadedPages = Math.max(
-    existingResult?.pagination?.loaded_pages ?? existingResult?.pagination?.current_page ?? existingResult?.page ?? 1,
-    nextResult?.pagination?.loaded_pages ?? nextResult?.pagination?.current_page ?? nextResult?.page ?? 1,
-  );
-
-  return {
-    ...existingResult,
-    ...nextResult,
-    results: mergedItems,
-    query_title: nextResult?.query_title ?? existingResult?.query_title,
-    query_artist: nextResult?.query_artist ?? existingResult?.query_artist,
-    pagination: {
-      ...(existingResult?.pagination ?? {}),
-      ...(nextResult?.pagination ?? {}),
-      current_page: nextResult?.pagination?.current_page ?? nextResult?.page ?? loadedPages,
-      total_pages: totalPages,
-      has_next: nextResult?.pagination?.has_next ?? (loadedPages < totalPages),
-      loaded_pages: loadedPages,
-      loading_more: loadingMore,
-    },
-  };
 }
 
 async function loadRemainingSearchPages(searchRunId) {
   if (
     currentSearchRunId !== searchRunId ||
     !currentSearchQuery ||
-    !currentSearchResults ||
+    !currentSearchData ||
     isLoadingMoreResults
   ) {
     return;
   }
 
-  const { currentPage, totalPages, hasNext } = getPaginationInfo(currentSearchResults);
-  if (!hasNext || currentPage >= totalPages) {
-    currentSearchResults = mergeSearchResults(currentSearchResults, currentSearchResults, { loadingMore: false });
-    renderResultList(currentSearchResults);
+  if (!utatenPageState.hasNext || utatenPageState.currentPage >= utatenPageState.totalPages) {
+    if (utatenPageState.loadingMore) {
+      utatenPageState = { ...utatenPageState, loadingMore: false };
+      renderResultList(currentSearchData);
+    }
     return;
   }
 
-  const nextPage = currentPage + 1;
+  const nextPage = utatenPageState.currentPage + 1;
   isLoadingMoreResults = true;
-  currentSearchResults = mergeSearchResults(currentSearchResults, currentSearchResults, { loadingMore: true });
-  renderResultList(currentSearchResults);
+  utatenPageState = { ...utatenPageState, loadingMore: true };
+  renderResultList(currentSearchData);
 
   try {
     const nextResult = await invoke('search_lyrics', {
@@ -1513,6 +1497,7 @@ async function loadRemainingSearchPages(searchRunId) {
       artist: currentSearchQuery.artist ?? null,
       page: nextPage,
       useCache: shouldUseCache(),
+      lyricSource: 'utaten',
     });
 
     if (currentSearchRunId !== searchRunId) {
@@ -1523,15 +1508,33 @@ async function loadRemainingSearchPages(searchRunId) {
       throw new Error(nextResult.error || `ページ ${nextPage} の取得に失敗しました`);
     }
 
-    currentSearchResults = mergeSearchResults(currentSearchResults, nextResult, { loadingMore: false });
-    renderResultList(currentSearchResults);
+    // Merge new UtaTen results
+    const newItems = (nextResult.results || []).map(item => ({ ...item, source: 'utaten' }));
+    const existingUrls = new Set(currentSearchData.allResults.map(r => r.url));
+    const dedupedNew = newItems.filter(item => !existingUrls.has(item.url));
+
+    currentSearchData = {
+      ...currentSearchData,
+      sources: { ...currentSearchData.sources, utaten: nextResult },
+      allResults: [...currentSearchData.allResults, ...dedupedNew],
+    };
+
+    utatenPageState = {
+      currentPage: nextPage,
+      totalPages: nextResult.pagination?.total_pages ?? utatenPageState.totalPages,
+      hasNext: nextResult.pagination?.has_next ?? false,
+      loadedPages: nextPage,
+      loadingMore: false,
+    };
+
+    renderResultList(currentSearchData);
   } catch (err) {
     if (currentSearchRunId !== searchRunId) {
       return;
     }
 
-    currentSearchResults = mergeSearchResults(currentSearchResults, currentSearchResults, { loadingMore: false });
-    renderResultList(currentSearchResults);
+    utatenPageState = { ...utatenPageState, loadingMore: false };
+    renderResultList(currentSearchData);
     console.error('Load more search results error:', err);
     const message = err instanceof Error ? err.message : String(err);
     showError(`続きの検索結果の取得に失敗しました: ${message}`);
@@ -1544,7 +1547,7 @@ async function loadRemainingSearchPages(searchRunId) {
 function maybeLoadMoreResults() {
   if (
     currentView !== 'results' ||
-    !currentSearchResults ||
+    !currentSearchData ||
     isLoadingMoreResults ||
     elements.resultsPagination.classList.contains('hidden')
   ) {
@@ -1596,45 +1599,67 @@ function initInfiniteScroll() {
 async function performSearch(page = 1, searchRunId = currentSearchRunId) {
   const title = currentSearchQuery?.title;
   const artist = currentSearchQuery?.artist ?? null;
-  
+
   if (!title) {
     showError('曲名を入力してください');
     return;
   }
-  
+
   showLoading();
-  
+
   console.log('🔍 搜索:', title, '| isTauriEnv:', isTauriEnv, '| invoke:', typeof invoke);
-  
+
   try {
-    const result = await invoke('search_lyrics', {
-      title,
-      artist,
-      page,
-      useCache: shouldUseCache(),
-    });
+    // Make parallel search calls to both sources
+    const results = await Promise.allSettled([
+      invoke('search_lyrics', { title, artist, page, useCache: shouldUseCache(), lyricSource: 'utaten' }),
+      invoke('search_lyrics', { title, artist, page, useCache: shouldUseCache(), lyricSource: 'qq_music' }),
+    ]);
 
     if (searchRunId !== currentSearchRunId) {
       return;
     }
-    
-    currentSearchResults = mergeSearchResults(null, result, { loadingMore: false });
-    
-    if (result.status === 'select' && result.results && result.results.length > 0) {
-      void appendAppLspLog('search', `search success results=${result.results.length}`);
-      renderResultList(currentSearchResults);
+
+    const utatenResult = results[0].status === 'fulfilled' ? results[0].value : null;
+    const qqMusicResult = results[1].status === 'fulfilled' ? results[1].value : null;
+
+    if (!utatenResult && !qqMusicResult) {
+      showError('両方のソースで検索に失敗しました');
+      return;
+    }
+
+    // Tag results with source
+    const utatenItems = (utatenResult?.results || []).map(item => ({ ...item, source: 'utaten' }));
+    const qqMusicItems = (qqMusicResult?.results || []).map(item => ({ ...item, source: 'qq_music' }));
+
+    currentSearchData = {
+      query: { title, artist },
+      sources: { utaten: utatenResult, qq_music: qqMusicResult },
+      allResults: [...utatenItems, ...qqMusicItems],
+    };
+    currentActiveTab = 'all';
+
+    // Init UtaTen pagination state
+    utatenPageState = {
+      currentPage: utatenResult?.pagination?.current_page || 1,
+      totalPages: utatenResult?.pagination?.total_pages || 1,
+      hasNext: utatenResult?.pagination?.has_next ?? false,
+      loadedPages: 1,
+      loadingMore: false,
+    };
+
+    if (currentSearchData.allResults.length > 0) {
+      void appendAppLspLog('search', `search success utaten=${utatenItems.length} qq=${qqMusicItems.length}`);
+      renderResultList(currentSearchData);
       if (currentView === 'results') {
         switchToResults();
       } else {
         showResults();
       }
       maybeLoadMoreResults();
-    } else if (result.status === 'not_found') {
+    } else {
       void appendAppLspLog('search', 'search not_found');
       showError('結果が見つかりませんでした');
-    } else {
-      void appendAppLspLog('search', `search failed ${result.error || 'unknown error'}`);
-      showError(result.error || '検索に失敗しました');
     }
   } catch (err) {
     console.error('Search error:', err);
@@ -1649,37 +1674,83 @@ async function performSearch(page = 1, searchRunId = currentSearchRunId) {
 async function handleSearch() {
   const title = elements.searchTitle.value.trim();
   const artist = elements.searchArtist.value.trim() || null;
-  
+
   currentSearchQuery = { title, artist };
   currentSearchRunId += 1;
   isLoadingMoreResults = false;
+  currentSearchData = null;
+  currentActiveTab = 'all';
   addSearchHistory(title, artist);
   void appendAppLspLog('ui', `search requested title="${title}" artist="${artist || ''}"`);
   await performSearch(1, currentSearchRunId);
 }
 
-// 渲染搜索结果列表
-function renderResultList(result) {
+// 渲染搜索结果列表（支持多源标签过滤）
+function renderResultList(data) {
   elements.resultsContainer.innerHTML = '';
-  updateResultsSummary(result);
-  updatePagination(result);
-  
-  result.results.forEach((item, index) => {
+  updateResultsSummary(data);
+  updatePagination(data);
+
+  // Determine filtered results based on active tab
+  let filteredResults = data && data.allResults ? data.allResults : [];
+  if (currentActiveTab !== 'all') {
+    filteredResults = filteredResults.filter(item => item.source === currentActiveTab);
+  }
+
+  // Update tab bar active state and counts
+  updateSourceTabs(data);
+
+  filteredResults.forEach((item, displayIndex) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'result-item';
+
+    const sourceBadge = item.source === 'qq_music'
+      ? '<span class="source-badge source-badge--qq">QQ</span>'
+      : '<span class="source-badge source-badge--utaten">UtaTen</span>';
+
     button.innerHTML = `
+      ${sourceBadge}
       <div class="title">${escapeHtml(item.title)}</div>
       <div class="artist">${escapeHtml(item.artist)}</div>
     `;
-    button.addEventListener('click', () => handleSelectResult(index));
+
+    // Find the real index in allResults for selection lookup
+    const realIndex = data.allResults.indexOf(item);
+    button.addEventListener('click', () => handleSelectResult(realIndex));
     elements.resultsContainer.appendChild(button);
   });
 }
 
+function updateSourceTabs(data) {
+  if (!elements.sourceTabs) return;
+  const tabs = elements.sourceTabs.querySelectorAll('.source-tab');
+  const utatenCount = (data?.sources?.utaten?.results || []).length;
+  const qqCount = (data?.sources?.qq_music?.results || []).length;
+  const totalCount = utatenCount + qqCount;
+
+  tabs.forEach(tab => {
+    const source = tab.dataset.source;
+    tab.classList.toggle('active', source === currentActiveTab);
+    tab.setAttribute('aria-selected', source === currentActiveTab);
+
+    let countEl = tab.querySelector('.tab-count');
+    const count = source === 'all' ? totalCount : source === 'utaten' ? utatenCount : qqCount;
+    if (!countEl) {
+      countEl = document.createElement('span');
+      countEl.className = 'tab-count';
+      tab.appendChild(countEl);
+    }
+    countEl.textContent = `(${count})`;
+    tab.dataset.empty = count === 0 ? 'true' : 'false';
+  });
+
+  show(elements.sourceTabs);
+}
+
 // 选择搜索结果，获取歌词
 async function handleSelectResult(index) {
-  const selectedItem = currentSearchResults.results[index];
+  const selectedItem = currentSearchData.allResults[index];
   const saltRequest = pendingSaltRequest;
 
   if (saltRequest) {
@@ -1703,6 +1774,7 @@ async function handleSelectResult(index) {
       useCache: shouldUseCache(),
       saveSaltBridge: !saltRequest,
       artworkSource: selectedArtworkSource(),
+      lyricSource: selectedItem.source || 'utaten',
     });
     
     currentLyrics = result;
@@ -1981,12 +2053,24 @@ function initControls() {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.dark;
       document.body.classList.toggle('dark-mode', mode === 'on');
-      
+
       // 保存到localStorage
       saveSettings({ darkMode: mode });
       updateButtonStates();
     });
   });
+
+  // 来源标签切换
+  if (elements.sourceTabs) {
+    elements.sourceTabs.addEventListener('click', (event) => {
+      const tab = event.target.closest('.source-tab');
+      if (!tab) return;
+
+      const source = tab.dataset.source;
+      currentActiveTab = source;
+      renderResultList(currentSearchData);
+    });
+  }
 }
 
 // ==================== Android Back Button ====================
