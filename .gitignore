@@ -17,6 +17,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Generated Android build
+src-tauri/gen/
+
 # Logs
 *.log
 
