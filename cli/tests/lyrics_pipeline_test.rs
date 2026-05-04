@@ -20,8 +20,16 @@ fn full_pipeline_e2e_with_sample_qrc() {
 
     let original_lines = qrc_parser::parse_qrc(qrc).expect("Should parse QRC");
     assert_eq!(original_lines.len(), 2, "Two lyric lines");
-    assert_eq!(original_lines[0].words.len(), 4, "First line: 4 words (起死開戦)");
-    assert_eq!(original_lines[1].words.len(), 5, "Second line: 5 words (鮮やかなる)");
+    assert_eq!(
+        original_lines[0].words.len(),
+        4,
+        "First line: 4 words (起死開戦)"
+    );
+    assert_eq!(
+        original_lines[1].words.len(),
+        5,
+        "Second line: 5 words (鮮やかなる)"
+    );
 }
 
 #[test]
@@ -142,7 +150,10 @@ fn full_end_to_end_mock_pipeline() {
     // Step 3: Convert romaji → hiragana and produce LyricElements
     let (orig_words, roma_words) = &aligned[0];
     let orig_text: String = orig_words.iter().map(|w| w.text.as_str()).collect();
-    let roma_text: String = roma_words.as_ref().unwrap().iter()
+    let roma_text: String = roma_words
+        .as_ref()
+        .unwrap()
+        .iter()
         .map(|w| w.text.as_str())
         .collect::<Vec<_>>()
         .join(" ");
