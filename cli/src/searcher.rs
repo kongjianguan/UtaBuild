@@ -979,7 +979,7 @@ impl UtaTenSearcher {
             .pointer("/req_0/data/body/item_song")
             .and_then(|v| v.as_array())?;
 
-        let song_mid = songs
+        let (song_id, _song_mid) = songs
             .iter()
             .filter_map(|song| {
                 let result = Self::qq_song_to_search_result(song, title, artist)?;
@@ -989,12 +989,13 @@ impl UtaTenSearcher {
                     title,
                     artist,
                 );
-                Some((score, result.url.strip_prefix("qq_music:").unwrap_or(&result.url).to_string()))
+                let id = song.get("id").and_then(|v| v.as_i64())?;
+                Some((score, id, result.url.strip_prefix("qq_music:").unwrap_or(&result.url).to_string()))
             })
-            .max_by_key(|(score, _)| *score)
-            .map(|(_, mid)| mid)?;
+            .max_by_key(|(score, _, _)| *score)
+            .map(|(_, id, mid)| (id, mid))?;
 
-        // Step 2: Fetch lyrics
+        // Step 2: Fetch lyrics (use numeric songID, not string mid)
         let lyric_body = serde_json::json!({
             "comm": {
                 "ct": "11", "cv": "1003006", "v": "1003006",
@@ -1002,10 +1003,10 @@ impl UtaTenSearcher {
                 "tmeAppID": "qqmusiclight", "nettype": "NETWORK_WIFI"
             },
             "req_0": {
-                "method": "music.musichallSong.PlayLyricInfo",
+                "method": "GetPlayLyricInfo",
                 "module": "music.musichallSong.PlayLyricInfo",
                 "param": {
-                    "songID": song_mid,
+                    "songID": song_id,
                     "crypt": 1, "qrc": 1,
                     "roma": 1, "trans": 0
                 }
@@ -1610,29 +1611,43 @@ impl UtaTenSearcher {
         }
 
         // Fallback to UtaTen
-        if let Some(html) = self.get_lyrics_with_ruby(&lyrics_url).await {
-            let metadata = self
-                .resolve_artwork_metadata(
-                    &found_title,
-                    Some(&found_artist),
-                    Self::extract_song_page_metadata(&html),
-                    ArtworkSourcePreference::Auto,
-                )
-                .await;
-            let annotations = self.extract_ruby_lyrics(&html);
-            self.cache
-                .lyrics()
-                .insert(lyrics_url.clone(), annotations.clone())
-                .await;
+        let utaten_url = if lyrics_url.starts_with("qq_music:") {
+            // QQ Music synthetic URL can't be used directly for UtaTen.
+            // Search UtaTen by title/artist to find the real URL.
+            let search_results = self.search(&found_title, Some(&found_artist)).await;
+            search_results.first().map(|r| r.url.clone())
+        } else {
+            Some(lyrics_url.clone())
+        };
 
-            result.ruby_annotations = annotations;
-            result.status = "success".to_string();
-            result.found_title = found_title;
-            result.found_artist = found_artist;
-            result.lyrics_url = lyrics_url;
-            result.found_album = metadata.album;
-            result.cover_url = metadata.cover_url;
-            result.selected_index = index as i32;
+        if let Some(ref effective_url) = utaten_url {
+            if let Some(html) = self.get_lyrics_with_ruby(effective_url).await {
+                let metadata = self
+                    .resolve_artwork_metadata(
+                        &found_title,
+                        Some(&found_artist),
+                        Self::extract_song_page_metadata(&html),
+                        ArtworkSourcePreference::Auto,
+                    )
+                    .await;
+                let annotations = self.extract_ruby_lyrics(&html);
+                self.cache
+                    .lyrics()
+                    .insert(lyrics_url.clone(), annotations.clone())
+                    .await;
+
+                result.ruby_annotations = annotations;
+                result.status = "success".to_string();
+                result.found_title = found_title;
+                result.found_artist = found_artist;
+                result.lyrics_url = lyrics_url;
+                result.found_album = metadata.album;
+                result.cover_url = metadata.cover_url;
+                result.selected_index = index as i32;
+            } else {
+                result.status = "error".to_string();
+                result.error = Some("无法获取歌词页面".to_string());
+            }
         } else {
             result.status = "error".to_string();
             result.error = Some("无法获取歌词页面".to_string());

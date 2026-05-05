@@ -1533,11 +1533,9 @@ async function loadRemainingSearchPages(searchRunId) {
       return;
     }
 
-    utatenPageState = { ...utatenPageState, loadingMore: false };
+    utatenPageState = { ...utatenPageState, loadingMore: false, hasNext: false };
     renderResultList(currentSearchData);
     console.error('Load more search results error:', err);
-    const message = err instanceof Error ? err.message : String(err);
-    showError(`続きの検索結果の取得に失敗しました: ${message}`);
   } finally {
     isLoadingMoreResults = false;
     maybeLoadMoreResults();
@@ -1767,7 +1765,7 @@ async function handleSelectResult(index) {
   
   try {
     // 按CLI逻辑：搜索 → 选择 → get_lyrics(传URL)
-    const result = await invoke('get_lyrics', {
+    let result = await invoke('get_lyrics', {
       url: selectedItem.url,
       title: selectedItem.title,
       artist: selectedItem.artist || null,
@@ -1776,7 +1774,28 @@ async function handleSelectResult(index) {
       artworkSource: selectedArtworkSource(),
       lyricSource: selectedItem.source || 'utaten',
     });
-    
+
+    // Fallback: if QQ source failed, try matching UtaTen result
+    if (result.status !== 'success' && selectedItem.source === 'qq_music') {
+      void appendAppLspLog('lyrics', `QQ failed for "${selectedItem.title}", trying UtaTen fallback`);
+      // Find a matching UtaTen result for the same song
+      const utatenResults = currentSearchData?.sources?.utaten?.results || [];
+      const match = utatenResults.find(
+        r => r.title === selectedItem.title && r.artist === selectedItem.artist
+      );
+      if (match) {
+        result = await invoke('get_lyrics', {
+          url: match.url,
+          title: match.title,
+          artist: match.artist || null,
+          useCache: shouldUseCache(),
+          saveSaltBridge: !saltRequest,
+          artworkSource: selectedArtworkSource(),
+          lyricSource: 'utaten',
+        });
+      }
+    }
+
     currentLyrics = result;
     
     if (result.status === 'success') {

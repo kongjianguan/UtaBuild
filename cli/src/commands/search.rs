@@ -136,9 +136,18 @@ pub async fn execute(
         let cache = CacheManager::new();
         let searcher = Arc::new(UtaTenSearcher::new(cache));
 
-        let search_response = searcher
+        let mut search_response = searcher
             .search_with_options(&title, artist_ref, "title", page)
             .await;
+
+        // If UtaTen returned no results, try QQ Music search
+        if search_response.results.is_empty() {
+            info!("UtaTen returned no results, trying QQ Music search");
+            search_response = searcher
+                .search_qq_music(&title, artist_ref, page)
+                .await;
+        }
+
         let process_result = search_response_to_process_result(&title, artist_ref, search_response);
 
         if process_result.search_results.is_empty() {
@@ -245,9 +254,18 @@ pub async fn execute(
         let cache = CacheManager::new();
         let searcher = Arc::new(UtaTenSearcher::new(cache));
 
-        let search_response = searcher
+        let mut search_response = searcher
             .search_with_options(&title, artist_ref, "title", page)
             .await;
+
+        // If UtaTen returned no results, try QQ Music search
+        if search_response.results.is_empty() {
+            info!("UtaTen returned no results, trying QQ Music search");
+            search_response = searcher
+                .search_qq_music(&title, artist_ref, page)
+                .await;
+        }
+
         let process_result =
             search_response_to_process_result(&title, artist_ref, search_response.clone());
 
