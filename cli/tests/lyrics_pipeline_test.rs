@@ -94,7 +94,7 @@ fn ruby_alignment_produces_correct_elements() {
     assert_eq!(elements[1].element_type, "text");
     assert_eq!(elements[1].base.as_deref(), Some("やかなる"));
 
-    // Verify second ruby
+    // Verify second ruby (merged)
     assert_eq!(elements[2].element_type, "ruby");
     assert_eq!(elements[2].base.as_deref(), Some("色彩"));
     assert_eq!(elements[2].ruby.as_deref(), Some("しきさい"));

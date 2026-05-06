@@ -1022,6 +1022,23 @@ body.songs-first-level-scrollbar-disabled::-webkit-scrollbar {
   background: rgba(67, 181, 129, 0.12);
 }
 
+.source-badge--ne {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.12);
+}
+
+
+
+/* Per-source error message in result list */
+.source-error {
+  padding: 24px 16px;
+  color: var(--danger, #e74c3c);
+  font-size: 0.9rem;
+  text-align: center;
+  background: rgba(231, 76, 60, 0.06);
+  border-radius: 10px;
+  margin: 12px 0;
+}
 
 /* ==================== Lyrics View ==================== */
 #lyrics-header {

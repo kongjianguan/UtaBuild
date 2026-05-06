@@ -327,7 +327,7 @@ public final class UtaBuildSaltModule extends XposedModule {
             Method drawText = Canvas.class.getMethod("drawText", String.class, float.class, float.class, Paint.class);
             hook(drawText).intercept(chain -> {
                 // Before original draw: inject ruby above the character
-                Object[] args = chain.getArgs();
+                Object[] args = chain.getArgs().toArray(new Object[0]);
                 RubyCanvasInjector.beforeDrawText(
                         (Canvas) chain.getThisObject(),
                         (String) args[0],

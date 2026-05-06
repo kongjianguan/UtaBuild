@@ -41,7 +41,14 @@ async fn search_lyrics(
     let page = page.unwrap_or(1);
     let use_cache = use_cache.unwrap_or(true);
     let is_qq = lyric_source.as_deref() == Some("qq_music");
-    let search_type = if is_qq { "qq_music" } else { "title" };
+    let is_ne = lyric_source.as_deref() == Some("netease");
+    let search_type = if is_qq {
+        "qq_music"
+    } else if is_ne {
+        "netease"
+    } else {
+        "title"
+    };
 
     write_app_lsp_log_if_enabled(
         &app,
@@ -71,6 +78,10 @@ async fn search_lyrics(
     let result = if is_qq {
         searcher
             .search_qq_music(&title, artist.as_deref(), page)
+            .await
+    } else if is_ne {
+        searcher
+            .search_netease(&title, artist.as_deref(), page)
             .await
     } else if use_cache {
         searcher
@@ -233,6 +244,50 @@ async fn get_lyrics(
         )
         .await;
         return Ok(response);
+    }
+
+    // NetEase path
+    if lyric_preference == LyricSourcePreference::Netease || url.starts_with("ne:") {
+        let ne_song_id = url.strip_prefix("ne:").unwrap_or(&url);
+        let ne_cache_key = format!("ne:{}", ne_song_id);
+
+        if use_cache {
+            if let Some(cached_annotations) = searcher.cache().lyrics().get(&ne_cache_key).await {
+                drop(searcher);
+                let response = lyrics_success_response(
+                    title.clone(),
+                    artist.clone(),
+                    ne_cache_key.clone(),
+                    &cached_annotations,
+                    None,
+                    None,
+                );
+                if save_salt_bridge {
+                    save_salt_bridge_cache(&app, &response)?;
+                }
+                return Ok(response);
+            }
+        }
+
+        let annotations: Vec<LyricElement> = searcher.ne_source.fetch_lyrics(ne_song_id).await.unwrap_or_default();
+        if !annotations.is_empty() {
+            searcher.cache().lyrics().insert(ne_cache_key.clone(), annotations.clone()).await;
+            drop(searcher);
+            let response = lyrics_success_response(title, artist, ne_cache_key, &annotations, None, None);
+            if save_salt_bridge {
+                save_salt_bridge_cache(&app, &response)?;
+            }
+            return Ok(response);
+        }
+
+        if lyric_preference == LyricSourcePreference::Netease {
+            drop(searcher);
+            return serde_json::to_value(serde_json::json!({
+                "status": "error",
+                "error": "NetEase 歌词获取失败"
+            })).map_err(|e| e.to_string());
+        }
+        // Fall through to UtaTen on Auto with ne: URL
     }
 
     // UtaTen path (existing logic)

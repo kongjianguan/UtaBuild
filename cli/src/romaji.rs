@@ -7,6 +7,16 @@ fn romaji_map() -> &'static HashMap<String, String> {
 }
 
 pub fn romaji_to_hiragana(input: &str) -> String {
+    romaji_to_hiragana_impl(input, false)
+}
+
+/// Convert romaji to hiragana, skipping characters that cannot be mapped
+/// (digits, punctuation, leaked timing data) instead of passing them through.
+pub fn romaji_to_hiragana_strict(input: &str) -> String {
+    romaji_to_hiragana_impl(input, true)
+}
+
+fn romaji_to_hiragana_impl(input: &str, strict: bool) -> String {
     let map = romaji_map();
     let mut result = String::with_capacity(input.len());
 
@@ -41,11 +51,11 @@ pub fn romaji_to_hiragana(input: &str) -> String {
                     continue;
                 }
             }
-            // Single char (pass through non-Japanese)
+            // Single char
             let one: String = chars[i..=i].iter().collect();
             if let Some(h) = map.get(&one) {
                 result.push_str(h);
-            } else {
+            } else if !strict {
                 result.push(chars[i]);
             }
             i += 1;

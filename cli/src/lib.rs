@@ -2,7 +2,10 @@ pub mod cache;
 pub mod cache_manager;
 pub mod commands;
 pub mod logger;
+pub mod lrc_parser;
 pub mod models;
+pub mod ne_crypto;
+pub mod ne_source;
 pub mod output;
 pub mod platform;
 pub mod qm_decrypt;
@@ -18,3 +21,4 @@ pub use models::{
 pub use searcher::{
     parse_artist_info, ArtistInfo, ArtworkSourcePreference, LyricSourcePreference, UtaTenSearcher,
 };
+pub use ne_source::NeteaseSource;

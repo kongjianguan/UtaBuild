@@ -148,6 +148,14 @@ pub async fn execute(
                 .await;
         }
 
+        // If QQ Music also returned no results, try NetEase
+        if search_response.results.is_empty() {
+            info!("QQ Music returned no results, trying NetEase search");
+            search_response = searcher
+                .search_netease(&title, artist_ref, page)
+                .await;
+        }
+
         let process_result = search_response_to_process_result(&title, artist_ref, search_response);
 
         if process_result.search_results.is_empty() {
@@ -263,6 +271,14 @@ pub async fn execute(
             info!("UtaTen returned no results, trying QQ Music search");
             search_response = searcher
                 .search_qq_music(&title, artist_ref, page)
+                .await;
+        }
+
+        // If QQ Music also returned no results, try NetEase
+        if search_response.results.is_empty() {
+            info!("QQ Music returned no results, trying NetEase search");
+            search_response = searcher
+                .search_netease(&title, artist_ref, page)
                 .await;
         }
 

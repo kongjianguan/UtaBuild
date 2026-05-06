@@ -52,6 +52,26 @@ async function initTauri() {
       const page = Number(args.page || 1);
       const lyricSource = args.lyricSource || 'utaten';
 
+      if (lyricSource === 'netease') {
+        return {
+          status: 'select',
+          query_title: args.title,
+          query_artist: args.artist || null,
+          page,
+          pagination: {
+            current_page: page,
+            total_pages: 1,
+            has_next: false,
+          },
+          results: Array.from({ length: 3 }, (_, i) => ({
+            title: `${args.title || '春日影'} NE${page}-${i + 1}`,
+            artist: i === 0 ? 'MyGO!!!!!' : i === 1 ? 'Ave Mujica' : 'Other',
+            url: `ne:mock${page * 100 + i}`,
+            source: 'netease',
+          })),
+        };
+      }
+
       if (lyricSource === 'qq_music') {
         return {
           status: 'select',
@@ -1449,9 +1469,10 @@ function updatePagination(_data) {
 }
 
 function updateResultsSummary(data) {
-  const utatenCount = data?.sources?.utaten?.results?.length ?? 0;
-  const qqCount = data?.sources?.qq_music?.results?.length ?? 0;
-  const totalCount = utatenCount + qqCount;
+  const utatenCount = data?.sources?.utaten?.data?.results?.length ?? 0;
+  const qqCount = data?.sources?.qq_music?.data?.results?.length ?? 0;
+  const neCount = data?.sources?.netease?.data?.results?.length ?? 0;
+  const totalCount = utatenCount + qqCount + neCount;
   const { loadedPages, totalPages, loadingMore } = getPaginationInfo(data);
   const title = data?.query?.title ?? currentSearchQuery?.title ?? '';
   const artist = data?.query?.artist ?? currentSearchQuery?.artist;
@@ -1463,7 +1484,7 @@ function updateResultsSummary(data) {
   }
 
   const loadingSuffix = loadingMore ? '・続きを取得中' : '';
-  const perSource = totalCount > 0 ? `（UtaTen: ${utatenCount} / QQ: ${qqCount}）` : '';
+  const perSource = totalCount > 0 ? `（UtaTen: ${utatenCount} / QQ: ${qqCount} / NE: ${neCount}）` : '';
   elements.resultsSummary.textContent = `「${queryLabel}」の検索結果 ${totalCount}件${perSource}（${loadedPages}/${totalPages}ページ読み込み済み${loadingSuffix}）`;
   show(elements.resultsSummary);
 }
@@ -1515,7 +1536,7 @@ async function loadRemainingSearchPages(searchRunId) {
 
     currentSearchData = {
       ...currentSearchData,
-      sources: { ...currentSearchData.sources, utaten: nextResult },
+      sources: { ...currentSearchData.sources, utaten: { data: nextResult, error: null } },
       allResults: [...currentSearchData.allResults, ...dedupedNew],
     };
 
@@ -1608,46 +1629,59 @@ async function performSearch(page = 1, searchRunId = currentSearchRunId) {
   console.log('🔍 搜索:', title, '| isTauriEnv:', isTauriEnv, '| invoke:', typeof invoke);
 
   try {
-    // Make parallel search calls to both sources
+    // Make parallel search calls to all three sources
     const results = await Promise.allSettled([
       invoke('search_lyrics', { title, artist, page, useCache: shouldUseCache(), lyricSource: 'utaten' }),
       invoke('search_lyrics', { title, artist, page, useCache: shouldUseCache(), lyricSource: 'qq_music' }),
+      invoke('search_lyrics', { title, artist, page, useCache: shouldUseCache(), lyricSource: 'netease' }),
     ]);
 
     if (searchRunId !== currentSearchRunId) {
       return;
     }
 
-    const utatenResult = results[0].status === 'fulfilled' ? results[0].value : null;
-    const qqMusicResult = results[1].status === 'fulfilled' ? results[1].value : null;
-
-    if (!utatenResult && !qqMusicResult) {
-      showError('両方のソースで検索に失敗しました');
-      return;
+    function extractResult(index, sourceName) {
+      if (results[index].status !== 'fulfilled') {
+        return { sourceError: results[index].reason?.message || results[index].reason || `${sourceName} 検索に失敗しました` };
+      }
+      const val = results[index].value;
+      if (val && val.status === 'select' && val.results && val.results.length > 0) {
+        return { data: val, sourceError: null };
+      }
+      return { sourceError: `${sourceName} で結果が見つかりませんでした` };
     }
 
+    const utatenInfo = extractResult(0, 'UtaTen');
+    const qqMusicInfo = extractResult(1, 'QQ音楽');
+    const neteaseInfo = extractResult(2, '网易雲');
+
     // Tag results with source
-    const utatenItems = (utatenResult?.results || []).map(item => ({ ...item, source: 'utaten' }));
-    const qqMusicItems = (qqMusicResult?.results || []).map(item => ({ ...item, source: 'qq_music' }));
+    const utatenItems = (utatenInfo.data?.results || []).map(item => ({ ...item, source: 'utaten' }));
+    const qqMusicItems = (qqMusicInfo.data?.results || []).map(item => ({ ...item, source: 'qq_music' }));
+    const neteaseItems = (neteaseInfo.data?.results || []).map(item => ({ ...item, source: 'netease' }));
 
     currentSearchData = {
       query: { title, artist },
-      sources: { utaten: utatenResult, qq_music: qqMusicResult },
-      allResults: [...utatenItems, ...qqMusicItems],
+      sources: {
+        utaten: { data: utatenInfo.data ?? null, error: utatenInfo.sourceError },
+        qq_music: { data: qqMusicInfo.data ?? null, error: qqMusicInfo.sourceError },
+        netease: { data: neteaseInfo.data ?? null, error: neteaseInfo.sourceError },
+      },
+      allResults: [...utatenItems, ...qqMusicItems, ...neteaseItems],
     };
     currentActiveTab = 'all';
 
     // Init UtaTen pagination state
     utatenPageState = {
-      currentPage: utatenResult?.pagination?.current_page || 1,
-      totalPages: utatenResult?.pagination?.total_pages || 1,
-      hasNext: utatenResult?.pagination?.has_next ?? false,
+      currentPage: utatenInfo.data?.pagination?.current_page || 1,
+      totalPages: utatenInfo.data?.pagination?.total_pages || 1,
+      hasNext: utatenInfo.data?.pagination?.has_next ?? false,
       loadedPages: 1,
       loadingMore: false,
     };
 
     if (currentSearchData.allResults.length > 0) {
-      void appendAppLspLog('search', `search success utaten=${utatenItems.length} qq=${qqMusicItems.length}`);
+      void appendAppLspLog('search', `search success utaten=${utatenItems.length} qq=${qqMusicItems.length} ne=${neteaseItems.length}`);
       renderResultList(currentSearchData);
       if (currentView === 'results') {
         switchToResults();
@@ -1697,15 +1731,34 @@ function renderResultList(data) {
 
   // Update tab bar active state and counts
   updateSourceTabs(data);
+  // Show per-source error if no results due to error
+  if (filteredResults.length === 0 && currentActiveTab !== 'all') {
+    const sourceData = data?.sources?.[currentActiveTab];
+    if (sourceData?.error) {
+      const errorEl = document.createElement('div');
+      errorEl.className = 'source-error';
+      errorEl.setAttribute('role', 'alert');
+      errorEl.textContent = sourceData.error;
+      elements.resultsContainer.appendChild(errorEl);
+      return;
+    }
+  }
+
+
 
   filteredResults.forEach((item, displayIndex) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'result-item';
 
-    const sourceBadge = item.source === 'qq_music'
-      ? '<span class="source-badge source-badge--qq">QQ</span>'
-      : '<span class="source-badge source-badge--utaten">UtaTen</span>';
+    let sourceBadge;
+    if (item.source === 'qq_music') {
+      sourceBadge = '<span class="source-badge source-badge--qq">QQ</span>';
+    } else if (item.source === 'netease') {
+      sourceBadge = '<span class="source-badge source-badge--ne">NE</span>';
+    } else {
+      sourceBadge = '<span class="source-badge source-badge--utaten">UtaTen</span>';
+    }
 
     button.innerHTML = `
       ${sourceBadge}
@@ -1723,9 +1776,13 @@ function renderResultList(data) {
 function updateSourceTabs(data) {
   if (!elements.sourceTabs) return;
   const tabs = elements.sourceTabs.querySelectorAll('.source-tab');
-  const utatenCount = (data?.sources?.utaten?.results || []).length;
-  const qqCount = (data?.sources?.qq_music?.results || []).length;
-  const totalCount = utatenCount + qqCount;
+  const utatenCount = data?.sources?.utaten?.data?.results?.length ?? 0;
+  const qqCount = data?.sources?.qq_music?.data?.results?.length ?? 0;
+  const neCount = data?.sources?.netease?.data?.results?.length ?? 0;
+  const totalCount = utatenCount + qqCount + neCount;
+  const utatenErr = data?.sources?.utaten?.error ?? null;
+  const qqErr = data?.sources?.qq_music?.error ?? null;
+  const neErr = data?.sources?.netease?.error ?? null;
 
   tabs.forEach(tab => {
     const source = tab.dataset.source;
@@ -1733,14 +1790,27 @@ function updateSourceTabs(data) {
     tab.setAttribute('aria-selected', source === currentActiveTab);
 
     let countEl = tab.querySelector('.tab-count');
-    const count = source === 'all' ? totalCount : source === 'utaten' ? utatenCount : qqCount;
+    let count = totalCount;
+    let errorMsg = null;
+    if (source === 'utaten') { count = utatenCount; errorMsg = utatenErr; }
+    else if (source === 'qq_music') { count = qqCount; errorMsg = qqErr; }
+    else if (source === 'netease') { count = neCount; errorMsg = neErr; }
+
     if (!countEl) {
       countEl = document.createElement('span');
       countEl.className = 'tab-count';
       tab.appendChild(countEl);
     }
-    countEl.textContent = `(${count})`;
-    tab.dataset.empty = count === 0 ? 'true' : 'false';
+
+    if (errorMsg) {
+      countEl.textContent = `✕`;
+      tab.dataset.empty = 'true';
+      tab.title = errorMsg;
+    } else {
+      countEl.textContent = `(${count})`;
+      tab.dataset.empty = count === 0 ? 'true' : 'false';
+      tab.title = '';
+    }
   });
 
   show(elements.sourceTabs);
@@ -1779,7 +1849,27 @@ async function handleSelectResult(index) {
     if (result.status !== 'success' && selectedItem.source === 'qq_music') {
       void appendAppLspLog('lyrics', `QQ failed for "${selectedItem.title}", trying UtaTen fallback`);
       // Find a matching UtaTen result for the same song
-      const utatenResults = currentSearchData?.sources?.utaten?.results || [];
+      const utatenResults = currentSearchData?.sources?.utaten?.data?.results || [];
+      const match = utatenResults.find(
+        r => r.title === selectedItem.title && r.artist === selectedItem.artist
+      );
+      if (match) {
+        result = await invoke('get_lyrics', {
+          url: match.url,
+          title: match.title,
+          artist: match.artist || null,
+          useCache: shouldUseCache(),
+          saveSaltBridge: !saltRequest,
+          artworkSource: selectedArtworkSource(),
+          lyricSource: 'utaten',
+        });
+      }
+    }
+
+    // Fallback: if NetEase source failed, try matching UtaTen result
+    if (result.status !== 'success' && selectedItem.source === 'netease') {
+      void appendAppLspLog('lyrics', `NetEase failed for "${selectedItem.title}", trying UtaTen fallback`);
+      const utatenResults = currentSearchData?.sources?.utaten?.data?.results || [];
       const match = utatenResults.find(
         r => r.title === selectedItem.title && r.artist === selectedItem.artist
       );

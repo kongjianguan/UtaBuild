@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info};
+use base64::Engine as _;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SongPageMetadata {
@@ -40,6 +41,7 @@ pub enum LyricSourcePreference {
     Auto,
     UtaTen,
     QqMusic,
+    Netease,
 }
 
 impl LyricSourcePreference {
@@ -47,6 +49,7 @@ impl LyricSourcePreference {
         match value.map(str::trim).map(str::to_ascii_lowercase).as_deref() {
             Some("utaten") => Self::UtaTen,
             Some("qq") | Some("qqmusic") | Some("qq_music") => Self::QqMusic,
+            Some("netease") | Some("ne") | Some("wy") => Self::Netease,
             _ => Self::Auto,
         }
     }
@@ -128,6 +131,7 @@ pub struct UtaTenSearcher {
     pub cache: CacheManager,
     delay: Duration,
     last_request: Arc<Mutex<Instant>>,
+    pub ne_source: crate::ne_source::NeteaseSource,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -166,6 +170,7 @@ impl UtaTenSearcher {
             cache,
             delay: Duration::from_millis(REQUEST_DELAY_MS),
             last_request: Arc::new(Mutex::new(Instant::now() - Duration::from_secs(10))),
+            ne_source: crate::ne_source::NeteaseSource::new(),
         }
     }
 
@@ -979,7 +984,8 @@ impl UtaTenSearcher {
             .pointer("/req_0/data/body/item_song")
             .and_then(|v| v.as_array())?;
 
-        let (song_id, _song_mid) = songs
+        // Find best matching song and extract all needed metadata
+        let (song_id, song_title, singer_name, album_name, interval) = songs
             .iter()
             .filter_map(|song| {
                 let result = Self::qq_song_to_search_result(song, title, artist)?;
@@ -990,12 +996,37 @@ impl UtaTenSearcher {
                     artist,
                 );
                 let id = song.get("id").and_then(|v| v.as_i64())?;
-                Some((score, id, result.url.strip_prefix("qq_music:").unwrap_or(&result.url).to_string()))
+                let song_title = song
+                    .get("name")
+                    .or_else(|| song.get("title"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let singer_name = song
+                    .get("singer")
+                    .and_then(|v| v.as_array())
+                    .map(|singers| {
+                        singers
+                            .iter()
+                            .filter_map(|s| s.get("name").and_then(|n| n.as_str()))
+                            .collect::<Vec<_>>()
+                            .join("/")
+                    })
+                    .unwrap_or_default();
+                let album_name = song
+                    .get("album")
+                    .and_then(|v| v.get("name"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let interval = song.get("interval").and_then(|v| v.as_i64()).unwrap_or(0);
+                Some((score, id, song_title, singer_name, album_name, interval))
             })
-            .max_by_key(|(score, _, _)| *score)
-            .map(|(_, id, mid)| (id, mid))?;
+            .max_by_key(|(score, _, _, _, _, _)| *score)
+            .map(|(_, id, title, singer, album, interval)| (id, title, singer, album, interval))?;
 
-        // Step 2: Fetch lyrics (use numeric songID, not string mid)
+        // Step 2: Fetch lyrics with lyrico-compatible parameters
+        let engine = base64::engine::general_purpose::STANDARD;
         let lyric_body = serde_json::json!({
             "comm": {
                 "ct": "11", "cv": "1003006", "v": "1003006",
@@ -1007,8 +1038,16 @@ impl UtaTenSearcher {
                 "module": "music.musichallSong.PlayLyricInfo",
                 "param": {
                     "songID": song_id,
+                    "songName": engine.encode(song_title.as_bytes()),
+                    "albumName": engine.encode(album_name.as_bytes()),
+                    "singerName": engine.encode(singer_name.as_bytes()),
                     "crypt": 1, "qrc": 1,
-                    "roma": 1, "trans": 0
+                    "roma": 1, "trans": 1,
+                    "cv": 2111, "ct": 19,
+                    "lrc_t": 0, "qrc_t": 0,
+                    "roma_t": 0, "trans_t": 0,
+                    "type": 0,
+                    "interval": interval,
                 }
             }
         });
@@ -1078,6 +1117,43 @@ impl UtaTenSearcher {
             r.album = album;
             r
         })
+    }
+
+    /// Search NetEase Cloud Music for songs matching the given title/artist.
+    pub async fn search_netease(
+        &self,
+        title: &str,
+        artist: Option<&str>,
+        page: u32,
+    ) -> SearchResponse {
+        let query = Self::song_query(title, artist);
+        let mut response = SearchResponse::new();
+        response.query_title = Some(title.to_string());
+        response.query_artist = artist.map(|a| a.to_string());
+        response.search_type = "netease".to_string();
+        response.page = page;
+
+        if query.is_empty() {
+            response.status = "not_found".to_string();
+            return response;
+        }
+
+        match self.ne_source.search(&query, page, 8).await {
+            Some(results) if !results.is_empty() => {
+                response.status = "select".to_string();
+                response.pagination = Some(SearchPagination {
+                    current_page: page,
+                    total_pages: 1,
+                    has_next: false,
+                });
+                response.results = results;
+            }
+            _ => {
+                response.status = "not_found".to_string();
+            }
+        }
+
+        response
     }
 
     /// Search QQ Music for songs matching the given title/artist.
@@ -1221,7 +1297,7 @@ impl UtaTenSearcher {
                         .map(|w| w.text.as_str())
                         .collect::<Vec<_>>()
                         .join(" ");
-                    crate::romaji::romaji_to_hiragana(&romaji_str)
+                    crate::romaji::romaji_to_hiragana_strict(&romaji_str)
                 })
                 .unwrap_or_default();
 
@@ -1232,7 +1308,8 @@ impl UtaTenSearcher {
             if hiragana.is_empty() {
                 elements.push(LyricElement::new_text(orig_text));
             } else {
-                let line_elements = crate::ruby_align::align_ruby_to_text(&orig_text, &hiragana);
+                let line_elements =
+                    crate::ruby_align::align_ruby_to_text(&orig_text, &hiragana);
                 elements.extend(line_elements);
             }
 
@@ -1553,15 +1630,30 @@ impl UtaTenSearcher {
 
         // Check cache first (source-aware keys)
         let qq_cache_key = format!("qq:{}:{}", found_title, found_artist);
+        let ne_cache_key = format!("ne:{}", lyrics_url);
         let cache_hit = match lyric_preference {
             LyricSourcePreference::QqMusic => self.cache.lyrics().get(&qq_cache_key).await,
             LyricSourcePreference::UtaTen => self.cache.lyrics().get(&lyrics_url).await,
+            LyricSourcePreference::Netease => self.cache.lyrics().get(&ne_cache_key).await,
             LyricSourcePreference::Auto => {
-                let qq_hit = self.cache.lyrics().get(&qq_cache_key).await;
-                if qq_hit.is_some() {
-                    qq_hit
+                let ne_hit = if lyrics_url.starts_with("ne:") {
+                    self.cache.lyrics().get(&ne_cache_key).await
                 } else {
-                    self.cache.lyrics().get(&lyrics_url).await
+                    None
+                };
+                if ne_hit.is_some() {
+                    ne_hit
+                } else {
+                    let qq_hit = if lyrics_url.starts_with("qq_music:") {
+                        self.cache.lyrics().get(&qq_cache_key).await
+                    } else {
+                        None
+                    };
+                    if qq_hit.is_some() {
+                        qq_hit
+                    } else {
+                        self.cache.lyrics().get(&lyrics_url).await
+                    }
                 }
             }
         };
@@ -1579,8 +1671,36 @@ impl UtaTenSearcher {
         let use_qq = match lyric_preference {
             LyricSourcePreference::QqMusic => true,
             LyricSourcePreference::UtaTen => false,
+            LyricSourcePreference::Netease => false,
             LyricSourcePreference::Auto => true,
         };
+
+        // Try NetEase if URL starts with "ne:" or preference is Netease
+        let use_ne = lyric_preference == LyricSourcePreference::Netease
+            || (lyric_preference == LyricSourcePreference::Auto && lyrics_url.starts_with("ne:"));
+        if use_ne {
+            let ne_song_id = lyrics_url.strip_prefix("ne:").unwrap_or(&lyrics_url);
+            if let Some(annotations) = self.ne_source.fetch_lyrics(ne_song_id).await {
+                if !annotations.is_empty() {
+                    self.cache
+                        .lyrics()
+                        .insert(ne_cache_key.clone(), annotations.clone())
+                        .await;
+                    result.ruby_annotations = annotations;
+                    result.status = "success".to_string();
+                    result.found_title = found_title;
+                    result.found_artist = found_artist;
+                    result.lyrics_url = lyrics_url;
+                    result.selected_index = index as i32;
+                    return result;
+                }
+            }
+            if lyric_preference == LyricSourcePreference::Netease {
+                result.status = "error".to_string();
+                result.error = Some("NetEase 歌词获取失败".to_string());
+                return result;
+            }
+        }
 
         if use_qq {
             if let Some(annotations) = self
