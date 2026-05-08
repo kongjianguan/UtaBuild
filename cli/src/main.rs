@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use utabuild_cli::commands::{handle_history, handle_search, HistoryAction};
+use utabuild_cli::commands::{handle_history, handle_search, handle_url_lyrics, HistoryAction};
 
 #[derive(Parser)]
 #[command(name = "utabuild-cli")]
@@ -20,6 +20,9 @@ enum Commands {
 
         #[arg(short, long, help = "歌手名")]
         artist: Option<String>,
+
+        #[arg(long, help = "直接从 UtaTen 歌词 URL 获取（跳过搜索）")]
+        url: Option<String>,
 
         #[arg(short, long, default_value = "1", help = "页码，默认为 1")]
         page: u32,
@@ -60,6 +63,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::Search {
             title,
             artist,
+            url,
             page,
             select,
             output,
@@ -68,6 +72,16 @@ async fn main() -> anyhow::Result<()> {
             log_path,
             cache_dir,
         } => {
+            if url.is_some() {
+                return handle_url_lyrics(
+                    url,
+                    output,
+                    output_default,
+                    log_path,
+                    cache_dir,
+                )
+                .await;
+            }
             if output.is_some() && output_default {
                 eprintln!("错误: --output 和 --output-default 不能同时使用");
                 std::process::exit(1);

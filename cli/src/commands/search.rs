@@ -10,6 +10,82 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::{debug, info};
 
+/// Execute URL-based lyrics fetch: skip search, directly fetch from URL.
+pub async fn execute_from_url(
+    url: Option<String>,
+    output: Option<String>,
+    output_default: bool,
+    _cache_dir: Option<PathBuf>,
+) -> anyhow::Result<()> {
+    let url = match url {
+        Some(u) if !u.trim().is_empty() => u.trim().to_string(),
+        _ => {
+            let output = ErrorOutput::error("必须提供 --url 参数，且不能为空");
+            println!("{}", output.to_json()?);
+            return Ok(());
+        }
+    };
+
+    debug!("从 URL 获取歌词: {}", url);
+
+    // Check cache first
+    if let Some(cached_lyrics) = get_lyrics_cache(&url) {
+        info!("歌词缓存命中，直接输出");
+        let json_content = cached_lyrics.to_json()?;
+        if let Some(output_path) = output {
+            write_output_to_file(&output_path, &json_content)?;
+            info!("已输出到文件: {}", output_path);
+        } else if output_default {
+            let title = cached_lyrics.title.as_deref().unwrap_or("unknown");
+            let artist = cached_lyrics.artist.as_deref().unwrap_or("unknown");
+            let filename = generate_default_filename(artist, title);
+            write_output_to_file(&filename, &json_content)?;
+            info!("已输出到文件: {}", filename);
+        } else {
+            println!("{}", json_content);
+        }
+        return Ok(());
+    }
+
+    let cache = CacheManager::new();
+    let searcher = Arc::new(UtaTenSearcher::new(cache));
+
+    info!("从 URL 获取歌词: {}", url);
+    match searcher.fetch_lyrics_from_url(&url).await {
+        Some(annotations) if !annotations.is_empty() => {
+            let lyrics_output = LyricsOutput::success(
+                String::new(),
+                String::new(),
+                url.clone(),
+                &annotations,
+            );
+
+            info!("保存歌词到缓存: {}", url);
+            if let Err(e) = save_lyrics_cache(&url, lyrics_output.clone()) {
+                debug!("保存歌词缓存失败: {}", e);
+            }
+
+            let json_content = lyrics_output.to_json()?;
+            if let Some(output_path) = output {
+                write_output_to_file(&output_path, &json_content)?;
+                info!("已输出到文件: {}", output_path);
+            } else if output_default {
+                let filename = generate_default_filename("", "");
+                write_output_to_file(&filename, &json_content)?;
+                info!("已输出到文件: {}", filename);
+            } else {
+                println!("{}", json_content);
+            }
+        }
+        _ => {
+            let output = ErrorOutput::error("无法从该 URL 获取歌词");
+            println!("{}", output.to_json()?);
+        }
+    }
+
+    Ok(())
+}
+
 fn sanitize_filename(s: &str) -> String {
     let invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
     let mut result = s.to_string();

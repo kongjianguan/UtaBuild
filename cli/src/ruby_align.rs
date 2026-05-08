@@ -8,7 +8,7 @@ pub(crate) enum CharType {
 }
 
 #[inline]
-fn classify_char(ch: char) -> CharType {
+pub(crate) fn classify_char(ch: char) -> CharType {
     if ('\u{4e00}'..='\u{9fff}').contains(&ch) || ('\u{3400}'..='\u{4dbf}').contains(&ch) {
         CharType::Kanji
     } else if ('\u{3040}'..='\u{30ff}').contains(&ch) {
@@ -40,10 +40,19 @@ fn to_hiragana(ch: char) -> char {
 fn fallback_consume(remaining: &[char], kana_chars: &[char], kanji_len: usize) -> usize {
     if let Some(&last_char) = kana_chars.last() {
         if let Some(fallback_pos) = remaining.iter().position(|c| to_hiragana(*c) == last_char) {
+            tracing::info!(
+                "  FALLBACK: kanji_len={} kana_last={:?} found_at={} remaining_len={}",
+                kanji_len, last_char, fallback_pos, remaining.len()
+            );
             return fallback_pos;
         }
     }
-    (kanji_len * 2).min(remaining.len())
+    let heuristic = (kanji_len * 2).min(remaining.len());
+    tracing::info!(
+        "  FALLBACK_HEURISTIC: kanji_len={} heuristic={} remaining_len={}",
+        kanji_len, heuristic, remaining.len()
+    );
+    heuristic
 }
 
 struct RawBlock {
@@ -132,8 +141,22 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                             .windows(kana_chars.len())
                             .position(|w| w.iter().zip(&kana_chars).all(|(a, b)| to_hiragana(*a) == *b));
                         match pos {
-                            Some(p) => p,
+                            Some(p) => {
+                                if kanji_len == 1 {
+                                    tracing::info!(
+                                        "  ANCHOR_OK kanji={} kana_anchor={} pos={} hira_remaining={:?}",
+                                        block.text, kana_text, p,
+                                        remaining.iter().take(20).collect::<String>()
+                                    );
+                                }
+                                p
+                            }
                             None => {
+                                tracing::info!(
+                                    "  ANCHOR_FAIL kanji={} kana_anchor={} hira_remaining={:?}",
+                                    block.text, kana_text,
+                                    remaining.iter().take(20).collect::<String>()
+                                );
                                 // Full anchor not found (e.g. romaji data lacks
                                 // sokuon markers — "to te" instead of "to tte").
                                 // Fall back to the last character of the anchor
@@ -189,6 +212,12 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                     // to signal boundaries from the original text).
                     let remaining = &hiragana_chars[hira_idx..];
                     if let Some(space_pos) = remaining.iter().position(|c| c.is_whitespace()) {
+                        if space_pos < consume {
+                            tracing::info!(
+                                "  SPACE_CAP kanji={} consume={}->{} (space at pos {})",
+                                block.text, consume, space_pos, space_pos
+                            );
+                        }
                         consume = consume.min(space_pos);
                     }
                     if kanji_len == 1 {
@@ -257,7 +286,7 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
     merge_adjacent(&elements)
 }
 
-fn merge_adjacent(elements: &[LyricElement]) -> Vec<LyricElement> {
+pub(crate) fn merge_adjacent(elements: &[LyricElement]) -> Vec<LyricElement> {
     if elements.is_empty() {
         return vec![];
     }
@@ -314,6 +343,38 @@ fn merge_adjacent(elements: &[LyricElement]) -> Vec<LyricElement> {
     }
 
     merged
+}
+
+/// Post-process LyricElements to fix common encoding and normalization issues.
+///
+/// Currently handles:
+/// - Stray ASCII consonant letters in ruby text (e.g., 's' representing sokuon っ)
+///   This catches encoding issues where っ (U+3063) lost its proper encoding
+///   in the upstream data pipeline.
+pub fn sanitize_ruby_elements(elements: Vec<LyricElement>) -> Vec<LyricElement> {
+    elements.into_iter().map(|elem| {
+        if elem.element_type == "ruby" {
+            if let Some(ref ruby_text) = elem.ruby {
+                // Check if the ruby text contains any ASCII letters
+                if ruby_text.bytes().any(|b| b.is_ascii_alphabetic()) {
+                    // Replace stray consonants with sokuon (っ)
+                    let sanitized: String = ruby_text.chars().map(|c| {
+                        match c {
+                            's' | 't' | 'k' | 'p' | 'b' | 'd' | 'g' | 'j' | 'c' => 'っ',
+                            _ => c,
+                        }
+                    }).collect();
+                    if sanitized != *ruby_text {
+                        return LyricElement::new_ruby(
+                            elem.base.unwrap_or_default(),
+                            sanitized,
+                        );
+                    }
+                }
+            }
+        }
+        elem
+    }).collect()
 }
 
 /// Insert whitespace markers into hiragana based on space positions in the

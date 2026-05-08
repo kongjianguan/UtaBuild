@@ -43,6 +43,19 @@ pub async fn handle_search(
     .await
 }
 
+pub async fn handle_url_lyrics(
+    url: Option<String>,
+    output: Option<String>,
+    output_default: bool,
+    log_path: Option<PathBuf>,
+    cache_dir: Option<PathBuf>,
+) -> anyhow::Result<()> {
+    if log_path.is_some() {
+        crate::logger::init_logger_with_pathbuf(log_path);
+    }
+    search::execute_from_url(url, output, output_default, cache_dir).await
+}
+
 pub async fn handle_history(
     action: HistoryAction,
     cache_dir: Option<PathBuf>,
