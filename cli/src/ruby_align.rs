@@ -32,6 +32,21 @@ fn to_hiragana(ch: char) -> char {
     }
 }
 
+/// Compare two kana characters for matching, treating particle alternations
+/// as equivalent. Specifically:
+/// - `は` (ha) used as a topic particle reads as `わ` (wa) in romaji
+/// - `へ` (he) used as a direction particle reads as `え` (e) in romaji
+/// NetEase romalrc always uses the pronunciation (wa/e), while the original
+/// YRC text keeps the orthographic form (は/へ).
+#[inline]
+fn chars_match_kana(a: char, b: char) -> bool {
+    let a = to_hiragana(a);
+    let b = to_hiragana(b);
+    a == b
+        || (a == 'は' && b == 'わ') || (a == 'わ' && b == 'は')
+        || (a == 'へ' && b == 'え') || (a == 'え' && b == 'へ')
+}
+
 /// When the full kana anchor is not found in the hiragana reading
 /// (e.g. because the romaji data omits sokuon markers — "to te" instead
 /// of "to tte"), fall back to matching the last character of the anchor
@@ -39,19 +54,11 @@ fn to_hiragana(ch: char) -> char {
 /// `kanji_len * 2` heuristic.
 fn fallback_consume(remaining: &[char], kana_chars: &[char], kanji_len: usize) -> usize {
     if let Some(&last_char) = kana_chars.last() {
-        if let Some(fallback_pos) = remaining.iter().position(|c| to_hiragana(*c) == last_char) {
-            tracing::info!(
-                "  FALLBACK: kanji_len={} kana_last={:?} found_at={} remaining_len={}",
-                kanji_len, last_char, fallback_pos, remaining.len()
-            );
+        if let Some(fallback_pos) = remaining.iter().position(|c| chars_match_kana(*c, last_char)) {
             return fallback_pos;
         }
     }
     let heuristic = (kanji_len * 2).min(remaining.len());
-    tracing::info!(
-        "  FALLBACK_HEURISTIC: kanji_len={} heuristic={} remaining_len={}",
-        kanji_len, heuristic, remaining.len()
-    );
     heuristic
 }
 
@@ -139,24 +146,10 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                             kana_text.chars().map(to_hiragana).collect();
                         let pos = remaining
                             .windows(kana_chars.len())
-                            .position(|w| w.iter().zip(&kana_chars).all(|(a, b)| to_hiragana(*a) == *b));
+                            .position(|w| w.iter().zip(&kana_chars).all(|(a, b)| chars_match_kana(*a, *b)));
                         match pos {
-                            Some(p) => {
-                                if kanji_len == 1 {
-                                    tracing::info!(
-                                        "  ANCHOR_OK kanji={} kana_anchor={} pos={} hira_remaining={:?}",
-                                        block.text, kana_text, p,
-                                        remaining.iter().take(20).collect::<String>()
-                                    );
-                                }
-                                p
-                            }
+                            Some(p) => p,
                             None => {
-                                tracing::info!(
-                                    "  ANCHOR_FAIL kanji={} kana_anchor={} hira_remaining={:?}",
-                                    block.text, kana_text,
-                                    remaining.iter().take(20).collect::<String>()
-                                );
                                 // Full anchor not found (e.g. romaji data lacks
                                 // sokuon markers — "to te" instead of "to tte").
                                 // Fall back to the last character of the anchor
@@ -186,7 +179,7 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                                 kana_text.chars().map(to_hiragana).collect();
                             let total_pos = remaining
                                 .windows(kana_chars.len())
-                                .position(|w| w.iter().zip(&kana_chars).all(|(a, b)| to_hiragana(*a) == *b))
+                                .position(|w| w.iter().zip(&kana_chars).all(|(a, b)| chars_match_kana(*a, *b)))
                                 .unwrap_or_else(|| fallback_consume(remaining, &kana_chars, kanji_len));
 
                             if all_kanji_before_kana > 0 {
@@ -212,12 +205,6 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                     // to signal boundaries from the original text).
                     let remaining = &hiragana_chars[hira_idx..];
                     if let Some(space_pos) = remaining.iter().position(|c| c.is_whitespace()) {
-                        if space_pos < consume {
-                            tracing::info!(
-                                "  SPACE_CAP kanji={} consume={}->{} (space at pos {})",
-                                block.text, consume, space_pos, space_pos
-                            );
-                        }
                         consume = consume.min(space_pos);
                     }
                     if kanji_len == 1 {
@@ -267,7 +254,7 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                         matched += 1;
                         continue;
                     }
-                    if to_hiragana(hiragana_chars[hira_idx]) == to_hiragana(orig_ch) {
+                    if chars_match_kana(orig_ch, hiragana_chars[hira_idx]) {
                         hira_idx += 1;
                         matched += 1;
                     } else {

@@ -13,7 +13,7 @@ use crate::lrc_parser;
 use reqwest::Client;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 /// NetEase Cloud Music searcher.
 pub struct NeteaseSource {
@@ -309,24 +309,6 @@ impl NeteaseSource {
             .pointer("/romalrc/lyric")
             .and_then(|v| v.as_str())
             .filter(|s| !s.is_empty());
-
-        // Diagnostic: dump raw lyric data for root-cause analysis
-        if let Some(yrc) = yrc_lyric {
-            info!("===== RAW YRC =====");
-            for line in yrc.lines().take(5) {
-                info!("  YRC: {}", line);
-            }
-            let total = yrc.lines().filter(|l| !l.trim().is_empty()).count();
-            info!("  ... ({} lines total)", total);
-        }
-        if let Some(roma) = romalrc {
-            info!("===== RAW ROMALRC =====");
-            for line in roma.lines().take(5) {
-                info!("  ROMA: {}", line);
-            }
-            let total = roma.lines().filter(|l| !l.trim().is_empty()).count();
-            info!("  ... ({} lines total)", total);
-        }
 
         let elements = lrc_parser::parse_lyrics_with_ruby(
             yrc_lyric,

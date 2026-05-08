@@ -74,13 +74,6 @@ fn build_ruby_elements(
 
         if let Some(roma_str) = roma_text {
             let hiragana = crate::romaji::romaji_to_hiragana_strict(roma_str);
-            // Diagnostic: dump aligned pairs for the first 15 lines
-            if i < 15 {
-                tracing::info!(
-                    "ALIGN L{} orig={} romaji={} hiragana={}",
-                    i, orig_text, roma_str, hiragana
-                );
-            }
             if !hiragana.is_empty() && hiragana != orig_text.as_str() {
                 let line_elements =
                     crate::ruby_align::align_ruby_to_text(orig_text, &hiragana);
