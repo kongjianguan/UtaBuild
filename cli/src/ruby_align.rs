@@ -23,9 +23,17 @@ pub(crate) fn classify_char(ch: char) -> CharType {
 /// in hiragana ("ぱあじ"). Small kana (ぁっゃ etc.) are intentionally
 /// preserved — they match against small kana in the hiragana reading
 /// and avoid over-normalization that would break sokuon/anchor searches.
+///
+/// Characters outside the katakana kana range, such as the long vowel
+/// mark ー (U+30FC) and iteration marks ヽ (U+30FD) ヾ (U+30FE), are
+/// returned unchanged since they are diacritical marks, not kana.
 #[inline]
 fn to_hiragana(ch: char) -> char {
-    if ('\u{30A1}'..='\u{30F6}').contains(&ch) {
+    if ('\u{30A1}'..='\u{30F6}').contains(&ch)
+        && ch != '\u{30FC}'
+        && ch != '\u{30FD}'
+        && ch != '\u{30FE}'
+    {
         char::from_u32(ch as u32 - 96).unwrap_or(ch)
     } else {
         ch
@@ -33,11 +41,13 @@ fn to_hiragana(ch: char) -> char {
 }
 
 /// Compare two kana characters for matching, treating particle alternations
-/// as equivalent. Specifically:
+/// and the long vowel mark as equivalent. Specifically:
 /// - `は` (ha) used as a topic particle reads as `わ` (wa) in romaji
 /// - `へ` (he) used as a direction particle reads as `え` (e) in romaji
-/// NetEase romalrc always uses the pronunciation (wa/e), while the original
-/// YRC text keeps the orthographic form (は/へ).
+/// - `ー` (long vowel mark) in katakana represents vowel lengthening;
+///   in romaji-derived hiragana this is the corresponding short vowel
+/// NetEase romalrc always uses the pronunciation (wa/e/vowel), while the
+/// original YRC text keeps the orthographic form (は/へ/ー).
 #[inline]
 fn chars_match_kana(a: char, b: char) -> bool {
     let a = to_hiragana(a);
@@ -45,6 +55,13 @@ fn chars_match_kana(a: char, b: char) -> bool {
     a == b
         || (a == 'は' && b == 'わ') || (a == 'わ' && b == 'は')
         || (a == 'へ' && b == 'え') || (a == 'え' && b == 'へ')
+        || (a == 'ー' && is_vowel_kana(b))
+        || (b == 'ー' && is_vowel_kana(a))
+}
+
+/// Check if a character is a Japanese vowel kana (あいうえお or katakana equivalents).
+fn is_vowel_kana(c: char) -> bool {
+    matches!(c, 'あ' | 'い' | 'う' | 'え' | 'お' | 'ア' | 'イ' | 'ウ' | 'エ' | 'オ')
 }
 
 /// When the full kana anchor is not found in the hiragana reading
