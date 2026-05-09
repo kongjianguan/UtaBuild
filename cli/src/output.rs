@@ -141,6 +141,8 @@ pub struct SearchResultItem {
     pub lyricist: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub composer: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 impl SearchResultItem {
@@ -153,6 +155,7 @@ impl SearchResultItem {
             matched: if result.matched { Some(true) } else { None },
             lyricist: result.lyricist.clone(),
             composer: result.composer.clone(),
+            source: Some(result.source.clone()).filter(|s| !s.is_empty()),
         }
     }
 }

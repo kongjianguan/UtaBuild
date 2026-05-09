@@ -417,13 +417,16 @@ impl UtaTenSearcher {
 
                         if !link_text.is_empty() {
                             let artist_info = parse_artist_info(&current_artist);
-                            results.push(SearchResult::with_artist_info(
-                                link_text,
-                                artist_info.artist,
-                                href.to_string(),
-                                artist_info.lyricist,
-                                artist_info.composer,
-                            ));
+                            results.push(
+                                SearchResult::with_artist_info(
+                                    link_text,
+                                    artist_info.artist,
+                                    href.to_string(),
+                                    artist_info.lyricist,
+                                    artist_info.composer,
+                                )
+                                .with_source("utaten"),
+                            );
                         }
                     }
                 }

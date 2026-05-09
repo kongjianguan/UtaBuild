@@ -183,6 +183,60 @@ fn search_response_to_process_result(
     result
 }
 
+/// Run all three search sources in parallel, then merge results.
+async fn parallel_search_all(
+    searcher: &UtaTenSearcher,
+    title: &str,
+    artist: Option<&str>,
+    page: u32,
+) -> SearchResponse {
+    info!("Performing parallel search across UtaTen, QQ Music, and NetEase");
+
+    let (utaten, qq, ne) = tokio::join!(
+        searcher.search_with_options(title, artist, "title", page),
+        searcher.search_qq_music(title, artist, page),
+        searcher.search_netease(title, artist, page),
+    );
+
+    let total = utaten.results.len() + qq.results.len() + ne.results.len();
+    info!("Parallel search: UtaTen={}, QQ={}, NetEase={} (total={})",
+        utaten.results.len(), qq.results.len(), ne.results.len(), total);
+
+    // Collect errors before moving results out
+    let utaten_err = utaten.error.clone();
+    let qq_err = qq.error.clone();
+    let ne_err = ne.error.clone();
+
+    let mut merged = SearchResponse::new();
+    merged.query_title = Some(title.to_string());
+    merged.query_artist = artist.map(|a| a.to_string());
+    merged.search_type = "title".to_string();
+    merged.page = page;
+
+    let mut all = utaten.results;
+    all.extend(qq.results);
+    all.extend(ne.results);
+    merged.results = all;
+    merged.pagination = utaten.pagination;
+
+    if total > 0 {
+        merged.status = "select".to_string();
+    } else {
+        let errors: Vec<String> = [utaten_err, qq_err, ne_err]
+            .into_iter()
+            .flatten()
+            .collect();
+        if errors.is_empty() {
+            merged.status = "not_found".to_string();
+        } else {
+            merged.status = "error".to_string();
+            merged.error = Some(errors.join("; "));
+        }
+    }
+
+    merged
+}
+
 pub async fn execute(
     title: Option<String>,
     artist: Option<String>,
@@ -212,25 +266,9 @@ pub async fn execute(
         let cache = CacheManager::new();
         let searcher = Arc::new(UtaTenSearcher::new(cache));
 
-        let mut search_response = searcher
-            .search_with_options(&title, artist_ref, "title", page)
-            .await;
-
-        // If UtaTen returned no results, try QQ Music search
-        if search_response.results.is_empty() {
-            info!("UtaTen returned no results, trying QQ Music search");
-            search_response = searcher
-                .search_qq_music(&title, artist_ref, page)
-                .await;
-        }
-
-        // If QQ Music also returned no results, try NetEase
-        if search_response.results.is_empty() {
-            info!("QQ Music returned no results, trying NetEase search");
-            search_response = searcher
-                .search_netease(&title, artist_ref, page)
-                .await;
-        }
+        let search_response = parallel_search_all(
+            &searcher, &title, artist_ref, page,
+        ).await;
 
         let process_result = search_response_to_process_result(&title, artist_ref, search_response);
 
@@ -338,25 +376,9 @@ pub async fn execute(
         let cache = CacheManager::new();
         let searcher = Arc::new(UtaTenSearcher::new(cache));
 
-        let mut search_response = searcher
-            .search_with_options(&title, artist_ref, "title", page)
-            .await;
-
-        // If UtaTen returned no results, try QQ Music search
-        if search_response.results.is_empty() {
-            info!("UtaTen returned no results, trying QQ Music search");
-            search_response = searcher
-                .search_qq_music(&title, artist_ref, page)
-                .await;
-        }
-
-        // If QQ Music also returned no results, try NetEase
-        if search_response.results.is_empty() {
-            info!("QQ Music returned no results, trying NetEase search");
-            search_response = searcher
-                .search_netease(&title, artist_ref, page)
-                .await;
-        }
+        let search_response = parallel_search_all(
+            &searcher, &title, artist_ref, page,
+        ).await;
 
         let process_result =
             search_response_to_process_result(&title, artist_ref, search_response.clone());
