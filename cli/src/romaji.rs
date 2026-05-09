@@ -16,6 +16,13 @@ pub fn romaji_to_hiragana_strict(input: &str) -> String {
     romaji_to_hiragana_impl(input, true)
 }
 
+/// Characters that could represent sokuon (促音) when appearing alone.
+/// In romaji, a lone 's', 't', 'k', 'p', 'b', 'd', 'g', 'j', 'c'
+/// before another consonant syllable indicates gemination (っ).
+fn is_sokuon_candidate(c: char) -> bool {
+    matches!(c, 's' | 't' | 'k' | 'p' | 'b' | 'd' | 'g' | 'j' | 'c')
+}
+
 fn romaji_to_hiragana_impl(input: &str, strict: bool) -> String {
     let map = romaji_map();
     let mut result = String::with_capacity(input.len());
@@ -55,10 +62,19 @@ fn romaji_to_hiragana_impl(input: &str, strict: bool) -> String {
             let one: String = chars[i..=i].iter().collect();
             if let Some(h) = map.get(&one) {
                 result.push_str(h);
+                i += 1;
+            } else if strict && is_sokuon_candidate(chars[i]) {
+                // Stray consonant → sokuon (っ).
+                // This handles broken romaji like "i s sho" (should be "i ssho")
+                // where the 's' is a standalone sokuon marker.
+                result.push('っ');
+                i += 1;
             } else if !strict {
                 result.push(chars[i]);
+                i += 1;
+            } else {
+                i += 1; // skip unmappable in strict mode
             }
-            i += 1;
         }
     }
     result
@@ -94,6 +110,13 @@ fn build_romaji_map() -> HashMap<String, String> {
         ("ha", "は"),
         ("hi", "ひ"),
         ("fu", "ふ"),
+        ("fa", "ふぁ"),
+        ("fi", "ふぃ"),
+        ("fe", "ふぇ"),
+        ("fo", "ふぉ"),
+        ("fya", "ふゃ"),
+        ("fyu", "ふゅ"),
+        ("fyo", "ふょ"),
         ("he", "へ"),
         ("ho", "ほ"),
         ("ma", "ま"),
@@ -205,11 +228,40 @@ fn build_romaji_map() -> HashMap<String, String> {
         ("bbu", "っぶ"),
         ("bbe", "っべ"),
         ("bbo", "っぼ"),
+        ("ffa", "っふぁ"),
+        ("ffi", "っふぃ"),
+        ("ffe", "っふぇ"),
+        ("ffo", "っふぉ"),
+        ("ffya", "っふゃ"),
+        ("ffyu", "っふゅ"),
+        ("ffyo", "っふょ"),
         ("aa", "あー"),
         ("ii", "いー"),
         ("uu", "うー"),
         ("ee", "えー"),
         ("oo", "おー"),
+        // Sokuon + youon (missing entries for common combinations)
+        ("kkya", "っきゃ"),
+        ("kkyu", "っきゅ"),
+        ("kkyo", "っきょ"),
+        ("ssha", "っしゃ"),
+        ("sshu", "っしゅ"),
+        ("ssho", "っしょ"),
+        ("tcha", "っちゃ"),
+        ("tchu", "っちゅ"),
+        ("tcho", "っちょ"),
+        ("ppya", "っぴゃ"),
+        ("ppyu", "っぴゅ"),
+        ("ppyo", "っぴょ"),
+        ("bbya", "っびゃ"),
+        ("bbyu", "っびゅ"),
+        ("bbyo", "っびょ"),
+        ("ggya", "っぎゃ"),
+        ("ggyu", "っぎゅ"),
+        ("ggyo", "っぎょ"),
+        ("jja",  "っじゃ"),
+        ("jju",  "っじゅ"),
+        ("jjo",  "っじょ"),
     ];
     pairs
         .iter()
