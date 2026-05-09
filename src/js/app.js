@@ -298,12 +298,19 @@ let songLongPressTimer = null;
 let songLongPressTriggered = false;
 let activeSongContextMenu = null;
 let activeSongContextItem = null;
+let resultLongPressTimer = null;
+let resultLongPressTriggered = false;
+let activeResultContextMenu = null;
+let activeResultContextItem = null;
 const hydratingSongMetadataUrls = new Set();
 const viewScrollPositions = new Map();
 let isBottomMenuAutoHidden = false;
 let lastSongsScrollY = 0;
 let clearCacheConfirmationActive = false;
 let activeConfirmationCleanup = null;
+
+// 搜索按钮锁定标志
+let isSearching = false;
 
 // 当前视图状态：'search' | 'songs' | 'settings' | 'lspSettings' | 'lspLogs' | 'results' | 'lyrics'
 let currentView = 'search';
@@ -652,6 +659,8 @@ function normalizeSettings(rawSettings = {}) {
 
   if (VALID_DARK_MODES.has(rawSettings.darkMode)) {
     settings.darkMode = rawSettings.darkMode;
+  } else {
+    settings.darkMode = 'on';
   }
 
   if (typeof rawSettings.useCache === 'boolean') {
@@ -987,6 +996,13 @@ function renderSearchHistory() {
 
 // ==================== Saved Songs ====================
 
+function artworkSourceForSong(song) {
+  const url = (song && song.lyrics_url) || '';
+  if (url.startsWith('ne:')) return 'netease';
+  if (url.startsWith('qq:')) return 'qq';
+  return 'utaten';
+}
+
 function formatSongSubtitle(song) {
   const artist = song.artist || 'アーティスト不明';
   return song.album ? `${artist} - ${song.album}` : artist;
@@ -1031,6 +1047,24 @@ function buildSongItem(song) {
   const body = document.createElement('span');
   body.className = 'song-item__body';
 
+  // Detect source from lyrics_url
+  const url = song.lyrics_url || '';
+  let sourceLabel, sourceClass;
+  if (url.startsWith('ne:')) {
+    sourceLabel = 'NE';
+    sourceClass = 'source-badge--ne';
+  } else if (url.startsWith('qq:')) {
+    sourceLabel = 'QQ';
+    sourceClass = 'source-badge--qq';
+  } else {
+    sourceLabel = 'UtaTen';
+    sourceClass = 'source-badge--utaten';
+  }
+
+  const badge = document.createElement('span');
+  badge.className = `source-badge ${sourceClass}`;
+  badge.textContent = sourceLabel;
+
   const title = document.createElement('span');
   title.className = 'song-item__title';
   title.textContent = song.title || 'タイトル未設定';
@@ -1039,7 +1073,7 @@ function buildSongItem(song) {
   meta.className = 'song-item__meta';
   meta.textContent = formatSongSubtitle(song);
 
-  body.append(title, meta);
+  body.append(badge, title, meta);
   button.append(art, body);
   return button;
 }
@@ -1081,7 +1115,7 @@ async function hydrateMissingSongMetadata(songs) {
     try {
       const metadata = await invoke('hydrate_saved_lyrics_metadata', {
         url: song.lyrics_url,
-        artworkSource: selectedArtworkSource(),
+        artworkSource: artworkSourceForSong(song),
       });
       if (metadata?.status === 'success') {
         updateRenderedSongMetadata(metadata);
@@ -1138,7 +1172,7 @@ async function refreshSavedSongArtwork(song) {
     const metadata = await invoke('hydrate_saved_lyrics_metadata', {
       url: song.lyrics_url,
       forceRefresh: true,
-      artworkSource: selectedArtworkSource(),
+      artworkSource: artworkSourceForSong(song),
     });
 
     if (metadata?.status === 'success') {
@@ -1234,7 +1268,11 @@ function attachSongLongPressMenu(button, song) {
     songLongPressTimer = setTimeout(() => {
       songLongPressTriggered = true;
       if (event.pointerType !== 'mouse') {
-        button.setPointerCapture?.(event.pointerId);
+        try {
+          button.setPointerCapture?.(event.pointerId);
+        } catch (_) {
+          // Pointer may have been released by the time the timeout fires.
+        }
       }
       showSongContextMenu(song, button, event);
     }, 560);
@@ -1253,6 +1291,178 @@ function attachSongLongPressMenu(button, song) {
     event.preventDefault();
     songLongPressTriggered = true;
     showSongContextMenu(song, button, event);
+  });
+}
+
+// ==================== Search Result Context Menu ====================
+
+function closeResultContextMenu() {
+  if (resultLongPressTimer) {
+    clearTimeout(resultLongPressTimer);
+    resultLongPressTimer = null;
+  }
+
+  if (activeResultContextMenu) {
+    activeResultContextMenu.remove();
+    activeResultContextMenu = null;
+  }
+
+  if (activeResultContextItem) {
+    activeResultContextItem.classList.remove('is-menu-open');
+    activeResultContextItem = null;
+  }
+}
+
+function positionResultContextMenu(menu, clientX, clientY) {
+  const margin = 12;
+  const rect = menu.getBoundingClientRect();
+  const x = Math.min(Math.max(clientX, margin), window.innerWidth - rect.width - margin);
+  const y = Math.min(Math.max(clientY, margin), window.innerHeight - rect.height - margin);
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+}
+
+async function copyResultItemJson(item) {
+  showLoading();
+  try {
+    const result = await invoke('get_lyrics', {
+      url: item.url,
+      title: item.title,
+      artist: item.artist || null,
+      useCache: shouldUseCache(),
+      saveSaltBridge: false,
+      artworkSource: selectedArtworkSource(),
+      lyricSource: item.source || 'utaten',
+    });
+
+    if (result.status !== 'success') {
+      showError(result.error || '歌詞の取得に失敗しました');
+      return;
+    }
+
+    // Build CLI-compatible LyricsOutput JSON
+    const obj = {
+      status: 'success',
+      title: result.found_title,
+      artist: result.found_artist,
+      url: result.lyrics_url,
+      lyrics: { lines: [] },
+    };
+
+    let currentLine = [];
+    for (const el of (result.ruby_annotations || [])) {
+      if (el.type === 'linebreak') {
+        if (currentLine.length > 0) {
+          obj.lyrics.lines.push({ elements: currentLine });
+          currentLine = [];
+        }
+      } else {
+        const unit = { type: el.type };
+        if (el.base != null) {
+          unit.base = el.base;
+        }
+        if (el.ruby != null) {
+          unit.ruby = el.ruby;
+        }
+        currentLine.push(unit);
+      }
+    }
+    if (currentLine.length > 0) {
+      obj.lyrics.lines.push({ elements: currentLine });
+    }
+
+    const json = JSON.stringify(obj, null, 2);
+    try {
+      await navigator.clipboard.writeText(json);
+      showError('JSONをクリップボードにコピーしました');
+    } catch (err) {
+      const textarea = document.createElement('textarea');
+      textarea.value = json;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showError('JSONをクリップボードにコピーしました');
+      } catch (e) {
+        showError('クリップボードへのコピーに失敗しました');
+      }
+      document.body.removeChild(textarea);
+    }
+  } catch (err) {
+    console.error('Copy lyrics JSON error:', err);
+    showError(`コピーに失敗しました: ${err}`);
+  } finally {
+    hideLoading();
+  }
+}
+
+function showResultContextMenu(item, trigger, event) {
+  closeResultContextMenu();
+
+  const menu = document.createElement('div');
+  menu.className = 'long-press-menu';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML = `
+    <button class="long-press-menu__item long-press-menu__item--copy" type="button" role="menuitem" data-result-action="copy-json">复制utaten-cli输出的json到剪切板</button>
+  `;
+
+  menu.querySelector('[data-result-action="copy-json"]').addEventListener('click', async () => {
+    closeResultContextMenu();
+    await copyResultItemJson(item);
+  });
+
+  document.body.appendChild(menu);
+  trigger.classList.add('is-menu-open');
+  activeResultContextMenu = menu;
+  activeResultContextItem = trigger;
+
+  const rect = trigger.getBoundingClientRect();
+  const clientX = event?.clientX ?? rect.right - 18;
+  const clientY = event?.clientY ?? rect.top + rect.height / 2;
+  positionResultContextMenu(menu, clientX, clientY);
+
+  requestAnimationFrame(() => {
+    menu.classList.add('is-visible');
+    menu.querySelector('[role="menuitem"]')?.focus();
+  });
+}
+
+function attachResultLongPressMenu(button, item) {
+  button.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+
+    closeResultContextMenu();
+    resultLongPressTriggered = false;
+    resultLongPressTimer = setTimeout(() => {
+      resultLongPressTriggered = true;
+      if (event.pointerType !== 'mouse') {
+        try {
+          button.setPointerCapture?.(event.pointerId);
+        } catch (_) {
+          // Pointer may have been released by the time the timeout fires.
+        }
+      }
+      showResultContextMenu(item, button, event);
+    }, 560);
+  });
+
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => {
+    button.addEventListener(type, () => {
+      if (resultLongPressTimer) {
+        clearTimeout(resultLongPressTimer);
+        resultLongPressTimer = null;
+      }
+    });
+  });
+
+  button.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    resultLongPressTriggered = true;
+    showResultContextMenu(item, button, event);
   });
 }
 
@@ -1348,31 +1558,37 @@ function initSongsControls() {
     if (activeSongContextMenu && !activeSongContextMenu.contains(event.target)) {
       closeSongContextMenu();
     }
+    if (activeResultContextMenu && !activeResultContextMenu.contains(event.target)) {
+      closeResultContextMenu();
+    }
   });
   document.addEventListener('keydown', (event) => {
-    if (!activeSongContextMenu) {
-      return;
+    if (activeSongContextMenu) {
+      if (event.key === 'Escape') {
+        closeSongContextMenu();
+      } else if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
+        event.preventDefault();
+        const items = Array.from(activeSongContextMenu.querySelectorAll('[role="menuitem"]'));
+        const currentIndex = Math.max(0, items.indexOf(document.activeElement));
+        const nextIndex = event.key === 'ArrowDown'
+          ? (currentIndex + 1) % items.length
+          : (currentIndex - 1 + items.length) % items.length;
+        items[nextIndex]?.focus();
+      }
+    } else if (activeResultContextMenu) {
+      if (event.key === 'Escape') {
+        closeResultContextMenu();
+      }
     }
-
-    if (event.key === 'Escape') {
-      closeSongContextMenu();
-      return;
-    }
-
-    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) {
-      return;
-    }
-
-    event.preventDefault();
-    const items = Array.from(activeSongContextMenu.querySelectorAll('[role="menuitem"]'));
-    const currentIndex = Math.max(0, items.indexOf(document.activeElement));
-    const nextIndex = event.key === 'ArrowDown'
-      ? (currentIndex + 1) % items.length
-      : (currentIndex - 1 + items.length) % items.length;
-    items[nextIndex]?.focus();
   });
-  window.addEventListener('scroll', closeSongContextMenu, { passive: true });
-  window.addEventListener('resize', closeSongContextMenu);
+  window.addEventListener('scroll', () => {
+    closeSongContextMenu();
+    closeResultContextMenu();
+  }, { passive: true });
+  window.addEventListener('resize', () => {
+    closeSongContextMenu();
+    closeResultContextMenu();
+  });
 }
 
 // ==================== Ruby Rendering (utaten CSS方案) ====================
@@ -1704,6 +1920,9 @@ async function performSearch(page = 1, searchRunId = currentSearchRunId) {
 
 // 搜索
 async function handleSearch() {
+  // 搜索进行中时锁定，不做任何反应
+  if (isSearching) return;
+
   const title = elements.searchTitle.value.trim();
   const artist = elements.searchArtist.value.trim() || null;
 
@@ -1712,9 +1931,21 @@ async function handleSearch() {
   isLoadingMoreResults = false;
   currentSearchData = null;
   currentActiveTab = 'all';
+  // 搜索历史在新的搜索开始时才记录（不是在搜索完成后）
   addSearchHistory(title, artist);
   void appendAppLspLog('ui', `search requested title="${title}" artist="${artist || ''}"`);
-  await performSearch(1, currentSearchRunId);
+
+  // 锁定搜索按钮，启动流光动画
+  isSearching = true;
+  elements.searchBtn.classList.add('is-searching');
+
+  try {
+    await performSearch(1, currentSearchRunId);
+  } finally {
+    // 搜索完成或失败后解锁
+    isSearching = false;
+    elements.searchBtn.classList.remove('is-searching');
+  }
 }
 
 // 渲染搜索结果列表（支持多源标签过滤）
@@ -1768,7 +1999,14 @@ function renderResultList(data) {
 
     // Find the real index in allResults for selection lookup
     const realIndex = data.allResults.indexOf(item);
-    button.addEventListener('click', () => handleSelectResult(realIndex));
+    attachResultLongPressMenu(button, item);
+    button.addEventListener('click', () => {
+      if (resultLongPressTriggered) {
+        resultLongPressTriggered = false;
+        return;
+      }
+      handleSelectResult(realIndex);
+    });
     elements.resultsContainer.appendChild(button);
   });
 }
@@ -2416,8 +2654,13 @@ function init() {
   
   // 应用保存的暗色模式
   const settings = loadSettings();
-  if (settings.darkMode === 'on') {
+  const effectiveDarkMode = settings.darkMode || 'on';
+  if (effectiveDarkMode === 'on') {
     document.body.classList.add('dark-mode');
+  }
+  // Ensure default is saved for new users
+  if (!settings.darkMode) {
+    saveSettings({ darkMode: 'on' });
   }
   
   // 同步按钮状态

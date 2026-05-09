@@ -4798,7 +4798,7 @@ dependencies = [
 
 [[package]]
 name = "utabuild"
-version = "1.0.2"
+version = "1.1.1"
 dependencies = [
  "anyhow",
  "serde",
@@ -4812,7 +4812,7 @@ dependencies = [
 
 [[package]]
 name = "utabuild-cli"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "aes",
  "anyhow",

@@ -236,6 +236,7 @@ async fn get_lyrics(
         if save_salt_bridge {
             save_salt_bridge_cache(&app, &response)?;
         }
+        save_saved_lyrics_from_response(&response)?;
         write_app_lsp_log_if_enabled(
             &app,
             &state,
@@ -277,6 +278,7 @@ async fn get_lyrics(
             if save_salt_bridge {
                 save_salt_bridge_cache(&app, &response)?;
             }
+            save_saved_lyrics_from_response(&response)?;
             return Ok(response);
         }
 
@@ -1041,16 +1043,35 @@ async fn hydrate_saved_lyrics_metadata(
     }
 
     let searcher = state.searcher.lock().await;
-    let html = searcher
-        .get_lyrics_with_ruby(&url)
-        .await
-        .ok_or_else(|| "无法从UtaTen读取歌曲页面".to_string())?;
+
+    // For non-UtaTen URLs, skip the UtaTen page fetch and use matching artwork source
+    let (utaten_metadata, artwork_preference) = if url.starts_with("ne:") {
+        (
+            utabuild_cli::searcher::SongPageMetadata { album: None, cover_url: None },
+            ArtworkSourcePreference::Netease,
+        )
+    } else if url.starts_with("qq:") {
+        (
+            utabuild_cli::searcher::SongPageMetadata { album: None, cover_url: None },
+            ArtworkSourcePreference::QqMusic,
+        )
+    } else {
+        let html = searcher
+            .get_lyrics_with_ruby(&url)
+            .await
+            .ok_or_else(|| "无法从UtaTen读取歌曲页面".to_string())?;
+        (
+            UtaTenSearcher::extract_song_page_metadata(&html),
+            ArtworkSourcePreference::from_setting(artwork_source.as_deref()),
+        )
+    };
+
     let metadata = searcher
         .resolve_artwork_metadata(
             entry.title.as_deref().unwrap_or(""),
             entry.artist.as_deref(),
-            UtaTenSearcher::extract_song_page_metadata(&html),
-            ArtworkSourcePreference::from_setting(artwork_source.as_deref()),
+            utaten_metadata,
+            artwork_preference,
         )
         .await;
     drop(searcher);
