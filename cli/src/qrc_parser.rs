@@ -1,3 +1,4 @@
+use crate::models::LyricElement;
 use regex::Regex;
 
 #[derive(Debug, Clone)]
@@ -84,7 +85,9 @@ pub fn align_romaji_to_original(
             let matching_roma_words: Vec<QrcWord> = romaji
                 .iter()
                 .filter(|roma_line| {
-                    roma_line.start_ms >= orig_line.start_ms
+                    // 300ms tolerance: romaji timing may be slightly ahead of original timing
+                    // (matching the tolerance used in lrc_parser::align_romaji_by_time)
+                    roma_line.start_ms + 300 >= orig_line.start_ms
                         && roma_line.start_ms < orig_line.end_ms
                 })
                 .flat_map(|roma_line| roma_line.words.clone())
@@ -97,6 +100,108 @@ pub fn align_romaji_to_original(
             (orig_line.words.clone(), roma)
         })
         .collect()
+}
+
+/// Character-level timed entry.
+struct CharEntry {
+    text: String,
+    start_ms: u32,
+    end_ms: u32,
+}
+
+/// Split QRC words into individual characters with proportional time ranges.
+fn words_to_char_entries(words: &[QrcWord]) -> Vec<CharEntry> {
+    let mut entries = Vec::new();
+    for word in words {
+        let chars: Vec<char> = word.text.chars().collect();
+        if chars.is_empty() {
+            continue;
+        }
+        let char_duration = word.duration_ms / chars.len() as u32;
+        for (i, ch) in chars.iter().enumerate() {
+            entries.push(CharEntry {
+                text: ch.to_string(),
+                start_ms: word.start_ms + i as u32 * char_duration,
+                end_ms: word.start_ms + (i as u32 + 1) * char_duration,
+            });
+        }
+    }
+    entries
+}
+
+/// Align original lyrics with romaji at the **character level** using time overlap.
+///
+/// Each original character is matched against romaji characters whose time ranges
+/// overlap with it. Kanji characters get ruby annotations from their matched romaji;
+/// kana and other characters are rendered as plain text (they carry no ruby).
+///
+/// This replaces the old heuristic-based `align_ruby_to_text` approach which could
+/// not reliably separate okurigana from readings across word boundaries.
+///
+/// `orig_words` — the original QRC words for a single line.
+/// `roma_words` — the matching romaji QRC words (already filtered by time window).
+pub fn align_qrc_by_character(
+    orig_words: &[QrcWord],
+    roma_words: &[QrcWord],
+) -> Vec<LyricElement> {
+    let orig_chars = words_to_char_entries(orig_words);
+    let roma_chars = words_to_char_entries(roma_words);
+
+    if orig_chars.is_empty() {
+        return vec![];
+    }
+
+    let mut elements: Vec<LyricElement> = Vec::new();
+    let mut roma_idx = 0;
+
+    for oc in &orig_chars {
+        // Skip romaji entries that end before this original char starts
+        while roma_idx < roma_chars.len() && roma_chars[roma_idx].end_ms <= oc.start_ms {
+            roma_idx += 1;
+        }
+
+        // Collect all romaji chars whose time range overlapses with this orig char.
+        // Both the overlap itself and the romaji char's total time must
+        // be sufficiently long, to filter out edge noise at char boundaries.
+        let mut matched_roma = String::new();
+        let mut scan = roma_idx;
+        while scan < roma_chars.len() && roma_chars[scan].start_ms < oc.end_ms {
+            let r_start = roma_chars[scan].start_ms;
+            let r_end = roma_chars[scan].end_ms;
+            let r_dur = r_end.saturating_sub(r_start);
+            if r_dur == 0 {
+                scan += 1;
+                continue;
+            }
+            let overlap_start = std::cmp::max(r_start, oc.start_ms);
+            let overlap_end = std::cmp::min(r_end, oc.end_ms);
+            let overlap_dur = overlap_end.saturating_sub(overlap_start);
+            // Require at least 50% of the romaji char to fall within this
+            // original char's window — prevents edge-bleed at tight boundaries.
+            if overlap_dur >= r_dur / 2 {
+                matched_roma.push_str(&roma_chars[scan].text);
+            }
+            scan += 1;
+        }
+
+        // Determine character type and build element
+        let first_char = oc.text.chars().next().unwrap_or(' ');
+        let ct = crate::ruby_align::classify_char(first_char);
+
+        if ct == crate::ruby_align::CharType::Kanji && !matched_roma.is_empty() {
+            let hiragana = crate::romaji::romaji_to_hiragana_strict(&matched_roma);
+            if !hiragana.is_empty() && hiragana != oc.text {
+                elements.push(LyricElement::new_ruby(oc.text.clone(), hiragana));
+            } else {
+                elements.push(LyricElement::new_text(oc.text.clone()));
+            }
+        } else {
+            elements.push(LyricElement::new_text(oc.text.clone()));
+        }
+    }
+
+    // Merge adjacent same-type elements
+    crate::ruby_align::merge_adjacent(&elements)
 }
 
 #[cfg(test)]
