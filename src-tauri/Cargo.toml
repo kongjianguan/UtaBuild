@@ -2,6 +2,47 @@
 name = "utabuild"
 version = "1.1.1"
 edition = "2021"
+rust-version = "1.70"
+
+[lints.rust]
+# Linux Kernel 风格：prefer expect over allow
+# https://www.kernel.org/doc/html/next/rust/coding-guidelines.html#lints
+# unsafe_code 不 deny 因为 Tauri 内部需要 unsafe FFI
+unreachable_pub = "warn"
+
+[lints.clippy]
+# === Kernel 风格：禁止在生产路径使用可能 panic 的模式 ===
+unwrap_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+unreachable = "warn"
+get_unwrap = "warn"
+indexing_slicing = "warn"
+panic_in_result_fn = "warn"
+
+# === Kernel 风格：prefer expect over allow ===
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+
+# === Kernel 风格：并发安全 ===
+await_holding_lock = "warn"
+await_holding_refcell_ref = "warn"
+
+# === Kernel 风格：工具宏 ===
+dbg_macro = "deny"
+
+# === Kernel 风格：类型安全 ===
+cast_lossless = "warn"
+cast_sign_loss = "warn"
+cast_precision_loss = "warn"
+fn_params_excessive_bools = "warn"
+must_use_candidate = "warn"
+
+# === Kernel 风格：数值正确性 ===
+float_cmp = "warn"
+float_cmp_const = "warn"
+lossy_float_literal = "warn"
 
 [[bin]]
 name = "utabuild"

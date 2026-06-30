@@ -1,21 +1,32 @@
 use crate::models::LyricElement;
 use regex::Regex;
 
+/// QRC 歌词中的单个单词/字符块，包含文本及其时间信息。
 #[derive(Debug, Clone)]
 pub struct QrcWord {
+    /// 单词文本（可以是汉字、假名、罗马音等）
     pub text: String,
+    /// 该单词的起始时间（毫秒）
     pub start_ms: u32,
+    /// 该单词的持续时间（毫秒）
     pub duration_ms: u32,
 }
 
+/// QRC 歌词中的一行，包含该行的起止时间及单词列表。
 #[derive(Debug, Clone)]
 pub struct QrcLine {
+    /// 该行的起始时间（毫秒）
     pub start_ms: u32,
+    /// 该行的结束时间（毫秒），由 start_ms + duration_ms 计算得出
     pub end_ms: u32,
+    /// 该行包含的所有单词
     pub words: Vec<QrcWord>,
 }
 
-/// Parse QRC XML content into structured lyric lines.
+/// 解析 QRC XML 内容为结构化的歌词行。
+///
+/// 从 XML 中提取 LyricContent 属性，去除头部元信息行（ti/ar/kana/offset），
+/// 然后逐行解析时间戳和单词数据。每行格式为 `[start_ms,duration_ms]word1(t1,d1)word2(t2,d2)...`。
 pub fn parse_qrc(xml: &str) -> Option<Vec<QrcLine>> {
     let content = extract_lyric_content(xml)?;
 
@@ -40,8 +51,12 @@ pub fn parse_qrc(xml: &str) -> Option<Vec<QrcLine>> {
             let words: Vec<QrcWord> = word_re
                 .captures_iter(rest)
                 .filter_map(|cap| {
+                    let text = cap.get(1)?.as_str().trim().to_string();
+                    if text.is_empty() {
+                        return None;
+                    }
                     Some(QrcWord {
-                        text: cap.get(1)?.as_str().to_string(),
+                        text,
                         start_ms: cap.get(2)?.as_str().parse().ok()?,
                         duration_ms: cap.get(3)?.as_str().parse().ok()?,
                     })
@@ -59,6 +74,11 @@ pub fn parse_qrc(xml: &str) -> Option<Vec<QrcLine>> {
     Some(lines)
 }
 
+/// 从 QRC XML 中提取 `LyricContent` 属性的文本内容。
+///
+/// 使用字符串查找而非正则表达式，因为歌词文本中可能包含字面量 `"` 字符
+/// （例如 `"(143356,175)白...`），正则 `LyricContent="([^"]*)"` 会在第一个 `"` 处截断。
+/// 我们改为查找结尾的 `"/>` 来确定内容的结束位置。
 fn extract_lyric_content(xml: &str) -> Option<String> {
     // Use string-based extraction instead of regex because the lyric content
     // may contain literal `"` characters (e.g., `"(143356,175)白...`).
@@ -70,11 +90,11 @@ fn extract_lyric_content(xml: &str) -> Option<String> {
     Some(xml[start..start + end].to_string())
 }
 
-/// Align romaji lines to original lyric lines by time window.
-/// For each original line, collects ALL romaji lines whose start time falls
-/// within the original line's time window and merges their words.
-/// This handles QRC data where the romaji track is split across multiple
-/// lines (e.g. when the final syllable of a reading falls in a separate line).
+/// 按时间窗口将罗马音行对齐到原始歌词行。
+///
+/// 对于每一行原始歌词，收集所有起始时间落在该行时间窗口内的罗马音行，
+/// 并将其单词合并。这处理了 QRC 数据中罗马音轨被拆分为多行的情况
+/// （例如当某个读音的最后一个音节落在单独的一行中）。
 pub fn align_romaji_to_original(
     original: &[QrcLine],
     romaji: &[QrcLine],
@@ -102,14 +122,20 @@ pub fn align_romaji_to_original(
         .collect()
 }
 
-/// Character-level timed entry.
+/// 字符级时间条目，记录单个字符及其起止时间。
 struct CharEntry {
+    /// 字符文本
     text: String,
+    /// 起始时间（毫秒）
     start_ms: u32,
+    /// 结束时间（毫秒）
     end_ms: u32,
 }
 
-/// Split QRC words into individual characters with proportional time ranges.
+/// 将 QRC 单词拆分为单个字符，并按时间比例分配时间范围。
+///
+/// 每个字符获得等分的持续时间。例如一个持续 100ms 的 4 字符单词，
+/// 每个字符分配 25ms。
 fn words_to_char_entries(words: &[QrcWord]) -> Vec<CharEntry> {
     let mut entries = Vec::new();
     for word in words {
@@ -129,23 +155,22 @@ fn words_to_char_entries(words: &[QrcWord]) -> Vec<CharEntry> {
     entries
 }
 
-/// Align original lyrics with romaji at the **character level** using time overlap.
+/// 使用时间重叠在**字符级别**对齐原始歌词与罗马音。
 ///
-/// Each original character is matched against romaji characters whose time ranges
-/// overlap with it. Kanji characters get ruby annotations from their matched romaji;
-/// kana and other characters are rendered as plain text (they carry no ruby).
+/// 将每个原始字符与时间范围与之重叠的罗马音字符进行匹配。
+/// 汉字（Kanji）会从其匹配的罗马音获得注音（ruby）标注；
+/// 假名和其他字符作为纯文本渲染（不带注音）。
 ///
-/// This replaces the old heuristic-based `align_ruby_to_text` approach which could
-/// not reliably separate okurigana from readings across word boundaries.
+/// 这取代了旧的基于启发式的 `align_ruby_to_text` 方法，后者无法可靠地在跨词边界处
+/// 区分送假名（okurigana）和读音。
 ///
-/// `orig_words` — the original QRC words for a single line.
-/// `roma_words` — the matching romaji QRC words (already filtered by time window).
+/// `orig_words` — 单行原始歌词的 QRC 单词。
+/// `roma_words` — 匹配的罗马音 QRC 单词（已按时间窗口过滤）。
 pub fn align_qrc_by_character(
     orig_words: &[QrcWord],
     roma_words: &[QrcWord],
 ) -> Vec<LyricElement> {
     let orig_chars = words_to_char_entries(orig_words);
-    let roma_chars = words_to_char_entries(roma_words);
 
     if orig_chars.is_empty() {
         return vec![];
@@ -155,41 +180,39 @@ pub fn align_qrc_by_character(
     let mut roma_idx = 0;
 
     for oc in &orig_chars {
-        // Skip romaji entries that end before this original char starts
-        while roma_idx < roma_chars.len() && roma_chars[roma_idx].end_ms <= oc.start_ms {
+        while roma_idx < roma_words.len()
+            && roma_words[roma_idx].start_ms + roma_words[roma_idx].duration_ms <= oc.start_ms
+        {
             roma_idx += 1;
         }
 
-        // Collect all romaji chars whose time range overlapses with this orig char.
-        // Both the overlap itself and the romaji char's total time must
-        // be sufficiently long, to filter out edge noise at char boundaries.
         let mut matched_roma = String::new();
         let mut scan = roma_idx;
-        while scan < roma_chars.len() && roma_chars[scan].start_ms < oc.end_ms {
-            let r_start = roma_chars[scan].start_ms;
-            let r_end = roma_chars[scan].end_ms;
-            let r_dur = r_end.saturating_sub(r_start);
+        while scan < roma_words.len() && roma_words[scan].start_ms < oc.end_ms {
+            let r_start = roma_words[scan].start_ms;
+            let r_dur = roma_words[scan].duration_ms;
             if r_dur == 0 {
                 scan += 1;
                 continue;
             }
+            let r_end = r_start + r_dur;
             let overlap_start = std::cmp::max(r_start, oc.start_ms);
             let overlap_end = std::cmp::min(r_end, oc.end_ms);
             let overlap_dur = overlap_end.saturating_sub(overlap_start);
-            // Require at least 50% of the romaji char to fall within this
-            // original char's window — prevents edge-bleed at tight boundaries.
             if overlap_dur >= r_dur / 2 {
-                matched_roma.push_str(&roma_chars[scan].text);
+                matched_roma.push_str(&roma_words[scan].text);
+                matched_roma.push(' ');
             }
             scan += 1;
         }
 
-        // Determine character type and build element
+        let matched_roma = matched_roma.trim();
+
         let first_char = oc.text.chars().next().unwrap_or(' ');
         let ct = crate::ruby_align::classify_char(first_char);
 
         if ct == crate::ruby_align::CharType::Kanji && !matched_roma.is_empty() {
-            let hiragana = crate::romaji::romaji_to_hiragana_strict(&matched_roma);
+            let hiragana = crate::romaji::romaji_to_hiragana_strict(matched_roma);
             if !hiragana.is_empty() && hiragana != oc.text {
                 elements.push(LyricElement::new_ruby(oc.text.clone(), hiragana));
             } else {
@@ -200,14 +223,80 @@ pub fn align_qrc_by_character(
         }
     }
 
-    // Merge adjacent same-type elements
+    // 合并相邻的相同类型元素
     crate::ruby_align::merge_adjacent(&elements)
+}
+
+/// 完整的 QRC 处理流水线：同时解析原始歌词和罗马音的 QRC XML，
+/// 按时间对齐，并通过字符级匹配生成带注音（ruby）标注的 `LyricElement`。
+///
+/// 如果任一 XML 解析失败则返回 `None`。无罗马音数据的行将作为纯文本渲染。
+pub fn process_qrc_pipeline(
+    original_xml: &str,
+    romaji_xml: &str,
+) -> Option<Vec<LyricElement>> {
+    let original_lines = parse_qrc(original_xml)?;
+    let romaji_lines = parse_qrc(romaji_xml)?;
+
+    let aligned = align_romaji_to_original(&original_lines, &romaji_lines);
+
+    let mut elements: Vec<LyricElement> = Vec::new();
+
+    for (i, (orig_words, roma_words)) in aligned.iter().enumerate() {
+        if orig_words.is_empty() {
+            continue;
+        }
+
+        if let Some(roma_words) = roma_words {
+            if !roma_words.is_empty() {
+                let line_elements = align_qrc_by_character(orig_words, roma_words);
+                if !line_elements.is_empty() {
+                    elements.extend(line_elements);
+                } else {
+                    // 回退方案：使用完整的罗马音字符串进行假名锚点对齐
+                    let orig_text: String =
+                        orig_words.iter().map(|w| w.text.as_str()).collect();
+                    let roma_str: String = roma_words
+                        .iter()
+                        .map(|w| w.text.as_str())
+                        .collect::<Vec<&str>>()
+                        .join(" ");
+                    let hiragana = crate::romaji::romaji_to_hiragana_strict(&roma_str);
+                    if !hiragana.is_empty() && hiragana != orig_text {
+                        let fallback =
+                            crate::ruby_align::align_ruby_to_text(&orig_text, &hiragana);
+                        if fallback.is_empty() {
+                            elements.push(LyricElement::new_text(orig_text));
+                        } else {
+                            elements.extend(fallback);
+                        }
+                    } else {
+                        elements.push(LyricElement::new_text(orig_text));
+                    }
+                }
+            } else {
+                let orig_text: String =
+                    orig_words.iter().map(|w| w.text.as_str()).collect();
+                elements.push(LyricElement::new_text(orig_text));
+            }
+        } else {
+            let orig_text: String = orig_words.iter().map(|w| w.text.as_str()).collect();
+            elements.push(LyricElement::new_text(orig_text));
+        }
+
+        if i + 1 < aligned.len() {
+            elements.push(LyricElement::new_linebreak());
+        }
+    }
+
+    Some(elements)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// 创建 QrcWord 的辅助函数，用于测试中快速构造测试数据。
     fn qw(text: &str, start: u32, duration: u32) -> QrcWord {
         QrcWord {
             text: text.to_string(),
@@ -216,6 +305,7 @@ mod tests {
         }
     }
 
+    /// 解析 QRC XML 并验证基本行和单词结构。
     #[test]
     fn parses_qrc_xml_to_lines() {
         let qrc = r#"<?xml version="1.0" encoding="utf-8"?>
@@ -244,6 +334,7 @@ mod tests {
         assert_eq!(lines[1].words[0].text, "鮮");
     }
 
+    /// 按时间对齐罗马音到原始歌词行的基本功能测试。
     #[test]
     fn aligns_romaji_to_original_by_time() {
         let original_lines = vec![QrcLine {
@@ -277,11 +368,10 @@ mod tests {
         assert!(roma_words.is_some());
     }
 
+    /// 回归测试：当罗马音轨在一个原始行的时间窗口内被拆分为多行时，
+    /// 应收集并合并所有罗马音单词，而非仅第一个匹配行。
     #[test]
     fn merges_multiple_romaji_lines_in_same_window() {
-        // Regression: when the romaji track splits a reading across multiple
-        // lines within one original line's time window, all romaji words
-        // should be collected and merged (not just the first matching line).
         let original_lines = vec![QrcLine {
             start_ms: 0,
             end_ms: 500,
@@ -310,6 +400,7 @@ mod tests {
         assert_eq!(romaji_str, "kyu u sa i", "all four syllables should be merged");
     }
 
+    /// 验证时间窗口外的罗马音行不会被错误匹配。
     #[test]
     fn skips_romaji_lines_outside_time_window() {
         let original_lines = vec![QrcLine {
@@ -329,6 +420,7 @@ mod tests {
         assert!(roma_words.is_none());
     }
 
+    /// 空 QRC 内容应返回 Some 空向量而非 None。
     #[test]
     fn empty_qrc_returns_some_empty_vec() {
         let qrc = r#"<?xml version="1.0"?>
@@ -344,11 +436,13 @@ mod tests {
         assert!(lines.is_empty());
     }
 
+    /// 无效 XML 应返回 None。
     #[test]
     fn parse_invalid_xml_returns_none() {
         assert!(parse_qrc("not xml at all").is_none());
     }
 
+    /// 回归测试：纯时间标记（无文本内容，如 (6760,232)）不应将数字泄露到下一个单词文本中。
     #[test]
     fn skips_timing_only_entries_without_leaking_numbers_into_word_text() {
         // Regression test: timing-only entries like (6760,232) with no text
@@ -367,14 +461,17 @@ mod tests {
         let lines = parse_qrc(qrc).unwrap();
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].words.len(), 4);
-        assert_eq!(lines[0].words[0].text, "so ");
-        assert_eq!(lines[0].words[1].text, "no ");
+        assert_eq!(lines[0].words[0].text, "so");
+        assert_eq!(lines[0].words[1].text, "no");
         // The timing-only (100,232) should be skipped;
         // "232)" must NOT leak into the next word
-        assert_eq!(lines[0].words[2].text, "ki ");
-        assert_eq!(lines[0].words[3].text, "mi ");
+        assert_eq!(lines[0].words[2].text, "ki");
+        assert_eq!(lines[0].words[3].text, "mi");
+        // Also verify no trailing whitespace in word text
+        assert_eq!(lines[0].words[0].text.chars().last(), Some('o'), "trailing whitespace stripped");
     }
 
+    /// 回归测试：连续多个纯时间标记应全部被跳过，仅保留有文本的单词。
     #[test]
     fn skips_multiple_consecutive_timing_only_entries() {
         let qrc = r#"<?xml version="1.0" encoding="utf-8"?>
@@ -389,16 +486,18 @@ mod tests {
 </QrcInfos>"#;
         let lines = parse_qrc(qrc).unwrap();
         assert_eq!(lines[0].words.len(), 3);
-        assert_eq!(lines[0].words[0].text, "do ");
-        assert_eq!(lines[0].words[1].text, "re ");
-        assert_eq!(lines[0].words[2].text, "mi ");
+        assert_eq!(lines[0].words[0].text, "do");
+        assert_eq!(lines[0].words[1].text, "re");
+        assert_eq!(lines[0].words[2].text, "mi");
     }
 
+    /// 回归测试：歌词文本中包含字面量 `"` 字符时（例如 `"白"`），
+    /// LyricContent 提取不应被截断。
     #[test]
     fn extracts_full_lyrics_with_double_quotes_in_text() {
         // Regression test: lyrics containing literal `"` characters (e.g., `"白"`)
         // must not truncate the LyricContent extraction.
-        // Note: in r#"..."# raw strings, `"` is allowed as long as not followed by `#`.
+        // Note: in r#"..."#` raw strings, `"` is allowed as long as not followed by `#`.
         let qrc = r#"<?xml version="1.0" encoding="utf-8"?>
 <QrcInfos>
   <LyricInfo LyricCount="1">
@@ -419,6 +518,7 @@ mod tests {
         assert_eq!(lines[2].words[0].text, "baz");
     }
 
+    /// 验证复杂歌词（包含多个带引号的段落）能被完整提取且不被截断。
     #[test]
     fn extracts_full_kishikaisen_lyrics() {
         // Verify that the full lyrics are correctly extracted when

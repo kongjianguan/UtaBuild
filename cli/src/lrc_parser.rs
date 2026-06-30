@@ -43,6 +43,8 @@ pub fn parse_lyrics_with_ruby(
     build_ruby_elements(&orig_timed, &roma_timed)
 }
 
+/// 将带时间戳的条目转换为纯文本 LyricElement。
+/// 相邻行之间插入换行符，跳过空文本行。
 /// Convert timed entries to plain-text LyricElements.
 fn timed_to_elements(timed: &[(u64, String)]) -> Vec<LyricElement> {
     let mut elements = Vec::new();
@@ -58,6 +60,7 @@ fn timed_to_elements(timed: &[(u64, String)]) -> Vec<LyricElement> {
     elements
 }
 
+/// 通过将 romaji 对齐到原始歌词行并执行 romaji → 平假名 → ruby 对齐管线来构建 ruby 注音元素。
 /// Build ruby-annotated elements by aligning romaji to original lines
 /// and running the romaji→hiragana→ruby_align pipeline.
 fn build_ruby_elements(
@@ -93,6 +96,12 @@ fn build_ruby_elements(
     elements
 }
 
+/// 计算 YRC 原始歌词与 romalrc 之间的系统时间偏移量。
+///
+/// 网易云音乐的 YRC 和 romalrc 时间戳通常来自不同的编码管线，可能存在数百毫秒的系统误差。
+/// 该函数估算中位数偏移量，使 `align_romaji_by_time` 能够校正它，防止行级联对齐错误。
+///
+/// 正偏移表示 romaji 时间戳超前于原始歌词（romaji 起始时间早于对应 YRC 行）；负偏移表示落后。
 /// Compute the systemic time offset between YRC original lyrics and romalrc.
 ///
 /// NetEase YRC and romalrc timestamps often come from different encoding
@@ -143,6 +152,12 @@ fn compute_systemic_offset(
     offsets[offsets.len() / 2]
 }
 
+/// 通过时间窗口将 romaji 行对齐到原始歌词行（类似 Lyrico 的 `lyricsMerge`）。
+///
+/// 每个原始歌词行收集其时间窗口内（当前行起始到下一行起始）的 ALL romaji 行，然后用空格连接。
+/// 这处理了网易云 `romalrc` 数据中单个 YRC 行的读音可能分散在多行 LRC 中的情况。
+///
+/// 对齐之前，检测并校正 YRC 与 romalrc 轨道之间的系统时间偏移（参见 `compute_systemic_offset`）。
 /// Align romaji lines to original lines by time window (like Lyrico's `lyricsMerge`).
 ///
 /// Each original line accumulates ALL romaji lines whose timestamps fall
@@ -214,6 +229,8 @@ fn align_romaji_by_time(
     result
 }
 
+/// 将 LRC 文本解析为按时间戳排序的 `(timestamp_ms, text)` 列表。
+/// 支持 `[mm:ss.xx]` 和 `[mm:ss.xxx]` 两种时间格式。
 /// Parse LRC text into a sorted list of `(timestamp_ms, text)` pairs.
 pub fn parse_lrc_timed(lrc: &str) -> Vec<(u64, String)> {
     let re = regex::Regex::new(r"\[(\d{2}):(\d{2})\.(\d{2,3})\]").unwrap();
@@ -249,12 +266,16 @@ pub fn parse_lrc_timed(lrc: &str) -> Vec<(u64, String)> {
     entries
 }
 
+/// 将 LRC 字符串解析为纯文本 `LyricElement` 行序列。
 /// Parse an LRC string into plain-text `LyricElement` lines.
 pub fn parse_lrc_to_elements(lrc: &str) -> Vec<LyricElement> {
     let timed = parse_lrc_timed(lrc);
     timed_to_elements(&timed)
 }
 
+/// 将 YRC 解析为带时间戳的 `(start_ms, text)` 对。
+/// 去除 YRC 单词时间标记 `(start,dur,flag)`，只保留单词文本。
+/// 同时支持 `text(markers)` 和 `(markers)text` 两种格式。
 /// Parse YRC into timed `(start_ms, text)` pairs.
 /// YRC word timing markers `(start,dur,flag)` are stripped; only the
 /// word text is kept. Handles both `text(markers)` and `(markers)text` formats.
@@ -321,12 +342,21 @@ pub fn parse_yrc_timed(yrc: &str) -> Vec<(u64, String)> {
     entries
 }
 
+/// 将 YRC 字符串解析为纯文本 `LyricElement` 行序列。
 /// Parse a YRC string into plain-text `LyricElement` lines.
 pub fn parse_yrc_to_elements(yrc: &str) -> Vec<LyricElement> {
     let timed = parse_yrc_timed(yrc);
     timed_to_elements(&timed)
 }
 
+/// 使用 romaji LRC 解析原始歌词（优先 YRC），通过将 romaji 令牌分发到每行中的汉字块来生成 ruby 注音。
+///
+/// 与 `parse_lyrics_with_ruby`（将整个平假名字符串传递给 `align_ruby_to_text`，在词边界处会错误对齐）不同，该函数：
+/// 1. 将原始文本拆分为汉字块
+/// 2. 将空格分隔的 romaji 令牌分发到这些块中
+/// 3. 为每个汉字块分配其比例的读音
+///
+/// 假名块（送假名、助词等）作为纯文本渲染，不带 ruby 注音。
 /// Parse original lyrics (YRC preferred) with romaji LRC to produce ruby
 /// annotations by distributing romaji tokens among kanji blocks within each line.
 ///
@@ -439,13 +469,20 @@ pub fn parse_lyrics_with_ruby_tokenized(
     crate::ruby_align::merge_adjacent(&elements)
 }
 
+/// 表示文本中的一个块：连续的汉字序列或连续的非汉字序列。
+/// 包含文本内容、是否为汉字标记以及在原字符串中的起始位置。
 #[derive(Debug)]
 struct Block {
+    /// 块的文本内容
     text: String,
+    /// 是否为汉字块（假若为 false，则表示假名、标点或其他非汉字字符）
     is_kanji: bool,
+    /// 块在原始字符串中的字节起始位置
     start: usize,
 }
 
+/// 将文本拆分为连续的汉字块和连续的非汉字块。
+/// 用于将 romaji 令牌分发到每个汉字块以生成精确的 ruby 注音。
 /// Split text into blocks of consecutive kanji and consecutive non-kanji.
 fn split_kanji_kana_blocks(text: &str) -> Vec<Block> {
     let mut blocks = Vec::new();

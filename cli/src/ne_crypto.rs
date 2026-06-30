@@ -8,14 +8,17 @@
 use aes::cipher::{BlockDecrypt, BlockEncrypt, KeyInit};
 use aes::Aes128;
 
+/// NetEase EAPI 协议中使用的固定 AES 密钥。
 /// The fixed AES key used by the NetEase EAPI protocol.
 const EAPI_KEY: &[u8; 16] = b"e82ckenh8dichen8";
 
+/// 计算输入字符串的 MD5 哈希值，返回十六进制小写字符串。
 /// Compute a MD5 hex digest string.
 pub fn md5_hex(input: &str) -> String {
     format!("{:x}", md5::compute(input.as_bytes()))
 }
 
+/// AES-128-ECB 加密，使用 PKCS7 填充。
 /// AES-128-ECB encrypt with PKCS7 padding.
 fn aes_ecb_encrypt(data: &[u8]) -> Vec<u8> {
     let cipher = Aes128::new_from_slice(EAPI_KEY).expect("AES-128 key is 16 bytes");
@@ -29,6 +32,7 @@ fn aes_ecb_encrypt(data: &[u8]) -> Vec<u8> {
     result
 }
 
+/// AES-128-ECB 解密，移除 PKCS7 填充。返回 None 表示数据无效或解密失败。
 /// AES-128-ECB decrypt with PKCS7 padding removal.
 pub fn aes_ecb_decrypt(data: &[u8]) -> Option<String> {
     if data.is_empty() || data.len() % 16 != 0 {
@@ -51,6 +55,7 @@ pub fn aes_ecb_decrypt(data: &[u8]) -> Option<String> {
     String::from_utf8(result).ok()
 }
 
+/// 对数据进行 PKCS7 填充，使其长度为 block_size 的整数倍。
 /// PKCS7 padding.
 fn pkcs7_pad(data: &[u8], block_size: usize) -> Vec<u8> {
     let pad_len = block_size - (data.len() % block_size);
@@ -59,6 +64,14 @@ fn pkcs7_pad(data: &[u8], block_size: usize) -> Vec<u8> {
     padded
 }
 
+/// 使用 NetEase EAPI 协议加密请求参数，返回大写十六进制字符串。
+///
+/// 加密步骤（来自 lyrico NeCryptoUtils）：
+/// 1. `message = format!(DIGEST_TEXT, url, json_params)`
+/// 2. `digest = md5_hex(message)`
+/// 3. `data = format!("{url}-36cd479b6b5-{json_params}-36cd479b6b5-{digest}")`
+/// 4. 对 data 进行 AES-128-ECB 加密，输出大写十六进制编码
+///
 /// Encrypt request parameters using the NetEase EAPI protocol.
 ///
 /// The formula (from lyrico NeCryptoUtils):

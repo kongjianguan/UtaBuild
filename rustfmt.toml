@@ -1,0 +1,23 @@
+# Linux Kernel Rust Coding Guidelines — 默认 rustfmt 设置
+# https://www.kernel.org/doc/html/next/rust/coding-guidelines.html
+#
+# Kernel 明确使用 rustfmt 的默认设置（4 空格缩进、100 字符行宽等），
+# 不添加额外自定义规则，以保持社区一致性。
+#
+# 此文件只为了保证 cargo fmt 与 rustfmt 之间的 edition/style_edition 一致。
+# 具体由 .rustfmt.toml 还是 rustfmt.toml 决定？Kernel 无特殊要求。
+#
+# style_edition: 显式指定以消除 cargo fmt (读 Cargo.toml) 与 rustfmt (默认 2015) 的差异
+
+edition = "2021"
+style_edition = "2021"
+
+# 以下均为默认值，显式写出仅作文档用途 ——
+# max_width = 100
+# hard_tabs = false
+# tab_spaces = 4
+# newline_style = "Auto"
+# imports_layout = "Mixed"
+# imports_granularity = "Preserve"
+# reorder_imports = true
+# reorder_modules = true

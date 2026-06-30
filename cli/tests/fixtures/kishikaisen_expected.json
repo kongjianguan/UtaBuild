@@ -1,0 +1,1089 @@
+{
+  "status": "success",
+  "title": "起死開戦",
+  "artist": "millsage",
+  "url": "qq_music:003kP6E71r8DAn",
+  "lyrics": {
+    "lines": [
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "起死開戦-millsage"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "词：藤井健太郎"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "曲：藤井健太郎"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "鮮",
+            "ruby": "あざ"
+          },
+          {
+            "type": "text",
+            "base": "やかなる"
+          },
+          {
+            "type": "ruby",
+            "base": "色彩",
+            "ruby": "しきさい"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "その"
+          },
+          {
+            "type": "ruby",
+            "base": "意味",
+            "ruby": "いみ"
+          },
+          {
+            "type": "text",
+            "base": "など"
+          },
+          {
+            "type": "ruby",
+            "base": "君",
+            "ruby": "きみ"
+          },
+          {
+            "type": "text",
+            "base": "はもうcan'tknow"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "安",
+            "ruby": "やす"
+          },
+          {
+            "type": "text",
+            "base": "らかにsweet"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "温",
+            "ruby": "ぬく"
+          },
+          {
+            "type": "text",
+            "base": "もりの"
+          },
+          {
+            "type": "ruby",
+            "base": "意味初",
+            "ruby": "いみはじ"
+          },
+          {
+            "type": "text",
+            "base": "めて"
+          },
+          {
+            "type": "ruby",
+            "base": "知",
+            "ruby": "し"
+          },
+          {
+            "type": "text",
+            "base": "れば"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "鼓動",
+            "ruby": "こどう"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "音",
+            "ruby": "おと"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "抱",
+            "ruby": "だ"
+          },
+          {
+            "type": "text",
+            "base": "き"
+          },
+          {
+            "type": "ruby",
+            "base": "留",
+            "ruby": "と"
+          },
+          {
+            "type": "text",
+            "base": "める"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "求",
+            "ruby": "もと"
+          },
+          {
+            "type": "text",
+            "base": "める"
+          },
+          {
+            "type": "ruby",
+            "base": "救済枯",
+            "ruby": "きゅうさいか"
+          },
+          {
+            "type": "text",
+            "base": "れない"
+          },
+          {
+            "type": "ruby",
+            "base": "想",
+            "ruby": "おも"
+          },
+          {
+            "type": "text",
+            "base": "いが"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "ぶつかるくらいに"
+          },
+          {
+            "type": "ruby",
+            "base": "手",
+            "ruby": "て"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "伸",
+            "ruby": "の"
+          },
+          {
+            "type": "text",
+            "base": "ばす"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "非情",
+            "ruby": "ひじょう"
+          },
+          {
+            "type": "text",
+            "base": "にも"
+          },
+          {
+            "type": "ruby",
+            "base": "刻",
+            "ruby": "きざ"
+          },
+          {
+            "type": "text",
+            "base": "む"
+          },
+          {
+            "type": "ruby",
+            "base": "秒針",
+            "ruby": "びょうしん"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "止",
+            "ruby": "と"
+          },
+          {
+            "type": "text",
+            "base": "まらない"
+          },
+          {
+            "type": "ruby",
+            "base": "戻",
+            "ruby": "もど"
+          },
+          {
+            "type": "text",
+            "base": "らない"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "まだ"
+          },
+          {
+            "type": "ruby",
+            "base": "潜",
+            "ruby": "ひそ"
+          },
+          {
+            "type": "text",
+            "base": "むまだ"
+          },
+          {
+            "type": "ruby",
+            "base": "此処",
+            "ruby": "ここ"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "抗",
+            "ruby": "あらが"
+          },
+          {
+            "type": "text",
+            "base": "い"
+          },
+          {
+            "type": "ruby",
+            "base": "向",
+            "ruby": "む"
+          },
+          {
+            "type": "text",
+            "base": "き"
+          },
+          {
+            "type": "ruby",
+            "base": "合",
+            "ruby": "あ"
+          },
+          {
+            "type": "text",
+            "base": "い"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "まだ"
+          },
+          {
+            "type": "ruby",
+            "base": "潜",
+            "ruby": "くぐ"
+          },
+          {
+            "type": "text",
+            "base": "るまだ"
+          },
+          {
+            "type": "ruby",
+            "base": "奥",
+            "ruby": "おく"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "溶",
+            "ruby": "と"
+          },
+          {
+            "type": "text",
+            "base": "け"
+          },
+          {
+            "type": "ruby",
+            "base": "合",
+            "ruby": "あ"
+          },
+          {
+            "type": "text",
+            "base": "うように"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "此処",
+            "ruby": "ここ"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "立",
+            "ruby": "た"
+          },
+          {
+            "type": "text",
+            "base": "つ"
+          },
+          {
+            "type": "ruby",
+            "base": "僕",
+            "ruby": "ぼく"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "白紙",
+            "ruby": "はくし"
+          },
+          {
+            "type": "text",
+            "base": "のキャンバス"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "染",
+            "ruby": "そ"
+          },
+          {
+            "type": "text",
+            "base": "めて"
+          },
+          {
+            "type": "ruby",
+            "base": "彩",
+            "ruby": "さい"
+          },
+          {
+            "type": "text",
+            "base": "めて"
+          },
+          {
+            "type": "ruby",
+            "base": "欲",
+            "ruby": "ほ"
+          },
+          {
+            "type": "text",
+            "base": "しいのさ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "生",
+            "ruby": "う"
+          },
+          {
+            "type": "text",
+            "base": "まれ"
+          },
+          {
+            "type": "ruby",
+            "base": "変",
+            "ruby": "か"
+          },
+          {
+            "type": "text",
+            "base": "わるその"
+          },
+          {
+            "type": "ruby",
+            "base": "音",
+            "ruby": "おと"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "未来強",
+            "ruby": "みらいつよ"
+          },
+          {
+            "type": "text",
+            "base": "く"
+          },
+          {
+            "type": "ruby",
+            "base": "生",
+            "ruby": "い"
+          },
+          {
+            "type": "text",
+            "base": "き"
+          },
+          {
+            "type": "ruby",
+            "base": "抜",
+            "ruby": "ぬ"
+          },
+          {
+            "type": "text",
+            "base": "く"
+          },
+          {
+            "type": "ruby",
+            "base": "理由",
+            "ruby": "りゆう"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "なるでしょうか?"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "揺",
+            "ruby": "ゆ"
+          },
+          {
+            "type": "text",
+            "base": "れる"
+          },
+          {
+            "type": "ruby",
+            "base": "感情",
+            "ruby": "かんじょう"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "先確",
+            "ruby": "さきたし"
+          },
+          {
+            "type": "text",
+            "base": "かなる"
+          },
+          {
+            "type": "ruby",
+            "base": "旋律",
+            "ruby": "せんりつ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "天",
+            "ruby": "そら"
+          },
+          {
+            "type": "text",
+            "base": "へと"
+          },
+          {
+            "type": "ruby",
+            "base": "狼煙",
+            "ruby": "のろし"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "上",
+            "ruby": "あ"
+          },
+          {
+            "type": "text",
+            "base": "げるのさ"
+          },
+          {
+            "type": "ruby",
+            "base": "起死開戦",
+            "ruby": "きしかいせん"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "夜明",
+            "ruby": "よあ"
+          },
+          {
+            "type": "text",
+            "base": "けを"
+          },
+          {
+            "type": "ruby",
+            "base": "拒",
+            "ruby": "こば"
+          },
+          {
+            "type": "text",
+            "base": "む"
+          },
+          {
+            "type": "ruby",
+            "base": "理由",
+            "ruby": "りゆう"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "時",
+            "ruby": "とき"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "祝福",
+            "ruby": "しゅくふく"
+          },
+          {
+            "type": "text",
+            "base": "となり"
+          },
+          {
+            "type": "ruby",
+            "base": "降",
+            "ruby": "ふ"
+          },
+          {
+            "type": "text",
+            "base": "り"
+          },
+          {
+            "type": "ruby",
+            "base": "注",
+            "ruby": "そそ"
+          },
+          {
+            "type": "text",
+            "base": "ぐ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "あぁ"
+          },
+          {
+            "type": "ruby",
+            "base": "要",
+            "ruby": "い"
+          },
+          {
+            "type": "text",
+            "base": "らない"
+          },
+          {
+            "type": "ruby",
+            "base": "感情",
+            "ruby": "かんじょう"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "パージして"
+          },
+          {
+            "type": "ruby",
+            "base": "拓",
+            "ruby": "ひら"
+          },
+          {
+            "type": "text",
+            "base": "いた"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "視界",
+            "ruby": "しかい"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "先",
+            "ruby": "さき"
+          },
+          {
+            "type": "text",
+            "base": "で"
+          },
+          {
+            "type": "ruby",
+            "base": "笑",
+            "ruby": "わら"
+          },
+          {
+            "type": "text",
+            "base": "うのは"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "嘘",
+            "ruby": "うそ"
+          },
+          {
+            "type": "text",
+            "base": "みたいに"
+          },
+          {
+            "type": "ruby",
+            "base": "無垢",
+            "ruby": "むく"
+          },
+          {
+            "type": "text",
+            "base": "な"
+          },
+          {
+            "type": "ruby",
+            "base": "顔",
+            "ruby": "かお"
+          },
+          {
+            "type": "text",
+            "base": "をした"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "僅",
+            "ruby": "わず"
+          },
+          {
+            "type": "text",
+            "base": "かな"
+          },
+          {
+            "type": "ruby",
+            "base": "希望",
+            "ruby": "きぼう"
+          },
+          {
+            "type": "text",
+            "base": "のようだ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "鮮",
+            "ruby": "あざ"
+          },
+          {
+            "type": "text",
+            "base": "やかなる"
+          },
+          {
+            "type": "ruby",
+            "base": "餞",
+            "ruby": "はなむけ"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "\""
+          },
+          {
+            "type": "ruby",
+            "base": "白",
+            "ruby": "しろ"
+          },
+          {
+            "type": "text",
+            "base": "\"は"
+          },
+          {
+            "type": "ruby",
+            "base": "私",
+            "ruby": "わたし"
+          },
+          {
+            "type": "text",
+            "base": "と"
+          },
+          {
+            "type": "ruby",
+            "base": "貴方",
+            "ruby": "あなた"
+          },
+          {
+            "type": "text",
+            "base": "のアイダ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "壊",
+            "ruby": "こわ"
+          },
+          {
+            "type": "text",
+            "base": "すジアイだ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "そんな"
+          },
+          {
+            "type": "ruby",
+            "base": "感情全部彩",
+            "ruby": "かんじょうぜんぶいろ"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "分",
+            "ruby": "わ"
+          },
+          {
+            "type": "text",
+            "base": "け"
+          },
+          {
+            "type": "ruby",
+            "base": "与",
+            "ruby": "あた"
+          },
+          {
+            "type": "text",
+            "base": "え"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "染",
+            "ruby": "そ"
+          },
+          {
+            "type": "text",
+            "base": "め"
+          },
+          {
+            "type": "ruby",
+            "base": "上",
+            "ruby": "あ"
+          },
+          {
+            "type": "text",
+            "base": "げる"
+          },
+          {
+            "type": "ruby",
+            "base": "明日",
+            "ruby": "あした"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "鮮",
+            "ruby": "あざ"
+          },
+          {
+            "type": "text",
+            "base": "やかな"
+          },
+          {
+            "type": "ruby",
+            "base": "色彩",
+            "ruby": "しきさい"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "新",
+            "ruby": "あたら"
+          },
+          {
+            "type": "text",
+            "base": "しい\""
+          },
+          {
+            "type": "ruby",
+            "base": "私",
+            "ruby": "わたし"
+          },
+          {
+            "type": "text",
+            "base": "\"を"
+          },
+          {
+            "type": "ruby",
+            "base": "生",
+            "ruby": "い"
+          },
+          {
+            "type": "text",
+            "base": "き"
+          },
+          {
+            "type": "ruby",
+            "base": "抜",
+            "ruby": "ぬ"
+          },
+          {
+            "type": "text",
+            "base": "くよ"
+          },
+          {
+            "type": "ruby",
+            "base": "起死開戦",
+            "ruby": "きしかいせん"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "あなたは"
+          },
+          {
+            "type": "ruby",
+            "base": "還",
+            "ruby": "かえ"
+          },
+          {
+            "type": "text",
+            "base": "らない"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "二度",
+            "ruby": "にど"
+          },
+          {
+            "type": "text",
+            "base": "と"
+          },
+          {
+            "type": "ruby",
+            "base": "戻",
+            "ruby": "もど"
+          },
+          {
+            "type": "text",
+            "base": "ることはない"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "時計",
+            "ruby": "とけい"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "進",
+            "ruby": "すす"
+          },
+          {
+            "type": "text",
+            "base": "んでいくから"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "さぁ"
+          },
+          {
+            "type": "ruby",
+            "base": "手",
+            "ruby": "て"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "取",
+            "ruby": "と"
+          },
+          {
+            "type": "text",
+            "base": "って"
+          },
+          {
+            "type": "ruby",
+            "base": "花",
+            "ruby": "はな"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "贈",
+            "ruby": "おく"
+          },
+          {
+            "type": "text",
+            "base": "ろう"
+          }
+        ]
+      }
+    ]
+  }
+}

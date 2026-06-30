@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <clipPath id="c"><circle cx="64" cy="64" r="60"/></clipPath>
+  </defs>
+  <circle cx="64" cy="64" r="62" fill="#8B5E3C"/>
+  <!-- hair base -->
+  <ellipse cx="64" cy="58" rx="48" ry="46" fill="#9B6B42"/>
+  <!-- face -->
+  <ellipse cx="64" cy="66" rx="32" ry="30" fill="#FDDCB5"/>
+  <!-- bangs -->
+  <path d="M26 52 Q32 30 64 24 Q96 30 102 52 Q96 44 80 42 Q72 48 64 44 Q56 48 48 42 Q32 44 26 52Z" fill="#9B6B42"/>
+  <path d="M30 56 Q36 38 50 36 Q44 50 36 54Z" fill="#8B5C38"/>
+  <path d="M98 56 Q92 38 78 36 Q84 50 92 54Z" fill="#8B5C38"/>
+  <!-- side hair -->
+  <path d="M18 50 Q16 70 22 88 Q26 76 24 56Z" fill="#9B6B42"/>
+  <path d="M110 50 Q112 70 106 88 Q102 76 104 56Z" fill="#9B6B42"/>
+  <!-- eyes -->
+  <ellipse cx="48" cy="68" rx="7" ry="8" fill="#5C3A1E"/>
+  <ellipse cx="80" cy="68" rx="7" ry="8" fill="#5C3A1E"/>
+  <ellipse cx="49" cy="67" rx="3" ry="4" fill="#FFF" opacity="0.7"/>
+  <ellipse cx="81" cy="67" rx="3" ry="4" fill="#FFF" opacity="0.7"/>
+  <!-- mouth -->
+  <path d="M58 80 Q64 84 70 80" stroke="#C4956E" stroke-width="1.5" fill="none"/>
+  <!-- flower 1 (upper) -->
+  <g transform="translate(42,36) scale(0.5)">
+    <circle cx="0" cy="-6" r="5" fill="#FFF"/>
+    <circle cx="5.7" cy="-1.8" r="5" fill="#FFF"/>
+    <circle cx="3.5" cy="4.9" r="5" fill="#FFF"/>
+    <circle cx="-3.5" cy="4.9" r="5" fill="#FFF"/>
+    <circle cx="-5.7" cy="-1.8" r="5" fill="#FFF"/>
+    <circle cx="0" cy="0" r="3" fill="#FFD700"/>
+  </g>
+  <!-- flower 2 (lower) -->
+  <g transform="translate(50,40) scale(0.42)">
+    <circle cx="0" cy="-6" r="5" fill="#FFF"/>
+    <circle cx="5.7" cy="-1.8" r="5" fill="#FFF"/>
+    <circle cx="3.5" cy="4.9" r="5" fill="#FFF"/>
+    <circle cx="-3.5" cy="4.9" r="5" fill="#FFF"/>
+    <circle cx="-5.7" cy="-1.8" r="5" fill="#FFF"/>
+    <circle cx="0" cy="0" r="3" fill="#FFD700"/>
+  </g>
+</svg>

@@ -1,3 +1,9 @@
+//! 历史记录模块
+//!
+//! 本模块实现了搜索历史记录的存储、查询、使用和清除功能。
+//! 历史记录以 JSON 格式保存在本地文件中，包含歌曲标题、艺术家、URL、时间戳等信息。
+//! 历史记录最大容量为 50 条，超出时会自动截断最旧的记录。
+
 use crate::cache_manager::CacheManager;
 use crate::output::{ErrorOutput, HistoryItem, HistoryOutput, LyricsOutput};
 use crate::platform::{ensure_dir_exists, get_data_dir};
@@ -8,31 +14,51 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::info;
 
+/// 历史记录的最大条目数
 const MAX_HISTORY_SIZE: usize = 50;
 
+/// 单条历史记录的数据结构
+///
+/// 包含歌曲的标题、艺术家、URL、时间戳以及可选的作词/作曲信息。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryRecord {
+    /// 歌曲标题
     pub title: String,
+    /// 艺术家名称
     pub artist: String,
+    /// 歌词页面的 URL
     pub url: String,
+    /// 记录时间戳（格式：%Y-%m-%dT%H:%M:%S）
     pub timestamp: String,
+    /// 作词人（可选）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lyricist: Option<String>,
+    /// 作曲人（可选）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub composer: Option<String>,
 }
 
+/// 历史记录容器，包含多条 HistoryRecord
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct History {
+    /// 历史记录条目的列表
     pub items: Vec<HistoryRecord>,
 }
 
 impl History {
+    /// 创建一个新的空历史记录容器
     pub fn new() -> Self {
         Self { items: Vec::new() }
     }
 }
 
+/// 获取历史记录文件的路径
+///
+/// 如果提供了缓存目录，则使用该目录下的 history.json；
+/// 否则使用默认数据目录下的 history.json。
+///
+/// - `cache_dir`: 可选的缓存目录路径
+/// 返回: 历史记录文件的完整路径
 fn get_history_file_path(cache_dir: Option<&PathBuf>) -> PathBuf {
     if let Some(dir) = cache_dir {
         dir.join("history.json")
@@ -41,6 +67,9 @@ fn get_history_file_path(cache_dir: Option<&PathBuf>) -> PathBuf {
     }
 }
 
+/// 确保历史记录文件所在的目录存在
+///
+/// - `cache_dir`: 可选的缓存目录路径
 fn ensure_history_dir(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
     let path = get_history_file_path(cache_dir);
     if let Some(parent) = path.parent() {
@@ -49,6 +78,12 @@ fn ensure_history_dir(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// 从文件加载历史记录
+///
+/// 如果文件不存在或解析失败，返回空的历史记录。
+///
+/// - `cache_dir`: 可选的缓存目录路径
+/// 返回: 加载的 History 实例
 fn load_history(cache_dir: Option<&PathBuf>) -> History {
     let path = get_history_file_path(cache_dir);
 
@@ -65,6 +100,10 @@ fn load_history(cache_dir: Option<&PathBuf>) -> History {
     }
 }
 
+/// 将历史记录保存到文件
+///
+/// - `history`: 要保存的 History 实例
+/// - `cache_dir`: 可选的缓存目录路径
 fn save_history(history: &History, cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
     ensure_history_dir(cache_dir)?;
     let path = get_history_file_path(cache_dir);
@@ -73,10 +112,16 @@ fn save_history(history: &History, cache_dir: Option<&PathBuf>) -> anyhow::Resul
     Ok(())
 }
 
+/// 获取当前时间的格式化字符串（格式：%Y-%m-%dT%H:%M:%S）
 fn get_current_timestamp() -> String {
     chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string()
 }
 
+/// 列出所有历史记录
+///
+/// 从文件加载历史记录并输出为 JSON 格式。
+///
+/// - `cache_dir`: 可选的缓存目录路径
 pub fn list(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
     info!("列出历史记录");
 
@@ -115,6 +160,12 @@ pub fn list(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// 使用历史记录中的条目重新获取歌词
+///
+/// 根据历史记录的索引找到对应条目，重新搜索并获取歌词。
+///
+/// - `index`: 历史记录索引（从 0 开始）
+/// - `cache_dir`: 可选的缓存目录路径
 pub async fn use_record(index: u32, cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
     info!("使用历史记录: {}", index);
 
@@ -145,6 +196,7 @@ pub async fn use_record(index: u32, cache_dir: Option<&PathBuf>) -> anyhow::Resu
         return Ok(());
     }
 
+    // 在搜索结果中找到与历史记录 URL 匹配的条目
     let target_index = process_result
         .search_results
         .iter()
@@ -165,6 +217,7 @@ pub async fn use_record(index: u32, cache_dir: Option<&PathBuf>) -> anyhow::Resu
         .await;
 
     if selected_result.status == "success" {
+        // 更新历史记录中的信息
         add_to_history(
             &selected_result.found_title,
             &selected_result.found_artist,
@@ -189,6 +242,11 @@ pub async fn use_record(index: u32, cache_dir: Option<&PathBuf>) -> anyhow::Resu
     Ok(())
 }
 
+/// 清除所有历史记录
+///
+/// 创建一个新的空 History 并保存到文件。
+///
+/// - `cache_dir`: 可选的缓存目录路径
 pub fn clear(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
     info!("清除历史记录");
 
@@ -201,6 +259,17 @@ pub fn clear(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// 向历史记录中添加一条新记录
+///
+/// 如果已存在相同标题和艺术家的记录，则先移除旧的再插入到最前面。
+/// 超出最大容量时会截断最旧的记录。
+///
+/// - `title`: 歌曲标题
+/// - `artist`: 艺术家名称
+/// - `url`: 歌词页面的 URL
+/// - `lyricist`: 作词人（可选）
+/// - `composer`: 作曲人（可选）
+/// - `cache_dir`: 可选的缓存目录路径
 pub fn add_to_history(
     title: &str,
     artist: &str,
@@ -211,6 +280,7 @@ pub fn add_to_history(
 ) -> anyhow::Result<()> {
     let mut history = load_history(cache_dir);
 
+    // 移除已存在的相同条目（避免重复）
     history
         .items
         .retain(|item| !(item.title == title && item.artist == artist));
@@ -224,8 +294,10 @@ pub fn add_to_history(
         composer,
     };
 
+    // 新记录插入到最前面
     history.items.insert(0, new_item);
 
+    // 超出最大容量时截断
     if history.items.len() > MAX_HISTORY_SIZE {
         history.items.truncate(MAX_HISTORY_SIZE);
     }

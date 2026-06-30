@@ -4,6 +4,10 @@
 use flate2::read::ZlibDecoder;
 use std::io::Read;
 
+/// 将十六进制字符串解码为字节向量。
+///
+/// 支持长度为偶数的十六进制字符串（如 "48656c6c6f" → b"Hello"），
+/// 奇数长度或包含非法字符时返回 `None`。
 fn hex_decode(hex: &str) -> Option<Vec<u8>> {
     if hex.len() % 2 != 0 {
         return None;
@@ -14,6 +18,10 @@ fn hex_decode(hex: &str) -> Option<Vec<u8>> {
         .collect()
 }
 
+/// 对数据进行 zlib 解压，返回 UTF-8 字符串。
+///
+/// 内部使用 `flate2` 库的 `ZlibDecoder` 进行解压。
+/// 数据长度小于 2 字节时返回 `None`。
 fn zlib_decompress(data: &[u8]) -> Option<String> {
     if data.len() < 2 {
         return None;
@@ -24,6 +32,10 @@ fn zlib_decompress(data: &[u8]) -> Option<String> {
     String::from_utf8(decompressed).ok()
 }
 
+/// DES 算法的 S 盒查找表（8 个 S 盒，每个 64 项）。
+///
+/// 这是 DES 核心非线性变换的替换表，每个 S 盒将 6 位输入映射为 4 位输出，
+/// 用于 `f` 函数中的混淆步骤。
 const SBOX: [[u32; 64]; 8] = [
     [
         14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7, 0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12,
@@ -67,8 +79,19 @@ const SBOX: [[u32; 64]; 8] = [
     ],
 ];
 
+/// 3DES 解密密钥（24 字节 = 3 个 8 字节 DES 密钥）。
+///
+/// QQ 音乐 QRC 格式使用的固定解密密钥。
 const DECRYPT_KEY: &[u8; 24] = b"!@#)(*$%123ZXC!@!@#)(NHL";
 
+/// 解密 QQ 音乐 QRC 歌词。
+///
+/// 接收 QRC 歌词数据的十六进制字符串表示，依次执行：
+/// 1. 十六进制解码
+/// 2. 3DES EDE 模式解密（使用固定密钥 `DECRYPT_KEY`）
+/// 3. Zlib 解压
+///
+/// 返回解密后的 UTF-8 歌词字符串，任何步骤失败则返回 `None`。
 #[must_use]
 pub fn decrypt_qm_lyrics(hex: &str) -> Option<String> {
     let raw = hex_decode(hex)?;
@@ -76,6 +99,11 @@ pub fn decrypt_qm_lyrics(hex: &str) -> Option<String> {
     zlib_decompress(&decrypted)
 }
 
+/// 从字节数组中提取指定位置的比特位。
+///
+/// `data` 为字节数组，`b` 为以比特为单位的偏移量，
+/// `c` 控制结果左移的位数（用于拼接到目标位置）。
+/// 以大端序方式处理比特位索引。
 fn bitnum(data: &[u8], b: usize, c: u32) -> u32 {
     let byte_index = (b / 32) * 4 + 3 - (b % 32) / 8;
     if byte_index >= data.len() {
@@ -86,20 +114,38 @@ fn bitnum(data: &[u8], b: usize, c: u32) -> u32 {
     (bit_val as u32) << c
 }
 
+/// 从 `u32` 值的第 `b` 位提取比特并右对齐位移。
+///
+/// 等价于：取 `a` 的第 `(31 - b)` 位，结果左移 `c` 位。
+/// 用于 DES 的比特置换操作（右半部分取位）。
 fn bitnum_intr(a: u32, b: usize, c: u32) -> u32 {
     ((a >> (31 - b)) & 1) << c
 }
 
+/// 从 `u32` 值的第 `b` 位提取比特并左对齐位移。
+///
+/// 将 `a` 左移 `b` 位后截取最高位，结果右移 `c` 位。
+/// 用于 DES 的比特置换操作（左半部分取位）。
 fn bitnum_intl(a: u32, b: usize, c: u32) -> u32 {
     let shifted = a << b;
     let masked = shifted & 0x8000_0000;
     masked >> c
 }
 
+/// 根据输入值计算 S 盒索引。
+///
+/// 输入 `a` 为 6 位有效值（低 6 位），
+/// 输出为 0~63 的 S 盒索引，映射规则：
+/// - 第 0、5 位组合作为行选择
+/// - 第 1~4 位作为列选择
 fn sbox_bit(a: u32) -> usize {
     ((a & 32) | ((a & 31) >> 1) | ((a & 1) << 4)) as usize
 }
 
+/// DES 初始置换（IP）。
+///
+/// 将 8 字节输入按照 IP 表重新排列比特位，
+/// 输出分为左半部分 `s0` 和右半部分 `s1`（各 32 位）。
 fn initial_permutation(input_data: &[u8; 8]) -> (u32, u32) {
     let s0_idx = [
         57, 49, 41, 33, 25, 17, 9, 1, 59, 51, 43, 35, 27, 19, 11, 3, 61, 53, 45, 37, 29, 21, 13, 5,
@@ -118,6 +164,13 @@ fn initial_permutation(input_data: &[u8; 8]) -> (u32, u32) {
     (s0, s1)
 }
 
+/// DES 逆初始置换（IP⁻¹）。
+///
+/// 将 `s0`（左 32 位）和 `s1`（右 32 位）合并，
+/// 按 IP⁻¹ 表重新排列后输出 8 字节。
+///
+/// 输出字节顺序为：data[3], data[2], data[1], data[0],
+/// data[7], data[6], data[5], data[4]。
 fn inverse_permutation(s0: u32, s1: u32) -> [u8; 8] {
     let mut data = [0u8; 8];
     data[3] = ((bitnum_intr(s1, 7, 7)
@@ -195,6 +248,13 @@ fn inverse_permutation(s0: u32, s1: u32) -> [u8; 8] {
     data
 }
 
+/// DES 轮函数 f。
+///
+/// 对 32 位输入 `state` 执行：
+/// 1. 扩展置换（E 盒）：将 32 位扩展到 48 位
+/// 2. 与轮密钥 `key`（6 字节/48 位）异或
+/// 3. S 盒替换：8 个 S 盒将 48 位压缩回 32 位
+/// 4. P 盒置换：32 位重新排列后输出
 fn f(state: u32, key: &[u8; 6]) -> u32 {
     let s = state;
 
@@ -257,6 +317,12 @@ fn f(state: u32, key: &[u8; 6]) -> u32 {
     result
 }
 
+/// 使用给定轮密钥调度表加密/解密一个 8 字节块。
+///
+/// 执行 16 轮 Feistel 网络结构：
+/// - 前 15 轮：`s1 = f(s1, key[i]) ^ s0`，然后交换 `s0` 和 `s1`
+/// - 第 16 轮：`s0 ^= f(s1, key[15])`（不交换）
+/// - 最后执行逆初始置换
 fn crypt_block(input_data: &[u8; 8], key: &[[u8; 6]; 16]) -> [u8; 8] {
     let (mut s0, mut s1) = initial_permutation(input_data);
 
@@ -270,6 +336,16 @@ fn crypt_block(input_data: &[u8; 8], key: &[[u8; 6]; 16]) -> [u8; 8] {
     inverse_permutation(s0, s1)
 }
 
+/// 生成 DES 轮密钥调度表（16 轮，每轮 6 字节）。
+///
+/// 过程：
+/// 1. 从 8 字节密钥中提取 56 位（PC-1 置换），分为 C、D 各 28 位
+/// 2. 每轮循环左移指定位数（1 或 2 位，由 `shifts` 表决定）
+/// 3. 从 C、D 中选取 48 位（PC-2 压缩置换）作为该轮密钥
+///
+/// `mode` 参数控制密钥顺序：
+/// - `mode = 0`：逆序（用于解密）
+/// - `mode = 1`：正序（用于加密）
 fn key_schedule(k: &[u8], mode: u32) -> [[u8; 6]; 16] {
     let shifts = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
     let pc = [
@@ -310,6 +386,13 @@ fn key_schedule(k: &[u8], mode: u32) -> [[u8; 6]; 16] {
     sched
 }
 
+/// 3DES EDE（Encrypt-Decrypt-Encrypt）模式加密/解密。
+///
+/// 使用三个独立的 DES 密钥（共 24 字节）：
+/// - 加密时：密钥 1 加密 → 密钥 2 解密 → 密钥 3 加密
+/// - 解密时：密钥 3 解密 → 密钥 2 加密 → 密钥 1 解密
+///
+/// 数据长度必须是 8 的倍数，否则返回 `None`。
 fn triple_des_crypt_ede(data: &[u8], key: &[u8; 24], encrypt: bool) -> Option<Vec<u8>> {
     let schedules = if encrypt {
         [

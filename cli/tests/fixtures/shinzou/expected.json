@@ -1,0 +1,1834 @@
+{
+  "status": "success",
+  "title": "心臓を捧げよ!",
+  "artist": "Linked Horizon",
+  "url": "qq_music",
+  "lyrics": {
+    "lines": [
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "心臓を捧げよ! -LinkedHorizon"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "词：Revo"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "曲：Revo"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "これ"
+          },
+          {
+            "type": "ruby",
+            "base": "以上",
+            "ruby": "いじょう"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "地獄",
+            "ruby": "じごく"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "無",
+            "ruby": "な"
+          },
+          {
+            "type": "text",
+            "base": "いだろうと"
+          },
+          {
+            "type": "ruby",
+            "base": "信",
+            "ruby": "しん"
+          },
+          {
+            "type": "text",
+            "base": "じたかった"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "されど"
+          },
+          {
+            "type": "ruby",
+            "base": "人類最悪",
+            "ruby": "じんるいさいあく"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "日",
+            "ruby": "ひ"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "いつも"
+          },
+          {
+            "type": "ruby",
+            "base": "唐突",
+            "ruby": "とうとつ"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "扉",
+            "ruby": "とびら"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "叩",
+            "ruby": "たた"
+          },
+          {
+            "type": "text",
+            "base": "く"
+          },
+          {
+            "type": "ruby",
+            "base": "音",
+            "ruby": "おと"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "絶",
+            "ruby": "た"
+          },
+          {
+            "type": "text",
+            "base": "えず"
+          },
+          {
+            "type": "ruby",
+            "base": "酷",
+            "ruby": "ひど"
+          },
+          {
+            "type": "text",
+            "base": "く"
+          },
+          {
+            "type": "ruby",
+            "base": "無作法",
+            "ruby": "むさほう"
+          },
+          {
+            "type": "text",
+            "base": "で"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "招",
+            "ruby": "まね"
+          },
+          {
+            "type": "text",
+            "base": "かれざる"
+          },
+          {
+            "type": "ruby",
+            "base": "災厄",
+            "ruby": "さいやく"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "灯",
+            "ruby": "ひ"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "悪夢",
+            "ruby": "あくむ"
+          },
+          {
+            "type": "text",
+            "base": "のように"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "過",
+            "ruby": "す"
+          },
+          {
+            "type": "text",
+            "base": "ぎし"
+          },
+          {
+            "type": "ruby",
+            "base": "日",
+            "ruby": "ひ"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "裏切",
+            "ruby": "うらぎ"
+          },
+          {
+            "type": "text",
+            "base": "る"
+          },
+          {
+            "type": "ruby",
+            "base": "者",
+            "ruby": "もの"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "奴等",
+            "ruby": "やつら"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "駆逐",
+            "ruby": "くちく"
+          },
+          {
+            "type": "text",
+            "base": "すべき"
+          },
+          {
+            "type": "ruby",
+            "base": "敵",
+            "ruby": "てき"
+          },
+          {
+            "type": "text",
+            "base": "だ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "あの"
+          },
+          {
+            "type": "ruby",
+            "base": "日",
+            "ruby": "ひ"
+          },
+          {
+            "type": "text",
+            "base": "どんな"
+          },
+          {
+            "type": "ruby",
+            "base": "顔",
+            "ruby": "かお"
+          },
+          {
+            "type": "text",
+            "base": "で"
+          },
+          {
+            "type": "ruby",
+            "base": "瞳",
+            "ruby": "ひとみ"
+          },
+          {
+            "type": "text",
+            "base": "で"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "俺達",
+            "ruby": "おれたち"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "見",
+            "ruby": "み"
+          },
+          {
+            "type": "text",
+            "base": "つめていた"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "何",
+            "ruby": "なに"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "捨",
+            "ruby": "す"
+          },
+          {
+            "type": "text",
+            "base": "てれば"
+          },
+          {
+            "type": "ruby",
+            "base": "悪魔",
+            "ruby": "あくま"
+          },
+          {
+            "type": "text",
+            "base": "をも"
+          },
+          {
+            "type": "ruby",
+            "base": "凌",
+            "ruby": "しの"
+          },
+          {
+            "type": "text",
+            "base": "げる？"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "命",
+            "ruby": "いのち"
+          },
+          {
+            "type": "text",
+            "base": "さえ"
+          },
+          {
+            "type": "ruby",
+            "base": "魂",
+            "ruby": "たましい"
+          },
+          {
+            "type": "text",
+            "base": "さえ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "決",
+            "ruby": "けっ"
+          },
+          {
+            "type": "text",
+            "base": "して"
+          },
+          {
+            "type": "ruby",
+            "base": "惜",
+            "ruby": "お"
+          },
+          {
+            "type": "text",
+            "base": "しくなどはない"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "心臓",
+            "ruby": "しんぞう"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "全",
+            "ruby": "すべ"
+          },
+          {
+            "type": "text",
+            "base": "ての"
+          },
+          {
+            "type": "ruby",
+            "base": "犠牲",
+            "ruby": "ぎせい"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "今",
+            "ruby": "いま"
+          },
+          {
+            "type": "text",
+            "base": "この"
+          },
+          {
+            "type": "ruby",
+            "base": "瞬間",
+            "ruby": "とき"
+          },
+          {
+            "type": "text",
+            "base": "のために"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "心臓",
+            "ruby": "しんぞう"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "進",
+            "ruby": "すす"
+          },
+          {
+            "type": "text",
+            "base": "むべき"
+          },
+          {
+            "type": "ruby",
+            "base": "未来",
+            "ruby": "みらい"
+          },
+          {
+            "type": "text",
+            "base": "をその"
+          },
+          {
+            "type": "ruby",
+            "base": "手",
+            "ruby": "て"
+          },
+          {
+            "type": "text",
+            "base": "で"
+          },
+          {
+            "type": "ruby",
+            "base": "切",
+            "ruby": "き"
+          },
+          {
+            "type": "text",
+            "base": "り"
+          },
+          {
+            "type": "ruby",
+            "base": "拓",
+            "ruby": "ひら"
+          },
+          {
+            "type": "text",
+            "base": "け"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "過",
+            "ruby": "す"
+          },
+          {
+            "type": "text",
+            "base": "ぎし"
+          },
+          {
+            "type": "ruby",
+            "base": "日",
+            "ruby": "ひ"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "偽",
+            "ruby": "いつわ"
+          },
+          {
+            "type": "text",
+            "base": "る"
+          },
+          {
+            "type": "ruby",
+            "base": "者",
+            "ruby": "もの"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "奴等",
+            "ruby": "やつら"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "憎悪",
+            "ruby": "ぞうお"
+          },
+          {
+            "type": "text",
+            "base": "すべき"
+          },
+          {
+            "type": "ruby",
+            "base": "敵",
+            "ruby": "てき"
+          },
+          {
+            "type": "text",
+            "base": "だ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "あの"
+          },
+          {
+            "type": "ruby",
+            "base": "日",
+            "ruby": "ひ"
+          },
+          {
+            "type": "text",
+            "base": "どんな"
+          },
+          {
+            "type": "ruby",
+            "base": "声",
+            "ruby": "こえ"
+          },
+          {
+            "type": "text",
+            "base": "で"
+          },
+          {
+            "type": "ruby",
+            "base": "言葉",
+            "ruby": "ことば"
+          },
+          {
+            "type": "text",
+            "base": "で"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "俺",
+            "ruby": "おれ"
+          },
+          {
+            "type": "text",
+            "base": "たちを"
+          },
+          {
+            "type": "ruby",
+            "base": "騙",
+            "ruby": "かた"
+          },
+          {
+            "type": "text",
+            "base": "っていた"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "何",
+            "ruby": "なに"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "学",
+            "ruby": "まな"
+          },
+          {
+            "type": "text",
+            "base": "べば"
+          },
+          {
+            "type": "ruby",
+            "base": "悪魔",
+            "ruby": "あくま"
+          },
+          {
+            "type": "text",
+            "base": "をも"
+          },
+          {
+            "type": "ruby",
+            "base": "屠",
+            "ruby": "ほふ"
+          },
+          {
+            "type": "text",
+            "base": "れる？"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "技術",
+            "ruby": "ぎじゅつ"
+          },
+          {
+            "type": "text",
+            "base": "でも"
+          },
+          {
+            "type": "ruby",
+            "base": "戦術",
+            "ruby": "せんじゅつ"
+          },
+          {
+            "type": "text",
+            "base": "でも"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "全",
+            "ruby": "すべ"
+          },
+          {
+            "type": "text",
+            "base": "て"
+          },
+          {
+            "type": "ruby",
+            "base": "無駄",
+            "ruby": "むだ"
+          },
+          {
+            "type": "text",
+            "base": "になどしない"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "心臓",
+            "ruby": "しんぞう"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "全",
+            "ruby": "すべ"
+          },
+          {
+            "type": "text",
+            "base": "ての"
+          },
+          {
+            "type": "ruby",
+            "base": "努力",
+            "ruby": "どりょく"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "今",
+            "ruby": "いま"
+          },
+          {
+            "type": "text",
+            "base": "この"
+          },
+          {
+            "type": "ruby",
+            "base": "瞬間",
+            "ruby": "とき"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "為",
+            "ruby": "ため"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "心臓",
+            "ruby": "しんぞう"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "謳",
+            "ruby": "うた"
+          },
+          {
+            "type": "text",
+            "base": "うべき"
+          },
+          {
+            "type": "ruby",
+            "base": "勝利",
+            "ruby": "しょうり"
+          },
+          {
+            "type": "text",
+            "base": "をその"
+          },
+          {
+            "type": "ruby",
+            "base": "手",
+            "ruby": "て"
+          },
+          {
+            "type": "text",
+            "base": "で"
+          },
+          {
+            "type": "ruby",
+            "base": "掴",
+            "ruby": "つか"
+          },
+          {
+            "type": "text",
+            "base": "み"
+          },
+          {
+            "type": "ruby",
+            "base": "取",
+            "ruby": "と"
+          },
+          {
+            "type": "text",
+            "base": "れ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "得体",
+            "ruby": "えたい"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "知",
+            "ruby": "し"
+          },
+          {
+            "type": "text",
+            "base": "れない"
+          },
+          {
+            "type": "ruby",
+            "base": "化",
+            "ruby": "ば"
+          },
+          {
+            "type": "text",
+            "base": "け"
+          },
+          {
+            "type": "ruby",
+            "base": "物",
+            "ruby": "もの"
+          },
+          {
+            "type": "text",
+            "base": "が"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "人間",
+            "ruby": "ひと"
+          },
+          {
+            "type": "text",
+            "base": "と"
+          },
+          {
+            "type": "ruby",
+            "base": "似",
+            "ruby": "に"
+          },
+          {
+            "type": "text",
+            "base": "た"
+          },
+          {
+            "type": "ruby",
+            "base": "顔",
+            "ruby": "つら"
+          },
+          {
+            "type": "text",
+            "base": "をしてやがる"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "この"
+          },
+          {
+            "type": "ruby",
+            "base": "世",
+            "ruby": "よ"
+          },
+          {
+            "type": "text",
+            "base": "から"
+          },
+          {
+            "type": "ruby",
+            "base": "一匹残",
+            "ruby": "いっぴきのこ"
+          },
+          {
+            "type": "text",
+            "base": "らず"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "奴",
+            "ruby": "やつ"
+          },
+          {
+            "type": "text",
+            "base": "らを"
+          },
+          {
+            "type": "ruby",
+            "base": "駆逐",
+            "ruby": "くちく"
+          },
+          {
+            "type": "text",
+            "base": "してやる"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "最初",
+            "ruby": "さいしょ"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "言",
+            "ruby": "い"
+          },
+          {
+            "type": "text",
+            "base": "い"
+          },
+          {
+            "type": "ruby",
+            "base": "出",
+            "ruby": "だ"
+          },
+          {
+            "type": "text",
+            "base": "したのは"
+          },
+          {
+            "type": "ruby",
+            "base": "誰",
+            "ruby": "だれ"
+          },
+          {
+            "type": "text",
+            "base": "か？"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "そんな"
+          },
+          {
+            "type": "ruby",
+            "base": "事憶",
+            "ruby": "ことおぼ"
+          },
+          {
+            "type": "text",
+            "base": "えちゃいないが"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "忘",
+            "ruby": "わす"
+          },
+          {
+            "type": "text",
+            "base": "れられない"
+          },
+          {
+            "type": "ruby",
+            "base": "怒",
+            "ruby": "いか"
+          },
+          {
+            "type": "text",
+            "base": "りがある"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "必",
+            "ruby": "かなら"
+          },
+          {
+            "type": "text",
+            "base": "ず"
+          },
+          {
+            "type": "ruby",
+            "base": "駆逐",
+            "ruby": "くちく"
+          },
+          {
+            "type": "text",
+            "base": "してやる"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "嗚呼選",
+            "ruby": "ああえら"
+          },
+          {
+            "type": "text",
+            "base": "び"
+          },
+          {
+            "type": "ruby",
+            "base": "悔",
+            "ruby": "く"
+          },
+          {
+            "type": "text",
+            "base": "いた"
+          },
+          {
+            "type": "ruby",
+            "base": "道",
+            "ruby": "みち"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "先",
+            "ruby": "さき"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "どんな"
+          },
+          {
+            "type": "ruby",
+            "base": "景色",
+            "ruby": "ばしょ"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "繋",
+            "ruby": "つな"
+          },
+          {
+            "type": "text",
+            "base": "がっている？"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "唯捧",
+            "ruby": "ただささ"
+          },
+          {
+            "type": "text",
+            "base": "れられた"
+          },
+          {
+            "type": "ruby",
+            "base": "人生",
+            "ruby": "いのち"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "糧",
+            "ruby": "かて"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "咲",
+            "ruby": "さ"
+          },
+          {
+            "type": "text",
+            "base": "く"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "尊",
+            "ruby": "とうと"
+          },
+          {
+            "type": "text",
+            "base": "き"
+          },
+          {
+            "type": "ruby",
+            "base": "彼岸",
+            "ruby": "ひが"
+          },
+          {
+            "type": "text",
+            "base": "悲願の勝利"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "約束",
+            "ruby": "やくそく"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "地",
+            "ruby": "ち"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "楽園",
+            "ruby": "らくえん"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "果",
+            "ruby": "は"
+          },
+          {
+            "type": "text",
+            "base": "て"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "あの"
+          },
+          {
+            "type": "ruby",
+            "base": "日人類",
+            "ruby": "ひじんるい"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "思",
+            "ruby": "おも"
+          },
+          {
+            "type": "text",
+            "base": "い"
+          },
+          {
+            "type": "ruby",
+            "base": "出",
+            "ruby": "だ"
+          },
+          {
+            "type": "text",
+            "base": "した"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "ヤツラに"
+          },
+          {
+            "type": "ruby",
+            "base": "支配",
+            "ruby": "しはい"
+          },
+          {
+            "type": "text",
+            "base": "されていた"
+          },
+          {
+            "type": "ruby",
+            "base": "恐怖",
+            "ruby": "きょうふ"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "鳥籠",
+            "ruby": "とりかご"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "中",
+            "ruby": "なか"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "囚",
+            "ruby": "とら"
+          },
+          {
+            "type": "text",
+            "base": "われていた"
+          },
+          {
+            "type": "ruby",
+            "base": "屈辱",
+            "ruby": "くつじょく"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "黄昏",
+            "ruby": "たそがれ"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "弓矢",
+            "ruby": "ゆみや"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "翔",
+            "ruby": "かけ"
+          },
+          {
+            "type": "text",
+            "base": "る"
+          },
+          {
+            "type": "ruby",
+            "base": "翼",
+            "ruby": "つばさ"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "背負",
+            "ruby": "せお"
+          },
+          {
+            "type": "text",
+            "base": "い"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "その"
+          },
+          {
+            "type": "ruby",
+            "base": "軌跡",
+            "ruby": "きせき"
+          },
+          {
+            "type": "text",
+            "base": "が"
+          },
+          {
+            "type": "ruby",
+            "base": "自由",
+            "ruby": "じゆう"
+          },
+          {
+            "type": "text",
+            "base": "への"
+          },
+          {
+            "type": "ruby",
+            "base": "道",
+            "ruby": "みち"
+          },
+          {
+            "type": "text",
+            "base": "となる"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "心臓",
+            "ruby": "しんぞう"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "全",
+            "ruby": "すべ"
+          },
+          {
+            "type": "text",
+            "base": "ての"
+          },
+          {
+            "type": "ruby",
+            "base": "苦難",
+            "ruby": "くなん"
+          },
+          {
+            "type": "text",
+            "base": "は"
+          },
+          {
+            "type": "ruby",
+            "base": "今",
+            "ruby": "いま"
+          },
+          {
+            "type": "text",
+            "base": "この"
+          },
+          {
+            "type": "ruby",
+            "base": "瞬間",
+            "ruby": "とき"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "為",
+            "ruby": "ため"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "心臓",
+            "ruby": "しんぞう"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "儚",
+            "ruby": "はかな"
+          },
+          {
+            "type": "text",
+            "base": "き"
+          },
+          {
+            "type": "ruby",
+            "base": "命",
+            "ruby": "いのち"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "燃",
+            "ruby": "も"
+          },
+          {
+            "type": "text",
+            "base": "える"
+          },
+          {
+            "type": "ruby",
+            "base": "弓矢",
+            "ruby": "ゆみや"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "変",
+            "ruby": "か"
+          },
+          {
+            "type": "text",
+            "base": "えて"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          },
+          {
+            "type": "ruby",
+            "base": "心臓",
+            "ruby": "しんぞう"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "捧",
+            "ruby": "ささ"
+          },
+          {
+            "type": "text",
+            "base": "げよ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "誇",
+            "ruby": "ほこ"
+          },
+          {
+            "type": "text",
+            "base": "るべき"
+          },
+          {
+            "type": "ruby",
+            "base": "軌跡",
+            "ruby": "きせき"
+          },
+          {
+            "type": "text",
+            "base": "をその"
+          },
+          {
+            "type": "ruby",
+            "base": "身",
+            "ruby": "み"
+          },
+          {
+            "type": "text",
+            "base": "で"
+          },
+          {
+            "type": "ruby",
+            "base": "描",
+            "ruby": "えが"
+          },
+          {
+            "type": "text",
+            "base": "き"
+          },
+          {
+            "type": "ruby",
+            "base": "出",
+            "ruby": "だ"
+          },
+          {
+            "type": "text",
+            "base": "せ"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,12 +1,21 @@
 use crate::models::LyricElement;
 
+/// 字符类型枚举，用于区分日文字符类别
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CharType {
+    /// 汉字（CJK统一表意文字区）
     Kanji,
+    /// 假名（平假名和片假名）
     Kana,
+    /// 其他字符（标点、空格、拉丁字母等）
     Other,
 }
 
+/// 将字符分类为汉字、假名或其他类型
+///
+/// 汉字的判断基于 CJK 统一表意文字区（U+4E00~U+9FFF）和
+/// CJK 扩展区（U+3400~U+4DBF）。
+/// 假名的判断基于平假名和片假名区（U+3040~U+30FF）。
 #[inline]
 pub(crate) fn classify_char(ch: char) -> CharType {
     if ('\u{4e00}'..='\u{9fff}').contains(&ch) || ('\u{3400}'..='\u{4dbf}').contains(&ch) {
@@ -18,15 +27,14 @@ pub(crate) fn classify_char(ch: char) -> CharType {
     }
 }
 
-/// Normalize katakana to hiragana so that kana matching works even when
-/// the original text uses katakana (e.g. "パージ") while the reading is
-/// in hiragana ("ぱあじ"). Small kana (ぁっゃ etc.) are intentionally
-/// preserved — they match against small kana in the hiragana reading
-/// and avoid over-normalization that would break sokuon/anchor searches.
+/// 将片假名规范化为平假名，使得即使原文使用片假名（如"パージ"）
+/// 而注音读法是平假名（"ぱあじ"）时，假名匹配仍然能正常工作。
+/// 小假名（ぁっゃ等）被有意保留 —— 它们与平假名读法中的小假名匹配，
+/// 避免过度规范化导致促音/锚点搜索失败。
 ///
-/// Characters outside the katakana kana range, such as the long vowel
-/// mark ー (U+30FC) and iteration marks ヽ (U+30FD) ヾ (U+30FE), are
-/// returned unchanged since they are diacritical marks, not kana.
+/// 片假名范围之外的字符，如长音符号 ー（U+30FC）和
+/// 反复记号 ヽ（U+30FD）、ヾ（U+30FE），按原样返回，
+/// 因为它们是附加符号而非假名。
 #[inline]
 fn to_hiragana(ch: char) -> char {
     if ('\u{30A1}'..='\u{30F6}').contains(&ch)
@@ -40,14 +48,13 @@ fn to_hiragana(ch: char) -> char {
     }
 }
 
-/// Compare two kana characters for matching, treating particle alternations
-/// and the long vowel mark as equivalent. Specifically:
-/// - `は` (ha) used as a topic particle reads as `わ` (wa) in romaji
-/// - `へ` (he) used as a direction particle reads as `え` (e) in romaji
-/// - `ー` (long vowel mark) in katakana represents vowel lengthening;
-///   in romaji-derived hiragana this is the corresponding short vowel
-/// NetEase romalrc always uses the pronunciation (wa/e/vowel), while the
-/// original YRC text keeps the orthographic form (は/へ/ー).
+/// 比较两个假名字符是否匹配，处理助词音变和长音符号的等价关系。具体来说：
+/// - `は`（ha）作为主题助词时，罗马音读作 `わ`（wa）
+/// - `へ`（he）作为方向助词时，罗马音读作 `え`（e）
+/// - `ー`（长音符号）在片假名中表示元音延长；
+///   在由罗马音派生的平假名中，对应的是短元音
+/// NetEase 的 romalrc 总是使用实际发音（wa/e/元音），
+/// 而原始 YRC 文本保留书写形式（は/へ/ー）。
 #[inline]
 fn chars_match_kana(a: char, b: char) -> bool {
     let a = to_hiragana(a);
@@ -59,16 +66,15 @@ fn chars_match_kana(a: char, b: char) -> bool {
         || (b == 'ー' && is_vowel_kana(a))
 }
 
-/// Check if a character is a Japanese vowel kana (あいうえお or katakana equivalents).
+/// 判断字符是否为日语元音假名（あいうえお及对应的片假名）
 fn is_vowel_kana(c: char) -> bool {
     matches!(c, 'あ' | 'い' | 'う' | 'え' | 'お' | 'ア' | 'イ' | 'ウ' | 'エ' | 'オ')
 }
 
-/// When the full kana anchor is not found in the hiragana reading
-/// (e.g. because the romaji data omits sokuon markers — "to te" instead
-/// of "to tte"), fall back to matching the last character of the anchor
-/// as a consumption boundary. If even that fails, use the legacy
-/// `kanji_len * 2` heuristic.
+/// 当完整的假名锚点在平假名读法中找不到时
+///（例如，罗马音数据省略了促音标记 —— "to te" 而不是 "to tte"），
+/// 回退到匹配锚点的最后一个字符作为消耗边界。
+/// 如果仍然失败，则使用传统的 `kanji_len * 2` 启发式规则。
 fn fallback_consume(remaining: &[char], kana_chars: &[char], kanji_len: usize) -> usize {
     if let Some(&last_char) = kana_chars.last() {
         if let Some(fallback_pos) = remaining.iter().position(|c| chars_match_kana(*c, last_char)) {
@@ -79,28 +85,31 @@ fn fallback_consume(remaining: &[char], kana_chars: &[char], kanji_len: usize) -
     heuristic
 }
 
+/// 原始文本块，包含文本内容和对应的字符类型
 struct RawBlock {
+    /// 文本内容
     text: String,
+    /// 字符类型（汉字/假名/其他）
     char_type: CharType,
 }
 
-/// Align original Japanese text with hiragana reading to produce `Vec<LyricElement>`.
+/// 将日文原文与平假名读音对齐，生成 `Vec<LyricElement>`。
 ///
-/// The algorithm:
-/// 1. Classifies characters into Kanji, Kana, or Other blocks
-/// 2. For each kanji block, uses the next kana block as an anchor to find reading boundaries
-/// 3. Kana blocks are verified against and consume matching hiragana
-/// 4. Adjacent same-type elements are merged (e.g., consecutive ruby elements),
-///    unless separated by whitespace in the original text.
+/// 算法步骤：
+/// 1. 将字符分类为汉字、假名或其他类型的块
+/// 2. 对于每个汉字块，使用下一个假名块作为锚点来查找读音边界
+/// 3. 验证假名块并消耗匹配的平假名
+/// 4. 合并相邻的同类型元素（如连续的 ruby 元素），
+///    除非它们在原文中被空格分隔。
 ///
-/// If no kana anchor is found (all-kanji text or mismatched input), falls back to
-/// a heuristic of 2 kana characters per kanji.
+/// 如果找不到假名锚点（全汉字文本或输入不匹配），
+/// 回退到每个汉字对应 2 个假名字符的启发式规则。
 pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
     let original_chars: Vec<char> = original.chars().collect();
     let hiragana_chars: Vec<char> = hiragana.chars().collect();
     let mut hira_idx: usize = 0;
 
-    // Step 1: Classify into blocks
+    // 第 1 步：将字符分类为块
     let mut raw_blocks: Vec<RawBlock> = Vec::new();
     let mut i = 0;
     while i < original_chars.len() {
@@ -124,13 +133,13 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
         }
     }
 
-    // Step 2: Assign readings
+    // 第 2 步：为每个块分配读音
     let mut elements: Vec<LyricElement> = Vec::new();
 
     for (block_idx, block) in raw_blocks.iter().enumerate() {
         match block.char_type {
             CharType::Kanji => {
-                // Skip hiragana space markers (boundaries from original text)
+                // 跳过平假名中的空格标记（来自原文的边界标记）
                 while hira_idx < hiragana_chars.len()
                     && hiragana_chars[hira_idx].is_whitespace()
                 {
@@ -139,9 +148,9 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
 
                 let kanji_len = block.text.chars().count();
 
-                // Find where this kanji block's reading ends by searching
-                // for the next kana block in the remaining hiragana.
-                // Don't search past non-Kanji/non-Kana blocks (spaces, punctuation).
+                // 通过在剩余平假名中搜索下一个假名块
+                // 来查找当前汉字块的读音结束位置。
+                // 不要搜索越过非汉字/非假名块（空格、标点）。
                 let mut consume = if hira_idx < hiragana_chars.len() {
                     let following: Vec<&RawBlock> = raw_blocks[block_idx + 1..]
                         .iter()
@@ -167,17 +176,17 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                         match pos {
                             Some(p) => p,
                             None => {
-                                // Full anchor not found (e.g. romaji data lacks
-                                // sokuon markers — "to te" instead of "to tte").
-                                // Fall back to the last character of the anchor
-                                // kana block as a boundary hint.
+                                // 完整的锚点未找到（例如罗马音数据缺少
+                                // 促音标记 —— "to te" 而不是 "to tte"）。
+                                // 回退到使用锚点假名块的
+                                // 最后一个字符作为边界提示。
                                 fallback_consume(remaining, &kana_chars, kanji_len)
                             }
                         }
                     } else if hit_boundary {
-                        // No kana before the space/punctuation. Look past the
-                        // boundary for the next kana and distribute the reading
-                        // proportionally among all kanji blocks in the group.
+                        // 在空格/标点之前没有假名。越过
+                        // 边界查找下一个假名，并将读音
+                        // 按比例分配给组中所有汉字块。
                         let next_kana_all = raw_blocks[block_idx + 1..]
                             .iter()
                             .find(|b| b.char_type == CharType::Kana)
@@ -217,24 +226,23 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                 };
 
                 if consume > 0 && kanji_len > 0 {
-                    // Cap consumption at the first space marker in the remaining
-                    // hiragana (spaces are inserted by insert_spaces_into_hiragana
-                    // to signal boundaries from the original text).
+                    // 将消耗上限限制在剩余平假名中第一个空格标记处
+                    //（insert_spaces_into_hiragana 插入空格
+                    // 以标记原文中的边界）。
                     let remaining = &hiragana_chars[hira_idx..];
                     if let Some(space_pos) = remaining.iter().position(|c| c.is_whitespace()) {
                         consume = consume.min(space_pos);
                     }
                     if kanji_len == 1 {
-                        // Single kanji: existing behavior
+                        // 单汉字：保持现有行为
                         let reading: String = hiragana_chars[hira_idx..hira_idx + consume]
                             .iter()
                             .collect();
                         elements.push(LyricElement::new_ruby(block.text.clone(), reading));
                         hira_idx += consume;
                     } else {
-                        // Multi-kanji: proportionally distribute the reading
-                        // among individual kanji characters. Extra chars are
-                        // assigned to the rightmost characters.
+                        // 多汉字：按比例将读音分配给各个汉字。
+                        // 多余的字符分配给最右边的汉字。
                         let base = consume / kanji_len;
                         let extra = consume % kanji_len;
                         let rightmost_start = kanji_len - extra;
@@ -259,14 +267,15 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                 }
             }
             CharType::Kana => {
+                // 假名块：逐字符匹配并消耗平假名读音
                 let text_chars: Vec<char> = block.text.chars().collect();
                 let mut matched = 0;
                 while hira_idx < hiragana_chars.len() && matched < text_chars.len() {
                     let orig_ch = text_chars[matched];
                     if orig_ch == '\u{30FC}' {
-                        // Long vowel mark (ー): romaji-derived hiragana uses
-                        // actual vowel characters. Consume one hiragana char
-                        // without comparing — the counts still align.
+                        // 长音符号（ー）：由罗马音派生的平假名使用
+                        // 实际的元音字符。消耗一个平假名字符
+                        // 而不进行比较 —— 计数仍然对齐。
                         hira_idx += 1;
                         matched += 1;
                         continue;
@@ -281,15 +290,21 @@ pub fn align_ruby_to_text(original: &str, hiragana: &str) -> Vec<LyricElement> {
                 elements.push(LyricElement::new_text(block.text.clone()));
             }
             CharType::Other => {
+                // 其他字符（标点、空格等）：直接作为文本输出
                 elements.push(LyricElement::new_text(block.text.clone()));
             }
         }
     }
 
-    // Step 3: Merge adjacent same-type elements
+    // 第 3 步：合并相邻的同类型元素
     merge_adjacent(&elements)
 }
 
+/// 合并相邻的同类型 LyricElement。
+///
+/// 同类型的相邻元素（如连续的 ruby 元素或连续的 text 元素）
+/// 会被合并为一个元素。但如果元素之间在原文中有空格分隔，
+/// 则跳过合并以保留原文的边界信息。
 pub(crate) fn merge_adjacent(elements: &[LyricElement]) -> Vec<LyricElement> {
     if elements.is_empty() {
         return vec![];
@@ -318,7 +333,7 @@ pub(crate) fn merge_adjacent(elements: &[LyricElement]) -> Vec<LyricElement> {
                 }
             }
             _ => {
-                // Flush previous
+                // 刷新上一个合并结果
                 if let Some(t) = current_type.take() {
                     match t.as_str() {
                         "ruby" => merged.push(LyricElement::new_ruby(
@@ -338,6 +353,7 @@ pub(crate) fn merge_adjacent(elements: &[LyricElement]) -> Vec<LyricElement> {
         }
     }
 
+    // 处理最后一个未处理的合并项
     if let Some(t) = current_type {
         match t.as_str() {
             "ruby" => merged.push(LyricElement::new_ruby(current_base, current_ruby)),
@@ -349,19 +365,18 @@ pub(crate) fn merge_adjacent(elements: &[LyricElement]) -> Vec<LyricElement> {
     merged
 }
 
-/// Post-process LyricElements to fix common encoding and normalization issues.
+/// 后处理 LyricElement，修复常见的编码和规范化问题。
 ///
-/// Currently handles:
-/// - Stray ASCII consonant letters in ruby text (e.g., 's' representing sokuon っ)
-///   This catches encoding issues where っ (U+3063) lost its proper encoding
-///   in the upstream data pipeline.
+/// 当前处理：
+/// - ruby 文本中残留的 ASCII 辅音字母（如代表促音っ的 's'）
+///   这捕获了上游数据管道中っ（U+3063）丢失正确编码的问题。
 pub fn sanitize_ruby_elements(elements: Vec<LyricElement>) -> Vec<LyricElement> {
     elements.into_iter().map(|elem| {
         if elem.element_type == "ruby" {
             if let Some(ref ruby_text) = elem.ruby {
-                // Check if the ruby text contains any ASCII letters
+                // 检查 ruby 文本是否包含 ASCII 字母
                 if ruby_text.bytes().any(|b| b.is_ascii_alphabetic()) {
-                    // Replace stray consonants with sokuon (っ)
+                    // 将残留的辅音替换为促音（っ）
                     let sanitized: String = ruby_text.chars().map(|c| {
                         match c {
                             's' | 't' | 'k' | 'p' | 'b' | 'd' | 'g' | 'j' | 'c' => 'っ',
@@ -381,10 +396,11 @@ pub fn sanitize_ruby_elements(elements: Vec<LyricElement>) -> Vec<LyricElement> 
     }).collect()
 }
 
-/// Insert whitespace markers into hiragana based on space positions in the
-/// original text. Each space in the original signals a boundary where
-/// the algorithm should split ruby blocks. Without these markers, the
-/// kana-anchor search may find anchors past spaces and misdistribute readings.
+/// 根据原文中的空格位置，在平假名中插入空格标记。
+///
+/// 原文中的每个空格标志着算法应拆分 ruby 块的边界。
+/// 如果没有这些标记，假名锚点搜索可能会越过空格找到锚点，
+/// 导致读音分配错误。
 pub fn insert_spaces_into_hiragana(original: &str, hiragana: &str) -> String {
     let hira_chars: Vec<char> = hiragana.chars().collect();
     let mut insert_positions: Vec<usize> = Vec::new();
@@ -392,6 +408,7 @@ pub fn insert_spaces_into_hiragana(original: &str, hiragana: &str) -> String {
     let mut kana_count = 0;
     let mut cumulative = 0;
 
+    // 计算汉字与假名的比例，用于估计每个汉字块对应的平假名数量
     let total_kanji = original
         .chars()
         .filter(|c| matches!(classify_char(*c), CharType::Kanji))
@@ -407,6 +424,7 @@ pub fn insert_spaces_into_hiragana(original: &str, hiragana: &str) -> String {
         2.0
     };
 
+    // 遍历原文，在空格处计算插入位置
     for ch in original.chars() {
         match classify_char(ch) {
             CharType::Kanji => kanji_count += 1,
@@ -424,10 +442,12 @@ pub fn insert_spaces_into_hiragana(original: &str, hiragana: &str) -> String {
         }
     }
 
+    // 如果没有需要插入空格的位置，直接返回原字符串
     if insert_positions.is_empty() {
         return hiragana.to_string();
     }
 
+    // 在计算出的位置插入空格标记
     let mut result = String::with_capacity(hiragana.len() + insert_positions.len());
     let mut last_pos = 0;
     for pos in insert_positions {

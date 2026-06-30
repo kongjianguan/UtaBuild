@@ -7,11 +7,11 @@
 
 ## 功能特点
 
-- **歌词搜索** — 从 utaten.com 等来源搜索日语歌词
+- **歌词搜索** — 从 utaten.com QQ 网易云等来源搜索歌词
 - **Ruby/振假名渲染** — 在汉字的顶部标注读音假名
 - **跨平台桌面应用** — Windows / Linux / macOS（Tauri v2）
 - **Android APK** — 移动端歌词浏览
-- **LSPosed 集成** — 为 Salt Player 注入日语歌词优化显示（可选）
+- **LSPosed 集成** — 为 Salt Player 注入日语歌词优化显示（暂未完成实现）
 - **CLI 工具** — 命令行歌词搜索与解析
 
 ---
@@ -147,50 +147,27 @@ cargo build --manifest-path src-tauri/Cargo.toml --release
 
 ---
 
-## LSPosed / Salt Player 集成
-
-UtaBuild 的 Android APK 同时也是一个 **LSPosed API 101 模块**。在正常启动时是一个普通应用；如果在 LSPosed Manager 中启用并为 Salt Player 激活，会在 Salt Player 中注入歌词优化。
-
-完整集成流程见 [docs/LSPOSED_INTEGRATION.md](docs/LSPOSED_INTEGRATION.md)。
-
-### 快速启用
-
-```bash
-cargo tauri android init
-scripts/integrate-lsposed-into-tauri-android.sh
-cargo tauri android build --target aarch64 --apk
-```
-
-安装生成的 APK，然后在 **LSPosed Manager** 中启用 `UtaBuild` 模块，作用域设为 Salt Player（`com.salt.music`）。
-
----
-
 ## 测试
 
 ```bash
-# CLI 库单元测试
+# 全部测试
 cargo test --manifest-path cli/Cargo.toml
 
-# Tauri 后端单元测试
+# 仅集成测试（真实 QRC 数据比对）
+cargo test --manifest-path cli/Cargo.toml --test lyrics_pipeline_test
+
+# Tauri 后端测试
 cargo test --manifest-path src-tauri/Cargo.toml
-
-# 前端 Ruby 渲染快速验证
-# 在浏览器中直接打开 src/test-ruby.html
 ```
 
----
-
-## 代码质量
-
+fixture 变更时重新生成参照 JSON：
 ```bash
-# 格式化 Rust 代码
-cargo fmt --manifest-path src-tauri/Cargo.toml --all
-
-# Lint 检查（在提交前运行）
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+cargo run --manifest-path cli/Cargo.toml --release -- search \
+  --title <歌名> --artist <歌手> \
+  --output cli/tests/fixtures/{slug}/expected.json
 ```
 
----
+*需要人工校验参照JSON的内容*
 
 ## 项目结构
 
@@ -220,4 +197,4 @@ utabuild-tauri/
 
 ## 许可证
 
-本项目基于 [LICENSE](LICENSE) 文件中指定的许可证发布。
+本项目基于 GPLv3 许可证发布。

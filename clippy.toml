@@ -1,0 +1,44 @@
+# Linux Kernel Rust Coding Guidelines — Clippy 配置
+# https://www.kernel.org/doc/html/next/rust/coding-guidelines.html
+#
+# Kernel lint 哲学:
+#   1. 优先使用 #[expect(..)] 而非 #[allow(..)]
+#      因为 expect 会在 lint 不再触发时发出警告，防止遗忘
+#   2. 允许在 tests 中放宽限制（测试代码质量由测试框架保证）
+#   3. 不整体启用 restriction 类别，而是逐个挑选
+
+# MSRV: 与 Cargo.toml 中的 rust-version 保持一致
+# 当未设置时，clippy 使用当前 Rust 版本
+# msrv = "1.70"
+
+# ============================================================
+# 函数参数数量上限 (默认 7)
+# Kernel 风格倾向于清晰的接口设计
+too-many-arguments-threshold = 7
+
+# ============================================================
+# 类型复杂度上限
+type-complexity-threshold = 250
+
+# ============================================================
+# 允许在测试中使用 unwrap / panic / dbg / indexing
+# Kernel 没有测试放宽配置，但社区共识是测试代码需要更灵活
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-dbg-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-print-in-tests = true
+
+# ============================================================
+# 禁用 Clippy 对 -rs / -rust 后缀 crate 名的警告
+# 因 utabuild-cli 是合法命名（CLI crate）
+cargo-ignore-publish = false
+
+# ============================================================
+# 禁止的标识符名称
+# Kernel 风格：保证命名清晰，避免泛泛的临时命名
+disallowed-names = ["foo", "bar", "baz", "quux", "qux"]
+
+# 文档中认可的有效标识符（用于交叉引用）
+# doc-valid-idents = []

@@ -2,6 +2,49 @@
 name = "utabuild-cli"
 version = "0.3.0"
 edition = "2021"
+rust-version = "1.70"
+
+[lints.rust]
+# Linux Kernel 风格：prefer expect over allow
+# https://www.kernel.org/doc/html/next/rust/coding-guidelines.html#lints
+unreachable_pub = "warn"
+unsafe_code = "deny"
+
+[lints.clippy]
+# === Kernel 风格：禁止在生产路径使用可能 panic 的模式 ===
+# 见: https://www.kernel.org/doc/html/next/rust/coding-guidelines.html#error-handling
+unwrap_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+unreachable = "warn"
+get_unwrap = "warn"
+indexing_slicing = "warn"
+panic_in_result_fn = "warn"
+
+# === Kernel 风格：prefer expect over allow ===
+# 见: https://www.kernel.org/doc/html/next/rust/coding-guidelines.html#lints
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+
+# === Kernel 风格：并发安全 ===
+await_holding_lock = "warn"
+await_holding_refcell_ref = "warn"
+
+# === Kernel 风格：工具宏 ===
+dbg_macro = "deny"
+
+# === Kernel 风格：类型安全 ===
+cast_lossless = "warn"
+cast_sign_loss = "warn"
+cast_precision_loss = "warn"
+fn_params_excessive_bools = "warn"
+must_use_candidate = "warn"
+
+# === Kernel 风格：数值正确性 ===
+float_cmp = "warn"
+float_cmp_const = "warn"
+lossy_float_literal = "warn"
 
 [[bin]]
 name = "utabuild-cli"

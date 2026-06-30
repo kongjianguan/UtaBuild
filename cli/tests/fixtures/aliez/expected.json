@@ -1,0 +1,1103 @@
+{
+  "status": "success",
+  "title": "aLIEz",
+  "artist": "SawanoHiroyuki",
+  "url": "qq_music",
+  "lyrics": {
+    "lines": [
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "-SawanoHiroyuki[nZk]泽野弘之/瑞葵"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "词：HiroyukiSawano"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "曲：HiroyukiSawano"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "決",
+            "ruby": "き"
+          },
+          {
+            "type": "text",
+            "base": "めつけばかり"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "自惚",
+            "ruby": "うぬぼ"
+          },
+          {
+            "type": "text",
+            "base": "れを"
+          },
+          {
+            "type": "ruby",
+            "base": "着",
+            "ruby": "き"
+          },
+          {
+            "type": "text",
+            "base": "たチープなhokoriで"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "音荒",
+            "ruby": "おとあら"
+          },
+          {
+            "type": "text",
+            "base": "げても"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "棚",
+            "ruby": "たな"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "隠",
+            "ruby": "かく"
+          },
+          {
+            "type": "text",
+            "base": "した"
+          },
+          {
+            "type": "ruby",
+            "base": "哀",
+            "ruby": "あわ"
+          },
+          {
+            "type": "text",
+            "base": "れな"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "恥",
+            "ruby": "はじ"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "濡",
+            "ruby": "ぬ"
+          },
+          {
+            "type": "text",
+            "base": "れた"
+          },
+          {
+            "type": "ruby",
+            "base": "鏡",
+            "ruby": "かがみ"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "中",
+            "ruby": "なか"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "都合",
+            "ruby": "つごう"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "傷",
+            "ruby": "きず"
+          },
+          {
+            "type": "text",
+            "base": "だけひけらかして"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "手軽",
+            "ruby": "てがる"
+          },
+          {
+            "type": "text",
+            "base": "な"
+          },
+          {
+            "type": "ruby",
+            "base": "強",
+            "ruby": "つよ"
+          },
+          {
+            "type": "text",
+            "base": "さで"
+          },
+          {
+            "type": "ruby",
+            "base": "勝取",
+            "ruby": "かちと"
+          },
+          {
+            "type": "text",
+            "base": "る"
+          },
+          {
+            "type": "ruby",
+            "base": "術",
+            "ruby": "すべ"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "どれだけ"
+          },
+          {
+            "type": "ruby",
+            "base": "磨",
+            "ruby": "と"
+          },
+          {
+            "type": "text",
+            "base": "いでも"
+          },
+          {
+            "type": "ruby",
+            "base": "気",
+            "ruby": "き"
+          },
+          {
+            "type": "text",
+            "base": "はやつれる"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "ふらついた"
+          },
+          {
+            "type": "ruby",
+            "base": "思想通",
+            "ruby": "しそうどお"
+          },
+          {
+            "type": "text",
+            "base": "りだ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "愛",
+            "ruby": "あい"
+          },
+          {
+            "type": "text",
+            "base": "-same-CRIER"
+          },
+          {
+            "type": "ruby",
+            "base": "愛撫",
+            "ruby": "あい"
+          },
+          {
+            "type": "text",
+            "base": "-save-LIAR"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Eid-"
+          },
+          {
+            "type": "ruby",
+            "base": "聖",
+            "ruby": "せい"
+          },
+          {
+            "type": "text",
+            "base": "-RisingHELL"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "愛",
+            "ruby": "あい"
+          },
+          {
+            "type": "text",
+            "base": "してるgame"
+          },
+          {
+            "type": "ruby",
+            "base": "世界",
+            "ruby": "せかい"
+          },
+          {
+            "type": "text",
+            "base": "のday"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Don't-"
+          },
+          {
+            "type": "ruby",
+            "base": "生",
+            "ruby": "せい"
+          },
+          {
+            "type": "text",
+            "base": "-WarLie-"
+          },
+          {
+            "type": "ruby",
+            "base": "兵士",
+            "ruby": "へいし"
+          },
+          {
+            "type": "text",
+            "base": "-War-World"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Eyes-Hate-War"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "A-ZLooser-Krankheit-WasISdas?"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "受",
+            "ruby": "う"
+          },
+          {
+            "type": "text",
+            "base": "け"
+          },
+          {
+            "type": "ruby",
+            "base": "売",
+            "ruby": "う"
+          },
+          {
+            "type": "text",
+            "base": "り"
+          },
+          {
+            "type": "ruby",
+            "base": "盾",
+            "ruby": "たて"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "見下",
+            "ruby": "みくだ"
+          },
+          {
+            "type": "text",
+            "base": "してても"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "そこには"
+          },
+          {
+            "type": "ruby",
+            "base": "地面",
+            "ruby": "じめん"
+          },
+          {
+            "type": "text",
+            "base": "しかない"
+          },
+          {
+            "type": "ruby",
+            "base": "事",
+            "ruby": "こと"
+          },
+          {
+            "type": "text",
+            "base": "さえ"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "気付",
+            "ruby": "きず"
+          },
+          {
+            "type": "text",
+            "base": "かぬままに"
+          },
+          {
+            "type": "ruby",
+            "base": "壊",
+            "ruby": "こわ"
+          },
+          {
+            "type": "text",
+            "base": "れた"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "過去",
+            "ruby": "かこ"
+          },
+          {
+            "type": "text",
+            "base": "に"
+          },
+          {
+            "type": "ruby",
+            "base": "負",
+            "ruby": "ま"
+          },
+          {
+            "type": "text",
+            "base": "けた"
+          },
+          {
+            "type": "ruby",
+            "base": "鏡",
+            "ruby": "かがみ"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "奥",
+            "ruby": "おく"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "どこまで"
+          },
+          {
+            "type": "ruby",
+            "base": "叫",
+            "ruby": "さけ"
+          },
+          {
+            "type": "text",
+            "base": "べば"
+          },
+          {
+            "type": "ruby",
+            "base": "位置",
+            "ruby": "いち"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "知",
+            "ruby": "し"
+          },
+          {
+            "type": "text",
+            "base": "れる"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "とどめもないまま"
+          },
+          {
+            "type": "ruby",
+            "base": "息",
+            "ruby": "いき"
+          },
+          {
+            "type": "text",
+            "base": "が"
+          },
+          {
+            "type": "ruby",
+            "base": "切",
+            "ruby": "き"
+          },
+          {
+            "type": "text",
+            "base": "れる"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "堂",
+            "ruby": "どう"
+          },
+          {
+            "type": "text",
+            "base": "々さらした"
+          },
+          {
+            "type": "ruby",
+            "base": "罪",
+            "ruby": "つみ"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "群",
+            "ruby": "む"
+          },
+          {
+            "type": "text",
+            "base": "れと"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "後",
+            "ruby": "うし"
+          },
+          {
+            "type": "text",
+            "base": "ろ"
+          },
+          {
+            "type": "ruby",
+            "base": "向",
+            "ruby": "む"
+          },
+          {
+            "type": "text",
+            "base": "きにあらがう"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "愛",
+            "ruby": "あい"
+          },
+          {
+            "type": "text",
+            "base": "-same-CRIER"
+          },
+          {
+            "type": "ruby",
+            "base": "愛撫",
+            "ruby": "あい"
+          },
+          {
+            "type": "text",
+            "base": "-save-LIAR"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Aid-"
+          },
+          {
+            "type": "ruby",
+            "base": "聖",
+            "ruby": "せい"
+          },
+          {
+            "type": "text",
+            "base": "-RisingHELL"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "I'll-nessReset-EndじゃないBurst"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Don't-"
+          },
+          {
+            "type": "ruby",
+            "base": "生",
+            "ruby": "せい"
+          },
+          {
+            "type": "text",
+            "base": "-WarLie-"
+          },
+          {
+            "type": "ruby",
+            "base": "兵士",
+            "ruby": "へいし"
+          },
+          {
+            "type": "text",
+            "base": "-War-World"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Eyes-Hate-War"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "A-Z"
+          },
+          {
+            "type": "ruby",
+            "base": "想像",
+            "ruby": "そうぞう"
+          },
+          {
+            "type": "text",
+            "base": "High-de-SiehstYOUdas?"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "偽",
+            "ruby": "にせ"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "態度",
+            "ruby": "たいど"
+          },
+          {
+            "type": "text",
+            "base": "な"
+          },
+          {
+            "type": "ruby",
+            "base": "臆病",
+            "ruby": "おくびょう"
+          },
+          {
+            "type": "text",
+            "base": "loudvoice"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "気高",
+            "ruby": "けだか"
+          },
+          {
+            "type": "text",
+            "base": "さを"
+          },
+          {
+            "type": "ruby",
+            "base": "勘違",
+            "ruby": "かんちが"
+          },
+          {
+            "type": "text",
+            "base": "いした"
+          },
+          {
+            "type": "ruby",
+            "base": "心臓音",
+            "ruby": "しんぞうおん"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "狙",
+            "ruby": "ねら"
+          },
+          {
+            "type": "text",
+            "base": "い"
+          },
+          {
+            "type": "ruby",
+            "base": "通",
+            "ruby": "どお"
+          },
+          {
+            "type": "text",
+            "base": "りの"
+          },
+          {
+            "type": "ruby",
+            "base": "幻見",
+            "ruby": "まぼろしみ"
+          },
+          {
+            "type": "text",
+            "base": "ても"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "満",
+            "ruby": "み"
+          },
+          {
+            "type": "text",
+            "base": "たせない"
+          },
+          {
+            "type": "ruby",
+            "base": "何度",
+            "ruby": "なんど"
+          },
+          {
+            "type": "text",
+            "base": "も"
+          },
+          {
+            "type": "ruby",
+            "base": "目",
+            "ruby": "め"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "開",
+            "ruby": "あ"
+          },
+          {
+            "type": "text",
+            "base": "けても"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "どこまで"
+          },
+          {
+            "type": "ruby",
+            "base": "叫",
+            "ruby": "さけ"
+          },
+          {
+            "type": "text",
+            "base": "べば"
+          },
+          {
+            "type": "ruby",
+            "base": "位置",
+            "ruby": "いち"
+          },
+          {
+            "type": "text",
+            "base": "を"
+          },
+          {
+            "type": "ruby",
+            "base": "知",
+            "ruby": "し"
+          },
+          {
+            "type": "text",
+            "base": "れる"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "とどめもないまま"
+          },
+          {
+            "type": "ruby",
+            "base": "息",
+            "ruby": "いき"
+          },
+          {
+            "type": "text",
+            "base": "が"
+          },
+          {
+            "type": "ruby",
+            "base": "切",
+            "ruby": "き"
+          },
+          {
+            "type": "text",
+            "base": "れる"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "堂",
+            "ruby": "どう"
+          },
+          {
+            "type": "text",
+            "base": "々さらした"
+          },
+          {
+            "type": "ruby",
+            "base": "罪",
+            "ruby": "つみ"
+          },
+          {
+            "type": "text",
+            "base": "の"
+          },
+          {
+            "type": "ruby",
+            "base": "群",
+            "ruby": "む"
+          },
+          {
+            "type": "text",
+            "base": "れと"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "後",
+            "ruby": "うし"
+          },
+          {
+            "type": "text",
+            "base": "ろ"
+          },
+          {
+            "type": "ruby",
+            "base": "向",
+            "ruby": "む"
+          },
+          {
+            "type": "text",
+            "base": "きにあらがう"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "愛",
+            "ruby": "あい"
+          },
+          {
+            "type": "text",
+            "base": "-same-CRIER"
+          },
+          {
+            "type": "ruby",
+            "base": "愛撫",
+            "ruby": "あい"
+          },
+          {
+            "type": "text",
+            "base": "-save-LIAR"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Eid-"
+          },
+          {
+            "type": "ruby",
+            "base": "聖",
+            "ruby": "せい"
+          },
+          {
+            "type": "text",
+            "base": "-RisingHELL"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "ruby",
+            "base": "愛",
+            "ruby": "あい"
+          },
+          {
+            "type": "text",
+            "base": "してるGame"
+          },
+          {
+            "type": "ruby",
+            "base": "世界",
+            "ruby": "せかい"
+          },
+          {
+            "type": "text",
+            "base": "のDay"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Don't-"
+          },
+          {
+            "type": "ruby",
+            "base": "生",
+            "ruby": "せい"
+          },
+          {
+            "type": "text",
+            "base": "-WarLie-"
+          },
+          {
+            "type": "ruby",
+            "base": "兵士",
+            "ruby": "へいし"
+          },
+          {
+            "type": "text",
+            "base": "-War-World"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Eyes-Hate-War"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "A-ZLooser-Krankheit-WasISdas?"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Lebenwasistdas?"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Signalsiehstdudas?"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Radediedunichtweisst"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Auseigenemwillen"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Lebenwasistdas?"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Signalsiehstdudas?"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Radediedunichtweisst"
+          }
+        ]
+      },
+      {
+        "elements": [
+          {
+            "type": "text",
+            "base": "Siehmitdeinenaugen"
+          }
+        ]
+      }
+    ]
+  }
+}

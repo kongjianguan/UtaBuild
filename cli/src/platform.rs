@@ -49,7 +49,7 @@ pub fn get_log_path() -> PathBuf {
     get_cache_dir().join("utabuild.log")
 }
 
-/// 确保目录存在
+/// 确保目录存在，不存在则递归创建
 pub fn ensure_dir_exists(path: &PathBuf) -> anyhow::Result<()> {
     if !path.exists() {
         std::fs::create_dir_all(path)?;
