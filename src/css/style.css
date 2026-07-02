@@ -26,12 +26,12 @@
   --surface-elevated: #1a2642;
   --text: #e2eaf5;
   --text-secondary: #7a8faf;
-  --text-muted: #526680;
+  --text-muted: #6b7d96;
   --border: rgba(51, 136, 187, 0.12);
   --border-focus: rgba(51, 136, 187, 0.35);
-  --ruby-color: #8899aa;
-  --danger: #d94a5c;
-  --danger-bg: rgba(217, 74, 92, 0.12);
+  --ruby-color: #7a8da0;
+  --danger: #FF8899;
+  --danger-bg: rgba(255, 136, 153, 0.12);
 
   /* Glass/dock colors */
   --glass-bg: rgba(13, 22, 38, 0.72);
@@ -65,13 +65,13 @@ body:not(.dark-mode) {
   --surface-hover: #f2f6fc;
   --surface-elevated: #ffffff;
   --text: #1a2332;
-  --text-secondary: #5a6e8a;
-  --text-muted: #8a9ab2;
+  --text-secondary: #4a5d78;
+  --text-muted: #5f6e85;
   --border: rgba(51, 136, 187, 0.12);
   --border-focus: rgba(51, 136, 187, 0.30);
-  --ruby-color: #8899aa;
-  --danger: #c0392b;
-  --danger-bg: rgba(192, 57, 43, 0.08);
+  --ruby-color: #667a8a;
+  --danger: #FF8899;
+  --danger-bg: rgba(255, 136, 153, 0.08);
   --glass-bg: rgba(255, 255, 255, 0.70);
   --glass-bg-strong: rgba(255, 255, 255, 0.84);
   --glass-border: rgba(51, 136, 187, 0.10);
@@ -87,6 +87,10 @@ body:not(.dark-mode) {
   --shadow-md: 0 6px 18px rgba(51, 68, 102, 0.10);
   --shadow-lg: 0 14px 36px rgba(51, 68, 102, 0.12);
   --shadow-glow: 0 6px 18px rgba(51, 136, 187, 0.12);
+}
+
+body:not(.dark-mode) .ruby-sample {
+  box-shadow: var(--shadow-glow);
 }
 
 body {
@@ -199,29 +203,6 @@ body.songs-first-level-scrollbar-disabled::-webkit-scrollbar {
   overflow: hidden;
 }
 
-/* MyGO!!!!! logo background */
-#search-header::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(480px, 90vw);
-  height: min(240px, 45vw);
-  transform: translate(-50%, -58%);
-  background-image: url('https://ts4.tc.mm.bing.net/th/id/OIP-C.F1cczVjH3EFItFIeYgs22wHaDf?rs=1&pid=ImgDetMain&o=7&rm=3');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  opacity: 0.06;
-  pointer-events: none;
-  z-index: 0;
-  filter: saturate(0.8) brightness(1.2);
-}
-
-body:not(.dark-mode) #search-header::before {
-  opacity: 0.08;
-}
-
 #search-header > * {
   position: relative;
   z-index: 1;
@@ -262,7 +243,7 @@ body:not(.dark-mode) #search-header::before {
   border: 1px solid var(--glass-border);
   border-radius: 999px;
   background: var(--glass-bg);
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 0 24px var(--primary-glow), var(--shadow-glow);
   backdrop-filter: blur(18px) saturate(170%);
   -webkit-backdrop-filter: blur(18px) saturate(170%);
 }
@@ -506,6 +487,8 @@ body:not(.dark-mode) #search-header::before {
 
 .history-item:hover {
   border-color: var(--primary);
+  border-left-color: var(--accent-soyo);
+  border-left-width: 3px;
   background: var(--surface-hover);
   transform: translateX(4px);
   box-shadow: var(--shadow-glow);
@@ -1248,7 +1231,7 @@ button.secondary:disabled {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.18), transparent 34%), rgba(217, 74, 92, 0.85);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.18), transparent 34%), rgba(255, 136, 153, 0.85);
   color: white;
   padding: 12px 24px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1326,7 +1309,7 @@ button.secondary:disabled {
   padding: 10px 16px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #d94a5c, #c0392b);
+  background: linear-gradient(135deg, var(--danger), #e0667a);
   color: white;
   font: inherit;
   font-weight: 700;
@@ -1527,11 +1510,6 @@ button.secondary:disabled {
 
   #search-header h1 {
     font-size: 1.7rem;
-  }
-
-  #search-header::before {
-    width: min(340px, 90vw);
-    height: min(170px, 45vw);
   }
 
   .lyricBody {
