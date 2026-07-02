@@ -1,8 +1,5 @@
 import type { ViewType } from './types.js';
 import { loadSettings } from './settings.js';
-// Cross-module imports for show* functions (circular but safe with ESM - used only in function bodies)
-import { loadSavedLyrics } from './songs.js';
-import { viewLspLogs } from './lsp.js';
 
 // ==================== Element Accessors ====================
 
@@ -21,25 +18,6 @@ export function $$(sel: string): NodeListOf<Element> {
   return document.querySelectorAll(sel);
 }
 
-// ==================== State ====================
-
-export const SONGS_FIRST_LEVEL_SCROLLBAR_DISABLED_CLASS =
-  'songs-first-level-scrollbar-disabled';
-
-export let currentView: ViewType = 'search';
-export let isBottomMenuAutoHidden = false;
-export const viewScrollPositions = new Map<ViewType, number>();
-
-export function setCurrentView(view: ViewType): void {
-  currentView = view;
-  const isSongsFirstLevel = view === 'songs';
-  document.documentElement.classList.toggle(
-    SONGS_FIRST_LEVEL_SCROLLBAR_DISABLED_CLASS,
-    isSongsFirstLevel,
-  );
-  document.body.classList.toggle(SONGS_FIRST_LEVEL_SCROLLBAR_DISABLED_CLASS, isSongsFirstLevel);
-}
-
 // ==================== UI Helpers ====================
 
 export function show(el: Element | null): void {
@@ -51,65 +29,75 @@ export function hide(el: Element | null): void {
 }
 
 export function currentPageScrollY(): number {
-  return (
-    window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0
-  );
+  return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
 }
 
-export function scrollPageTo(y: number): void {
-  const top = Math.max(0, Math.round(Number(y) || 0));
+function _scrollPageTo(y: number): void {
+  const top = Math.max(0, Math.round(y || 0));
   document.documentElement.scrollTop = top;
   document.body.scrollTop = top;
   window.scrollTo({ top, left: 0, behavior: 'auto' });
 }
 
-export function scrollPageToTop(): void {
-  scrollPageTo(0);
-}
-
-function repeatScrollTo(y: number): void {
-  scrollPageTo(y);
-  requestAnimationFrame(() => scrollPageTo(y));
-  setTimeout(() => scrollPageTo(y), 80);
-}
-
-export function resetViewportToTop(): void {
-  repeatScrollTo(0);
-}
-
-export function saveCurrentScrollPosition(): void {
-  if (!currentView) return;
-  viewScrollPositions.set(currentView, currentPageScrollY());
-}
-
-export function restoreViewScrollPosition(view: ViewType): void {
-  repeatScrollTo(viewScrollPositions.get(view) || 0);
+function _repeatScrollTo(y: number): void {
+  _scrollPageTo(y);
+  requestAnimationFrame(() => _scrollPageTo(y));
+  setTimeout(() => _scrollPageTo(y), 80);
 }
 
 export function showLoading(): void {
-  const el = getElements();
-  show(el.loading);
+  show(el<HTMLElement>('loading'));
 }
 
 export function hideLoading(): void {
-  const el = getElements();
-  hide(el.loading);
+  hide(el<HTMLElement>('loading'));
 }
 
 export function showError(msg: string): void {
-  const el = getElements();
-  el.errorMessage.textContent = msg;
-  show(el.errorToast);
-  setTimeout(() => hide(el.errorToast), 5000);
+  el<HTMLElement>('error-message').textContent = msg;
+  show(el<HTMLElement>('error-toast'));
+  setTimeout(() => hide(el<HTMLElement>('error-toast')), 5000);
 }
 
-// ==================== Bottom Menu ====================
+export function setBottomMenuAutoHidden(isHidden: boolean): void {
+  el<HTMLElement>('bottom-menu').classList.toggle('is-auto-hidden', Boolean(isHidden));
+}
 
-export function syncBottomMenu(activeTab: string): void {
-  const el = getElements();
-  if (!el.bottomMenu) return;
+// ==================== View Router ====================
 
-  el.bottomMenu.dataset.activeTab = activeTab;
+const FIRST_LEVEL = new Set<ViewType>(['search', 'songs', 'settings']);
+
+const VIEW_ORDER: Record<ViewType, number> = {
+  search: 0,
+  songs: 1,
+  settings: 2,
+  lspSettings: 3,
+  lspLogs: 3,
+  results: 3,
+  lyrics: 3,
+};
+
+const SONGS_SCROLLBAR_CLASS = 'songs-first-level-scrollbar-disabled';
+
+const _viewScroll = new Map<ViewType, number>();
+
+function _saveScroll(): void {
+  _viewScroll.set(router._current, currentPageScrollY());
+}
+
+function _restoreScroll(view: ViewType): void {
+  _repeatScrollTo(_viewScroll.get(view) || 0);
+}
+
+function _setFirstLevelScrollbar(view: ViewType): void {
+  const isSongs = view === 'songs';
+  document.documentElement.classList.toggle(SONGS_SCROLLBAR_CLASS, isSongs);
+  document.body.classList.toggle(SONGS_SCROLLBAR_CLASS, isSongs);
+}
+
+function _syncBottomMenu(activeTab: string): void {
+  const menu = el<HTMLElement>('bottom-menu');
+  menu.dataset.activeTab = activeTab;
   $$('[data-app-tab]').forEach((button) => {
     const btn = button as HTMLElement;
     const isActive = btn.dataset.appTab === activeTab;
@@ -123,269 +111,120 @@ export function syncBottomMenu(activeTab: string): void {
   });
 }
 
-export function setBottomMenuAutoHidden(isHidden: boolean): void {
-  const el = getElements();
-  if (!el.bottomMenu) return;
-
-  isBottomMenuAutoHidden = Boolean(isHidden);
-  el.bottomMenu.classList.toggle('is-auto-hidden', isBottomMenuAutoHidden);
+function _setBottomMenu(visible: boolean, activeTab?: string): void {
+  const menu = el<HTMLElement>('bottom-menu');
+  menu.classList.toggle('hidden', !visible);
+  menu.setAttribute('aria-hidden', String(!visible));
+  document.body.classList.toggle('has-bottom-menu', visible);
+  if (visible) _syncBottomMenu(activeTab || 'search');
 }
 
-export function setBottomMenuVisible(isVisible: boolean, activeTab?: string): void {
-  const el = getElements();
-  if (!el.bottomMenu) return;
+function _toggleViewElements(view: ViewType): void {
+  const ids = [
+    'search-header', 'songs-view', 'settings-view',
+    'lsp-settings-view', 'lsp-log-view', 'result-list', 'lyrics-view',
+  ];
+  const viewIdMap: Record<ViewType, string> = {
+    search: 'search-header',
+    songs: 'songs-view',
+    settings: 'settings-view',
+    lspSettings: 'lsp-settings-view',
+    lspLogs: 'lsp-log-view',
+    results: 'result-list',
+    lyrics: 'lyrics-view',
+  };
+  for (const id of ids) {
+    if (id === viewIdMap[view]) {
+      el<HTMLElement>(id).classList.remove('hidden');
+    } else {
+      el<HTMLElement>(id).classList.add('hidden');
+    }
+  }
+}
 
-  el.bottomMenu.classList.toggle('hidden', !isVisible);
-  el.bottomMenu.setAttribute('aria-hidden', String(!isVisible));
-  document.body.classList.toggle('has-bottom-menu', isVisible);
+function _animateEntry(view: ViewType, direction: 'forward' | 'back'): void {
+  if (!FIRST_LEVEL.has(view)) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  if (!isVisible) {
-    setBottomMenuAutoHidden(false);
-    return;
+  const viewElMap: Record<string, string> = {
+    search: 'search-header',
+    songs: 'songs-view',
+    settings: 'settings-view',
+  };
+  const targetId = viewElMap[view];
+  if (!targetId) return;
+
+  for (const id of Object.values(viewElMap)) {
+    el<HTMLElement>(id).classList.remove('first-level-slide-from-left', 'first-level-slide-from-right');
   }
 
-  syncBottomMenu(activeTab || 'search');
-  setBottomMenuAutoHidden(false);
-}
-
-// ==================== View Helpers ====================
-
-const FIRST_LEVEL_INDEX: Record<string, number> = {
-  search: 0,
-  songs: 1,
-  settings: 2,
-  lspSettings: 3,
-  lspLogs: 3,
-  results: 3,
-  lyrics: 3,
-};
-
-export function firstLevelIndex(view: ViewType): number {
-  return FIRST_LEVEL_INDEX[view] ?? 0;
-}
-
-export function firstLevelElement(view: ViewType): HTMLElement | null {
-  const el = getElements();
-  if (view === 'settings') return el.settingsView;
-  if (view === 'songs') return el.songsView;
-  return el.searchHeader;
-}
-
-let firstLevelAnimationTimer: ReturnType<typeof setTimeout> | null = null;
-
-export function animateFirstLevelEntry(view: ViewType, direction: string): void {
-  const target = firstLevelElement(view);
-  if (!target || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-  if (firstLevelAnimationTimer) clearTimeout(firstLevelAnimationTimer);
-  const el = getElements();
-  [el.searchHeader, el.songsView, el.settingsView].forEach((element) => {
-    element?.classList.remove('first-level-slide-from-left', 'first-level-slide-from-right');
-  });
-
-  const className =
-    direction === 'back' ? 'first-level-slide-from-left' : 'first-level-slide-from-right';
+  const target = el<HTMLElement>(targetId);
+  const className = direction === 'back'
+    ? 'first-level-slide-from-left'
+    : 'first-level-slide-from-right';
   target.classList.add(className);
 
-  firstLevelAnimationTimer = setTimeout(() => {
-    target.classList.remove(className);
-  }, 420);
+  setTimeout(() => target.classList.remove(className), 420);
 }
 
-// ==================== View Switching (internal, no pushState) ====================
+export class Router {
+  _current: ViewType = 'search';
+  private _navigatingBack = false;
 
-export function switchToSearch(options?: { animate?: boolean; direction?: string }): void {
-  const el = getElements();
-  show(el.searchHeader);
-  hide(el.songsView);
-  hide(el.settingsView);
-  hide(el.lspSettingsView);
-  hide(el.lspLogView);
-  hide(el.resultList);
-  hide(el.lyricsView);
-  setCurrentView('search');
-  setBottomMenuVisible(true, 'search');
-  if (options?.animate) animateFirstLevelEntry('search', options.direction || 'back');
-}
+  get current(): ViewType {
+    return this._current;
+  }
 
-export function switchToSettings(options?: { animate?: boolean; direction?: string }): void {
-  const el = getElements();
-  hide(el.searchHeader);
-  hide(el.songsView);
-  show(el.settingsView);
-  hide(el.lspSettingsView);
-  hide(el.lspLogView);
-  hide(el.resultList);
-  hide(el.lyricsView);
-  setCurrentView('settings');
-  setBottomMenuVisible(true, 'settings');
-  if (options?.animate) animateFirstLevelEntry('settings', options.direction || 'forward');
-}
+  navigate(view: ViewType, opts?: { animate?: boolean; resetScroll?: boolean }): void {
+    if (view === this._current) return;
 
-export function switchToSongs(options?: { animate?: boolean; direction?: string }): void {
-  const el = getElements();
-  hide(el.searchHeader);
-  show(el.songsView);
-  hide(el.settingsView);
-  hide(el.lspSettingsView);
-  hide(el.lspLogView);
-  hide(el.resultList);
-  hide(el.lyricsView);
-  setCurrentView('songs');
-  setBottomMenuVisible(true, 'songs');
-  setBottomMenuAutoHidden(false);
-  if (options?.animate) animateFirstLevelEntry('songs', options.direction || 'forward');
-}
+    _saveScroll();
+    const prev = this._current;
+    this._current = view;
 
-export function switchToResults(): void {
-  const el = getElements();
-  hide(el.searchHeader);
-  hide(el.songsView);
-  hide(el.settingsView);
-  hide(el.lspSettingsView);
-  hide(el.lspLogView);
-  show(el.resultList);
-  hide(el.lyricsView);
-  setCurrentView('results');
-  setBottomMenuVisible(false);
-}
+    _toggleViewElements(view);
+    _setFirstLevelScrollbar(view);
+    _setBottomMenu(FIRST_LEVEL.has(view), view);
 
-export function switchToLyrics(options?: { resetScroll?: boolean }): void {
-  const el = getElements();
-  hide(el.searchHeader);
-  hide(el.songsView);
-  hide(el.settingsView);
-  hide(el.lspSettingsView);
-  hide(el.lspLogView);
-  hide(el.resultList);
-  show(el.lyricsView);
-  setCurrentView('lyrics');
-  setBottomMenuVisible(false);
-  if (options?.resetScroll !== false) {
-    resetViewportToTop();
+    if (opts?.resetScroll) {
+      _repeatScrollTo(0);
+    }
+
+    if (opts?.animate) {
+      const dir = (VIEW_ORDER[view] > VIEW_ORDER[prev]) ? 'forward' : 'back';
+      _animateEntry(view, dir);
+    }
+
+    if (!this._navigatingBack) {
+      history.pushState({ view }, '', '');
+    }
+    this._navigatingBack = false;
+
+    if (view === 'lspSettings') {
+      syncLspLogVisibility();
+    }
+  }
+
+  back(): void {
+    this._navigatingBack = true;
+    window.history.back();
+  }
+
+  handlePopstate(event: PopStateEvent): void {
+    const state = event.state as { view?: ViewType } | null;
+    if (state?.view) {
+      this._navigatingBack = true;
+      _saveScroll();
+      this._current = state.view;
+      _toggleViewElements(state.view);
+      _setFirstLevelScrollbar(state.view);
+      _setBottomMenu(FIRST_LEVEL.has(state.view), state.view);
+      _restoreScroll(state.view);
+    }
   }
 }
 
-export function switchToLspLogs(): void {
-  const el = getElements();
-  hide(el.searchHeader);
-  hide(el.songsView);
-  hide(el.settingsView);
-  hide(el.lspSettingsView);
-  show(el.lspLogView);
-  hide(el.resultList);
-  hide(el.lyricsView);
-  setCurrentView('lspLogs');
-  setBottomMenuVisible(false);
-}
-
-export function switchToLspSettings(options?: { resetScroll?: boolean }): void {
-  const el = getElements();
-  hide(el.searchHeader);
-  hide(el.songsView);
-  hide(el.settingsView);
-  show(el.lspSettingsView);
-  hide(el.lspLogView);
-  hide(el.resultList);
-  hide(el.lyricsView);
-  setCurrentView('lspSettings');
-  setBottomMenuVisible(false);
-  syncLspLogVisibility();
-  if (options?.resetScroll !== false) {
-    resetViewportToTop();
-  }
-}
-
-// ==================== View Switching (user action, with pushState) ====================
-
-let isNavigatingBack = false;
-
-export function setIsNavigatingBack(v: boolean): void {
-  isNavigatingBack = v;
-}
-
-export function isNavigatingBackFlag(): boolean {
-  return isNavigatingBack;
-}
-
-export function showSearch(): void {
-  saveCurrentScrollPosition();
-  const previousView = currentView;
-  const shouldAnimate =
-    ['songs', 'settings'].includes(previousView) && !isNavigatingBack;
-  switchToSearch({
-    animate: shouldAnimate,
-    direction:
-      firstLevelIndex(previousView) > firstLevelIndex('search') ? 'back' : 'forward',
-  });
-  if (!isNavigatingBack) {
-    history.pushState({ view: 'search' }, '', '');
-  }
-}
-
-export function showSettings(): void {
-  saveCurrentScrollPosition();
-  const previousView = currentView;
-  const shouldAnimate =
-    ['search', 'songs'].includes(previousView) && !isNavigatingBack;
-  switchToSettings({
-    animate: shouldAnimate,
-    direction:
-      firstLevelIndex(previousView) < firstLevelIndex('settings') ? 'forward' : 'back',
-  });
-  if (!isNavigatingBack) {
-    history.pushState({ view: 'settings' }, '', '');
-  }
-}
-
-export function showSongs(): void {
-  saveCurrentScrollPosition();
-  const previousView = currentView;
-  const shouldAnimate =
-    ['search', 'settings'].includes(previousView) && !isNavigatingBack;
-  switchToSongs({
-    animate: shouldAnimate,
-    direction:
-      firstLevelIndex(previousView) < firstLevelIndex('songs') ? 'forward' : 'back',
-  });
-  if (!isNavigatingBack) {
-    history.pushState({ view: 'songs' }, '', '');
-  }
-  void loadSavedLyrics();
-}
-
-export function showResults(): void {
-  saveCurrentScrollPosition();
-  switchToResults();
-  if (!isNavigatingBack) {
-    history.pushState({ view: 'results' }, '', '');
-  }
-}
-
-export function showLyricsView(): void {
-  saveCurrentScrollPosition();
-  switchToLyrics({ resetScroll: true });
-  if (!isNavigatingBack) {
-    history.pushState({ view: 'lyrics' }, '', '');
-  }
-}
-
-export function showLspLogsView(): void {
-  saveCurrentScrollPosition();
-  switchToLspLogs();
-  if (!isNavigatingBack) {
-    history.pushState({ view: 'lspLogs' }, '', '');
-  }
-  void viewLspLogs();
-}
-
-export function showLspSettingsView(): void {
-  saveCurrentScrollPosition();
-  switchToLspSettings({ resetScroll: true });
-  if (!isNavigatingBack) {
-    history.pushState({ view: 'lspSettings' }, '', '');
-  }
-}
+export const router = new Router();
 
 // ==================== Button States ====================
 
@@ -416,19 +255,24 @@ export function updateButtonStates(): void {
 // ==================== LSP Log Visibility (DOM-side) ====================
 
 export function syncLspLogVisibility(): void {
-  const el = getElements();
-  if (!el.settingLspLog || !el.lspLogPanel) return;
+  const settingLspLog = el<HTMLInputElement>('setting-lsp-log');
+  if (!settingLspLog) return;
+
+  const lspLogPanel = el<HTMLElement>('lsp-log-panel');
+  if (!lspLogPanel) return;
 
   const enabled = loadSettings().lspLogEnabled === true;
-  el.settingLspLog.checked = enabled;
-  el.lspLogPanel.classList.toggle('hidden', !enabled);
-  if (!enabled && el.lspLogContent) {
-    el.lspLogContent.textContent = '';
-    if (currentView === 'lspLogs') {
-      switchToSettings();
+  settingLspLog.checked = enabled;
+  lspLogPanel.classList.toggle('hidden', !enabled);
+
+  if (!enabled) {
+    const lspLogContent = el<HTMLPreElement>('lsp-log-content');
+    lspLogContent.textContent = '';
+    if (router._current === 'lspLogs') {
+      router.navigate('settings', { resetScroll: true });
     }
   }
-  if (!enabled && currentView === 'lspSettings') {
-    el.lspLogPanel.classList.add('hidden');
+  if (!enabled && router._current === 'lspSettings') {
+    lspLogPanel.classList.add('hidden');
   }
 }
