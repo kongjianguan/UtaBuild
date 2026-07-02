@@ -1,0 +1,18 @@
+{
+  "name": "utabuild-frontend",
+  "private": true,
+  "version": "1.1.1",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "lint": "eslint src/ts/ --ext .ts",
+    "format": "prettier --write \"src/ts/**/*.ts\" \"src/css/**/*.css\""
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "prettier": "^3.3.0"
+  }
+}
