@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="has-bottom-menu">
-  <div id="app">
+  <main id="app">
     <!-- 搜索界面 -->
     <header id="search-header">
       <h1>UtaBuild</h1>
@@ -23,7 +23,6 @@
           id="search-title"
           placeholder="曲名を入力..."
           autocomplete="off"
-          style="ime-mode: disabled;"
         />
         <input 
           type="text" 
@@ -201,18 +200,18 @@
     </section>
 
     <!-- 加载指示器 -->
-    <div id="loading" class="hidden">
+    <div id="loading" class="hidden" role="status" aria-live="polite">
       <div class="spinner"></div>
       <p>読み込み中...</p>
     </div>
 
     <!-- 错误提示 -->
-    <div id="error-toast" class="hidden">
+    <div id="error-toast" class="hidden" role="alert" aria-live="assertive">
       <span id="error-message"></span>
       <button id="error-close">&times;</button>
     </div>
 
-    <div id="confirm-dialog" class="confirm-dialog hidden" role="presentation">
+    <div id="confirm-dialog" class="confirm-dialog hidden">
       <div class="confirm-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">
         <p id="confirm-dialog-step" class="confirm-dialog__step"></p>
         <h2 id="confirm-dialog-title" class="confirm-dialog__title">キャッシュを削除</h2>
@@ -233,7 +232,7 @@
         <button type="button" role="tab" class="bottom-menu__item" data-app-tab="settings" aria-selected="false">設定</button>
       </div>
     </nav>
-  </div>
+  </main>
 
   <script src="js/app.js" type="module"></script>
 </body>
