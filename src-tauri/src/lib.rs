@@ -1152,15 +1152,15 @@ async fn set_lsp_settings(
     )
 }
 
-/// 将歌词数据渲染为 HTML 并写入指定文件路径
+/// 将歌词数据渲染为 HTML 并通过原生保存对话框写入文件
 #[tauri::command]
 async fn export_lyrics_html(
+    app: AppHandle,
     title: String,
     artist: Option<String>,
     lyrics_url: String,
     ruby_annotations: Vec<utabuild_cli::LyricElement>,
     cover_url: Option<String>,
-    output_path: String,
 ) -> Result<(), String> {
     let artist = artist.unwrap_or_default();
     let html = utabuild_cli::output_html::render_lyrics_html(
@@ -1170,7 +1170,24 @@ async fn export_lyrics_html(
         &ruby_annotations,
         cover_url.as_deref(),
     );
-    std::fs::write(&output_path, html).map_err(|e| e.to_string())?;
+
+    let default_name = format!("{} - {}.html",
+        if artist.is_empty() { "Unknown" } else { &artist },
+        if title.is_empty() { "unknown" } else { &title },
+    ).replace(['<', '>', ':', '"', '/', '\\', '|', '?', '*'], "_");
+
+    use tauri_plugin_dialog::DialogExt;
+    let path = app
+        .dialog()
+        .file()
+        .add_filter("HTML", &["html"])
+        .set_file_name(default_name)
+        .blocking_save_file();
+
+    if let Some(path) = path {
+        let path_buf = path.into_path().map_err(|e| e.to_string())?;
+        std::fs::write(&path_buf, html).map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 
