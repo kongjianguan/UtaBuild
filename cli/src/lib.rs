@@ -18,6 +18,8 @@ pub mod ne_crypto;
 pub mod ne_source;
 /// 输出结构定义
 pub mod output;
+/// HTML 输出模块
+pub mod output_html;
 /// 跨平台路径抽象
 pub mod platform;
 /// QQMusic QMC 解密
