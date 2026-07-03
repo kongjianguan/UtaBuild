@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TITLE - ARTIST</title>
+<style>
+/* === Synced with src/css/style.css === */
+/* Theme variables: style.css:8-58 (dark), style.css:61-89 (light) */
+/* Ruby rendering: style.css:1146-1178 */
+/* Font sizes: style.css:1180-1207 */
+/* Controls: style.css:1099-1143 */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #3388BB;
+  --primary-hover: #4099CC;
+  --bg: #060b16;
+  --bg-secondary: #0c1220;
+  --surface: #111b2e;
+  --surface-hover: #192540;
+  --text: #e2eaf5;
+  --text-secondary: #7a8faf;
+  --ruby-color: #7a8da0;
+  --border: rgba(51, 136, 187, 0.12);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.20);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+
+body.light {
+  --bg: #f0f4fa;
+  --bg-secondary: #e4eaf2;
+  --surface: #ffffff;
+  --surface-hover: #f2f6fc;
+  --text: #1a2332;
+  --text-secondary: #4a5d78;
+  --ruby-color: #667a8a;
+  --border: rgba(51, 136, 187, 0.12);
+  --shadow-sm: 0 2px 8px rgba(51, 68, 102, 0.08);
+  --shadow-md: 0 6px 18px rgba(51, 68, 102, 0.10);
+}
+
+body {
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", "Meiryo", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+/* === Header === */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.cover-art {
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 40px;
+  overflow: hidden;
+}
+
+.cover-art.has-cover {
+  border-color: rgba(51, 136, 187, 0.20);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.header-info {
+  min-width: 0;
+}
+
+.header-info h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.header-info h1 a {
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.16s, text-shadow 0.16s;
+}
+
+.header-info h1 a:hover,
+.header-info h1 a:focus-visible {
+  color: var(--primary);
+  text-shadow: 0 0 12px var(--primary);
+  outline: none;
+}
+
+.header-info .artist {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+/* === Controls === */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-group span {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.control-group button {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.16s, color 0.16s, background 0.16s;
+}
+
+.control-group button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.control-group button.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* === Ruby Rendering (synced with style.css:1146-1207) === */
+.lyricBody {
+  user-select: none;
+  letter-spacing: 1px;
+  line-height: 2.3;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow-md);
+  min-height: 200px;
+}
+
+.lyricBody span.ruby {
+  margin-bottom: 0.55em;
+  display: inline-table;
+  position: relative;
+  vertical-align: bottom;
+}
+
+.lyricBody span.ruby span.rb {
+  display: table-row;
+  position: relative;
+  line-height: 1.2;
+}
+
+.lyricBody span.ruby span.rt {
+  display: table-header-group;
+  line-height: 1.8;
+  color: var(--ruby-color);
+  white-space: nowrap;
+  text-align: center;
+  letter-spacing: -0.001em;
+}
+
+.lyricBody div.medium { font-size: 17px; }
+.lyricBody div.medium span.ruby span.rt { font-size: 11px; }
+.lyricBody div.small { font-size: 13px; }
+.lyricBody div.small span.ruby span.rt { font-size: 7px; }
+.lyricBody div.large { font-size: 21px; }
+.lyricBody div.large span.ruby { line-height: 2.6; }
+.lyricBody div.large span.ruby span.rt { font-size: 14px; }
+
+/* === Footer === */
+.footer {
+  text-align: center;
+  margin-top: 32px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+</style>
+</head>
+<body class="dark">
+<div class="container">
+
+<div class="header">
+  <div class="cover-art COVER_CLASS" STYLE_COVER></div>
+  <div class="header-info">
+    <h1><a href="LYRICS_URL" target="_blank" rel="noopener">TITLE</a></h1>
+    <p class="artist">ARTIST</p>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="control-group">
+    <span>文字サイズ:</span>
+    <button data-size="small">小</button>
+    <button data-size="medium" class="active">中</button>
+    <button data-size="large">大</button>
+  </div>
+  <div class="control-group">
+    <span>テーマ:</span>
+    <button data-theme="dark" class="active">暗</button>
+    <button data-theme="light">亮</button>
+  </div>
+</div>
+
+<div class="lyricBody">
+  <div class="medium">
+RUBY_HTML
+  </div>
+</div>
+
+<div class="footer">Powered by UtaBuild</div>
+
+</div>
+<script>
+(function() {
+  var body = document.body;
+  var lyricDiv = document.querySelector('.lyricBody > div');
+
+  function setActive(selector, value, attr) {
+    document.querySelectorAll(selector).forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset[attr] === value);
+    });
+  }
+
+  document.querySelectorAll('[data-size]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var size = btn.dataset.size;
+      lyricDiv.className = size;
+      setActive('[data-size]', size, 'size');
+      try { localStorage.setItem('utabuild-fontsize', size); } catch(e) {}
+    });
+  });
+
+  document.querySelectorAll('[data-theme]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var theme = btn.dataset.theme;
+      body.classList.toggle('light', theme === 'light');
+      setActive('[data-theme]', theme, 'theme');
+      try { localStorage.setItem('utabuild-theme', theme); } catch(e) {}
+    });
+  });
+
+  try {
+    var savedSize = localStorage.getItem('utabuild-fontsize');
+    if (savedSize) {
+      lyricDiv.className = savedSize;
+      setActive('[data-size]', savedSize, 'size');
+    }
+    var savedTheme = localStorage.getItem('utabuild-theme');
+    if (savedTheme) {
+      body.classList.toggle('light', savedTheme === 'light');
+      setActive('[data-theme]', savedTheme, 'theme');
+    }
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>
