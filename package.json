@@ -3,13 +3,18 @@
   "private": true,
   "version": "1.1.1",
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "prebuild": "bash scripts/check-env.sh",
+    "build:ts": "tsc",
+    "build:scss": "sass src/scss/main.scss src/css/style.css --style compressed",
+    "build": "npm run build:ts && npm run build:scss",
+    "watch:ts": "tsc --watch",
+    "watch:scss": "sass src/scss/main.scss src/css/style.css --watch",
     "lint": "eslint src/ts/ --ext .ts",
-    "format": "prettier --write \"src/ts/**/*.ts\" \"src/css/**/*.css\""
+    "format": "prettier --write \"src/ts/**/*.ts\" \"src/scss/**/*.scss\""
   },
   "devDependencies": {
     "typescript": "^5.5.0",
+    "sass": "^1.77.0",
     "eslint": "^8.57.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
