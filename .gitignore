@@ -33,39 +33,15 @@ src-tauri/gen/
 .deepseek/
 .playwright-mcp/
 .worktrees/
+.opencode
 
 # Project docs (generated / research)
 AGENTS.md
 CLAUDE.md
-docs/HOOK_ROOT_CAUSE_ANALYSIS.md
-docs/LSPOSED_INTEGRATION.md
-docs/problems/
-docs/superpowers/
-docs/kishikaisen_uta_body_with_bugs.html
-docs/kishikaisen_uta_body_with_bugs.json
-docs/shiori_uta_body_with_bugs_from_netease.json
-docs/utakotoba_uta_body_with_bugs_from_netease.html
-
-# Images & icons
-app-icon.png
-ruby-aaaaaa.png
-ruby-compare.png
-utabuild-dock-stable-mobile.png
-utabuild-ui-after-japanese-copy.png
-img/
-src-tauri/icons/
-
-# Test pages
-ruby-compare.html
-src/ruby-compare.html
+docs/
 
 # Scripts
-install.sh
-scripts/__pycache__/
-scripts/decrypt_qm.py
-scripts/install-release-apk-wireless.ps1
-scripts/simulate_pipeline.py
-scripts/verify-lsposed-apk.sh
+scripts/
 
 # Salt integration (prebuilt artifacts)
 SaltLycAdapter/
