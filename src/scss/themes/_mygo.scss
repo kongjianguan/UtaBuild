@@ -40,6 +40,9 @@ body[data-theme="mygo"] {
   --prim-mygo-accent-soyo: #FFBB12;
   --prim-mygo-accent-taki: #9988CC;
 
+  // Code/log background
+  --prim-mygo-glass-code-bg: rgba(0, 0, 0, 0.32);
+
   // Shadows (with blue glow)
   --prim-mygo-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 18px rgba(119, 187, 221, 0.04);
   --prim-mygo-shadow-md: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 28px rgba(119, 187, 221, 0.06);

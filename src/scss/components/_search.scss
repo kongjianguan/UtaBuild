@@ -3,161 +3,230 @@
 // ============================================================
 
 #search-header {
-  padding: var(--space-10) var(--space-4) var(--space-4);
   text-align: center;
-}
+  padding: 48px var(--space-5) 32px;
+  position: relative;
+  overflow: hidden;
 
-#search-header h1 {
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  margin-bottom: var(--space-1);
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #3388BB, #77BBDD);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
 .subtitle {
-  font-size: var(--font-sm);
-  color: var(--text-muted);
-  margin-bottom: var(--space-1);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 4px;
 }
 
 .subtitle-note {
-  font-size: var(--font-xs);
-  color: var(--text-muted);
-  margin-bottom: var(--space-6);
+  max-width: 360px;
+  margin: 0 auto 16px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.55;
 }
 
-// Ruby sample pill — removed from search UI;
-// CSS preserved but will not match any visible element.
-// (Rules can be removed in a future cleanup.)
 .search-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 12px;
   max-width: 400px;
-  margin: 0 auto var(--space-8);
-  padding: var(--space-4);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  margin: 0 auto;
+
+  input {
+    padding: 12px 16px;
+    font-size: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+
+    &::placeholder {
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    &:focus {
+      border-color: var(--primary);
+      background: var(--surface-hover);
+      box-shadow: 0 0 0 3px var(--primary-dim), var(--shadow-md);
+    }
+  }
+
+  button {
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 80%, black));
+    color: white;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px var(--primary-glow);
+    transition: background 0.2s, transform 0.12s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+
+    &:hover {
+      background: linear-gradient(135deg, var(--primary-hover), var(--primary));
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px var(--primary-glow);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+  }
 }
 
-.search-form input {
-  padding: 10px 14px;
-  font-size: 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--bg-secondary);
-  color: var(--text);
-  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
-}
-
-.search-form input::placeholder {
-  color: var(--text-muted);
-}
-
-.search-form input:focus {
-  outline: none;
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--primary-dim);
-}
-
-#search-btn {
-  padding: 10px 0;
-  font-size: 0.9rem;
-  font-weight: 700;
-  border: none;
-  border-radius: var(--radius-pill);
+// Search button flowing border animation
+.search-form button.is-searching {
+  position: relative;
+  cursor: not-allowed;
+  opacity: 0.92;
+  border: 3px solid transparent;
   background: var(--primary);
-  color: #fff;
-  cursor: pointer;
-  transition: background var(--motion-fast), box-shadow var(--motion-fast);
+  background-clip: padding-box;
+  box-shadow: 0 8px 20px var(--primary-glow);
+  transform: none !important;
+  pointer-events: none;
+  transition: none;
+
+  &:hover {
+    transform: none !important;
+    background: var(--primary);
+    background-clip: padding-box;
+  }
+
+  &:active {
+    transform: none !important;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    z-index: -1;
+    border-radius: 19px;
+    padding: 3px;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent 0px,
+      transparent 5px,
+      rgba(119, 187, 221, 0.07) 5px,
+      rgba(119, 187, 221, 0.18) 6px,
+      rgba(119, 187, 221, 0.30) 7px,
+      rgba(119, 187, 221, 0.18) 8px,
+      rgba(119, 187, 221, 0.07) 9px,
+      transparent 9px,
+      transparent 14px
+    );
+    background-size: 28px 28px;
+    animation: stripe-flow 1s linear infinite;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+            mask-composite: exclude;
+  }
 }
 
-#search-btn:hover {
-  background: var(--primary-hover);
-  box-shadow: 0 0 12px var(--primary-glow);
+@keyframes stripe-flow {
+  to { background-position: 28px 0; }
 }
 
 // Search history
 .search-history {
   max-width: 400px;
-  margin: 0 auto;
+  margin: 24px auto 0;
   text-align: left;
 }
 
 .search-history__title {
-  font-size: var(--font-sm);
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: var(--space-3);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  margin-bottom: 10px;
 }
 
 .search-history__list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-}
-
-.search-history__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  border-left: 2px solid var(--primary-dim);
-  transition: background var(--motion-fast), border-color var(--motion-fast);
-  cursor: pointer;
-}
-
-.search-history__item:hover {
-  background: var(--surface-hover);
-  border-left-color: var(--primary);
-}
-
-.search-history__item .title {
-  font-size: var(--font-sm);
-  font-weight: 500;
-}
-
-.search-history__item .artist {
-  font-size: var(--font-xs);
-  color: var(--text-muted);
-}
-
-.search-history__item .remove {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 0 4px;
-  transition: color var(--motion-fast);
-}
-
-.search-history__item .remove:hover {
-  color: var(--danger);
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .search-history__empty {
-  font-size: var(--font-xs);
+  padding: 16px;
   color: var(--text-muted);
   text-align: center;
-  padding: var(--space-6) 0;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  font-size: 0.9rem;
 }
 
-// MyGO: search history item with source-based member accent color
-// Applied dynamically by TS based on search source field.
-body[data-theme="mygo"] .search-history__item[data-source="utaten"] {
-  border-left-color: var(--accent-taki);
-}
+.history-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.12s, background 0.2s, box-shadow 0.2s;
 
-body[data-theme="mygo"] .search-history__item[data-source="qq_music"] {
-  border-left-color: var(--accent-rana);
-}
+  &:hover {
+    border-color: var(--primary);
+    border-left-color: var(--accent-soyo, var(--primary));
+    border-left-width: 3px;
+    background: var(--surface-hover);
+    transform: translateX(4px);
+    box-shadow: 0 8px 24px var(--primary-glow);
+  }
 
-body[data-theme="mygo"] .search-history__item[data-source="netease"] {
-  border-left-color: var(--accent-anon);
+  &__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  &__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
 }

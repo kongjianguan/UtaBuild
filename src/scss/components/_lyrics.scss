@@ -129,3 +129,36 @@ body[data-theme="mygo"] .lyricBody {
   border-color: var(--primary);
   color: var(--primary);
 }
+
+// Responsive
+@media (max-width: 768px) {
+  .lyricBody {
+    padding: 12px;
+  }
+
+  .lyricBody div.medium {
+    font-size: 15px;
+
+    span.ruby span.rt {
+      font-size: 9px;
+    }
+  }
+
+  .lyrics-controls {
+    gap: 10px;
+  }
+
+  .control-group {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 375px) {
+  .lyricBody div.medium {
+    font-size: 14px;
+
+    span.ruby span.rt {
+      font-size: 8px;
+    }
+  }
+}

@@ -1,5 +1,5 @@
 // ============================================================
-// Typography
+// Typography, selection, scrollbar
 // ============================================================
 
 body {
@@ -21,18 +21,18 @@ body {
 // MyGO night-sky overlay
 body[data-theme="mygo"] {
   background-image: none;
-}
 
-body[data-theme="mygo"]::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(119, 187, 221, 0.06), transparent 70%),
-    radial-gradient(ellipse 40% 30% at 75% 30%, rgba(255, 136, 153, 0.03), transparent),
-    radial-gradient(ellipse 35% 25% at 20% 60%, rgba(153, 136, 204, 0.04), transparent);
+  &::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(119, 187, 221, 0.06), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 75% 30%, rgba(255, 136, 153, 0.03), transparent),
+      radial-gradient(ellipse 35% 25% at 20% 60%, rgba(153, 136, 204, 0.04), transparent);
+  }
 }
 
 h1, h2, h3 {
@@ -43,7 +43,52 @@ h1, h2, h3 {
 h1 { font-size: var(--font-xl); font-weight: 700; }
 h2 { font-size: var(--font-lg); font-weight: 600; }
 
+// Selection highlight
+::selection {
+  background: var(--primary-dim);
+}
+
+::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
 // Bottom nav safe area
 body.has-bottom-menu {
   padding-bottom: calc(104px + env(safe-area-inset-bottom));
+}
+
+// Scrollbar
+html {
+  scrollbar-color: var(--primary-dim) transparent;
+  scrollbar-width: thin;
+}
+
+html.songs-first-level-scrollbar-disabled,
+body.songs-first-level-scrollbar-disabled {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+html.songs-first-level-scrollbar-disabled::-webkit-scrollbar,
+body.songs-first-level-scrollbar-disabled::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--primary-dim);
+  background-clip: padding-box;
 }

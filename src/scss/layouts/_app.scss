@@ -1,12 +1,14 @@
 // ============================================================
-// App Layout: view switching, visibility, responsive
+// App Layout: view switching, visibility, context menu, responsive
 // ============================================================
 
 #app {
-  max-width: 720px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-5) var(--space-12);
-  min-height: 100vh;
+  padding: 20px;
+  padding-bottom: 24px;
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
 }
 
 // View visibility
@@ -14,61 +16,238 @@
   display: none !important;
 }
 
-// Secondary button style (used across views)
-.secondary {
-  padding: 6px 16px;
-  font-size: var(--font-xs);
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: border-color var(--motion-fast), color var(--motion-fast);
-}
-
-.secondary:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.secondary.active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-}
-
-// Context menu (long press)
-.context-menu {
-  position: fixed;
-  z-index: 180;
-  padding: var(--space-1);
-  background: var(--surface-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  min-width: 150px;
-}
-
-.context-menu button {
-  display: block;
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text);
+// Button base reset
+button,
+input,
+select {
   font-family: inherit;
-  font-size: var(--font-sm);
-  text-align: left;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
   cursor: pointer;
-  transition: background var(--motion-fast);
+
+  &:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--primary-glow);
+    outline-offset: 2px;
+  }
 }
 
-.context-menu button:hover {
-  background: var(--surface-hover);
+button:not(.bottom-menu__item):active {
+  transform: scale(0.985);
 }
 
-.context-menu button.danger {
-  color: var(--danger);
+// Secondary button style
+button.secondary {
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--surface-hover);
+  }
+
+  &.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Primary button style
+button.primary {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #3388BB, #2a7aaa);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(51, 136, 187, 0.22);
+  transition: background 0.2s, transform 0.12s, box-shadow 0.2s;
+
+  &:hover {
+    background: linear-gradient(135deg, #4099CC, #3388BB);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(51, 136, 187, 0.28);
+  }
+}
+
+#back-btn,
+#back-to-results-btn {
+  margin-top: 20px;
+}
+
+// Long press context menu
+.long-press-menu {
+  position: fixed;
+  z-index: 1200;
+  min-width: 148px;
+  padding: 7px;
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transform-origin: top left;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-lg);
+  transition: opacity 0.14s ease, transform 0.16s cubic-bezier(0.19, 1, 0.22, 1);
+
+  &.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  &__item {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 14px;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: background 0.12s, color 0.12s;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--primary-dim);
+    }
+
+    &--refresh {
+      color: var(--primary);
+    }
+
+    &--danger {
+      color: var(--danger);
+
+      &:hover,
+      &:focus-visible {
+        background: var(--danger-bg);
+      }
+    }
+
+    &--copy {
+      color: var(--primary);
+
+      &:hover,
+      &:focus-visible {
+        background: var(--primary-dim);
+      }
+    }
+  }
+}
+
+// First-level slide transitions
+#search-header,
+.songs-view,
+.settings-view {
+  will-change: opacity, transform;
+}
+
+.first-level-slide-from-right {
+  animation: first-level-slide-from-right 0.38s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.first-level-slide-from-left {
+  animation: first-level-slide-from-left 0.38s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+@keyframes first-level-slide-from-right {
+  from {
+    opacity: 0.88;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes first-level-slide-from-left {
+  from {
+    opacity: 0.88;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  #app {
+    padding: 12px;
+    padding-bottom: 24px;
+  }
+
+  #search-header {
+    padding: 28px 0 20px;
+
+    h1 {
+      font-size: 1.7rem;
+    }
+  }
+
+  .subpage-header {
+    grid-template-columns: 1fr;
+  }
+
+  .songs-header {
+    flex-direction: column;
+  }
+
+  .songs-sort {
+    width: 100%;
+
+    button {
+      flex: 1;
+    }
+  }
+
+  .lsp-log-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lsp-log-zoom-controls {
+    justify-content: space-between;
+  }
+
+  .lsp-log-frame {
+    height: 58vh;
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 375px) {
+  // Minimal adjustments for very small viewports
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .first-level-slide-from-right,
+  .first-level-slide-from-left {
+    animation: none;
+  }
 }

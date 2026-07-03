@@ -35,6 +35,9 @@
   --danger: var(--prim-dark-danger);
   --danger-bg: var(--prim-dark-danger-bg);
 
+  // Glass/code
+  --glass-code-bg: var(--prim-dark-glass-code-bg);
+
   // Shadows
   --shadow-sm: var(--prim-dark-shadow-sm);
   --shadow-md: var(--prim-dark-shadow-md);
@@ -60,6 +63,7 @@ body[data-theme="light"] {
   --primary-dim: var(--prim-light-primary-dim);
   --danger: var(--prim-light-danger);
   --danger-bg: var(--prim-light-danger-bg);
+  --glass-code-bg: var(--prim-light-glass-code-bg);
   --shadow-sm: var(--prim-light-shadow-sm);
   --shadow-md: var(--prim-light-shadow-md);
   --shadow-lg: var(--prim-light-shadow-lg);
@@ -84,6 +88,7 @@ body[data-theme="mygo"] {
   --primary-dim: var(--prim-mygo-primary-dim);
   --danger: var(--prim-mygo-danger);
   --danger-bg: var(--prim-mygo-danger-bg);
+  --glass-code-bg: var(--prim-mygo-glass-code-bg);
   --shadow-sm: var(--prim-mygo-shadow-sm);
   --shadow-md: var(--prim-mygo-shadow-md);
   --shadow-lg: var(--prim-mygo-shadow-lg);
