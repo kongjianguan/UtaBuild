@@ -1,0 +1,34 @@
+// ============================================================
+// UtaBuild Design System
+// Three themes: dark (product-tool), light (mirror), mygo (anime)
+// Compiled to: src/css/style.css
+// ============================================================
+
+// ---- Utilities ----
+@use 'utilities/mixins';
+
+// ---- Tokens ----
+@use 'tokens/primitives';
+@use 'themes/dark';
+@use 'themes/light';
+@use 'themes/mygo';
+@use 'tokens/semantic';
+
+// ---- Base ----
+@use 'base/reset';
+@use 'base/typography';
+
+// ---- Layout ----
+@use 'layouts/app';
+
+// ---- Components ----
+@use 'components/ruby';
+@use 'components/lyrics';
+@use 'components/search';
+@use 'components/results';
+@use 'components/songs';
+@use 'components/settings';
+@use 'components/dock';
+@use 'components/dialog';
+@use 'components/toast';
+@use 'components/spinner';
