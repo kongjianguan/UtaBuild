@@ -6,6 +6,7 @@ import { loadSavedLyrics, initSongsControls, initSongsDockAutoHide } from './son
 import { handleSearch, initInfiniteScroll, setPendingSaltRequest, setCurrentActiveTab, currentSearchData, renderResultList, } from './search.js';
 import { syncLspLogZoom, adjustLspLogZoom, syncLspSettings, setBackendLspLogging, appendAppLspLog, viewLspLogs, } from './lsp.js';
 import { confirmClearAllCaches, clearAllCaches } from './cache.js';
+import { exportLyricsToFile, getExportData } from './export.js';
 import { initBackButton, initBackGesture, handleBack } from './back-gesture.js';
 import { initBottomMenu } from './bottom-menu.js';
 // ==================== Salt Player Launch Flow ====================
@@ -121,6 +122,26 @@ function initControls() {
             updateButtonStates();
         });
     });
+    // Export lyrics button
+    const exportBtn = document.getElementById('export-lyrics-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', async () => {
+            const data = getExportData();
+            if (!data)
+                return;
+            const btn = exportBtn;
+            btn.disabled = true;
+            try {
+                await exportLyricsToFile(data);
+            }
+            catch (err) {
+                showError(`エクスポートに失敗しました: ${err}`);
+            }
+            finally {
+                btn.disabled = false;
+            }
+        });
+    }
     // Source tab switching
     el('source-tabs').addEventListener('click', (event) => {
         const tab = event.target.closest('.source-tab');

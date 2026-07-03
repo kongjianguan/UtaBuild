@@ -6,6 +6,7 @@ import { addSearchHistory } from './search-history.js';
 import { appendAppLspLog } from './lsp.js';
 import { attachResultLongPressMenu, resultLongPressTriggered, setResultLongPressTriggered, } from './songs.js';
 import { escapeHtml } from './utils.js';
+import { setExportData } from './export.js';
 // ==================== Search State ====================
 export let currentSearchData = null;
 export let currentActiveTab = 'all';
@@ -514,6 +515,13 @@ async function handleSelectResult(index) {
             el('lyrics-body').appendChild(lyricsEl);
             updateButtonStates();
             router.navigate('lyrics', { resetScroll: true });
+            setExportData({
+                title: result.found_title,
+                artist: result.found_artist,
+                lyricsUrl: result.lyrics_url,
+                rubyAnnotations: result.ruby_annotations,
+                coverUrl: result.cover_url ?? null,
+            });
         }
         else {
             void appendAppLspLog('lyrics', `get lyrics failed selected="${selectedItem.title}"`);

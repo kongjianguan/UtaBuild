@@ -2,6 +2,7 @@ import { invoke } from './tauri.js';
 import { shouldUseCache, selectedArtworkSource } from './settings.js';
 import { el, $$, showLoading, hideLoading, showError, router, updateButtonStates, currentPageScrollY, setBottomMenuAutoHidden } from './dom.js';
 import { renderLyrics } from './ruby.js';
+import { exportLyricsToFile, setExportData } from './export.js';
 // ==================== State ====================
 export let songsSortBy = 'title';
 export const hydratingSongMetadataUrls = new Set();
@@ -87,6 +88,28 @@ export function buildSongItem(song) {
     meta.textContent = formatSongSubtitle(song);
     body.append(badge, titleEl, meta);
     button.append(art, body);
+    const exportBtn = document.createElement('button');
+    exportBtn.className = 'song-item__export';
+    exportBtn.setAttribute('aria-label', 'エクスポート');
+    exportBtn.textContent = '⤓';
+    exportBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        try {
+            const lyricsData = await invoke('get_saved_lyrics', { url: song.lyrics_url });
+            const data = {
+                title: lyricsData.found_title,
+                artist: lyricsData.found_artist,
+                lyricsUrl: lyricsData.lyrics_url,
+                rubyAnnotations: lyricsData.ruby_annotations,
+                coverUrl: lyricsData.cover_url ?? null,
+            };
+            await exportLyricsToFile(data);
+        }
+        catch (err) {
+            console.error('Export failed:', err);
+        }
+    });
+    button.append(exportBtn);
     return button;
 }
 // ==================== Update Metadata ====================
@@ -507,6 +530,13 @@ export async function openSavedLyrics(url) {
         el('lyrics-body').appendChild(renderLyrics(result.ruby_annotations));
         updateButtonStates();
         router.navigate('lyrics', { resetScroll: true });
+        setExportData({
+            title: result.found_title,
+            artist: result.found_artist,
+            lyricsUrl: url,
+            rubyAnnotations: result.ruby_annotations,
+            coverUrl: result.cover_url ?? null,
+        });
     }
     catch (err) {
         console.error('Open saved lyrics error:', err);
