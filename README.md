@@ -67,6 +67,25 @@ cargo tauri dev
 
 这将以开发模式启动桌面应用。前端位于 `src/` 目录（纯 HTML/CSS/JS），修改后刷新即可生效。
 
+### TypeScript 编译
+
+前端 TypeScript 源码位于 `src/ts/`，编译产物输出到 `src/js/`。
+
+> **注意：** 仓库中已包含预构建的 `.js` 文件，仅修改 TypeScript 源码后才需要手动编译。
+
+修改 TypeScript 源码后，需手动编译生成 `.js` 文件：
+
+```bash
+# npm
+npx tsc
+
+# bun
+bunx tsc
+
+# pnpm
+pnpm exec tsc
+```
+
 ### Android 开发（连接真机或模拟器）
 
 ```bash
