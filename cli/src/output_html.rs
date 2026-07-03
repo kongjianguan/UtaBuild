@@ -5,6 +5,15 @@
 
 use crate::models::LyricElement;
 
+/// 将 UtaTen 相对路径补全为完整 URL，其他 URL 原样返回。
+fn resolve_url(url: &str) -> String {
+    if url.starts_with("/lyric/") {
+        format!("https://utaten.com{}", url)
+    } else {
+        url.to_string()
+    }
+}
+
 /// HTML 实体转义：将特殊字符替换为对应的 HTML 实体。
 fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;")
@@ -74,7 +83,7 @@ pub fn render_lyrics_html(
 
     let escaped_title = html_escape(title);
     let escaped_artist = html_escape(artist);
-    let escaped_url = html_escape(lyrics_url);
+    let escaped_url = html_escape(&resolve_url(lyrics_url));
     let display_title = if title.is_empty() { "未知の曲" } else { title };
     let display_artist = if artist.is_empty() { "不明なアーティスト" } else { artist };
 
@@ -197,5 +206,36 @@ mod tests {
         assert!(html.contains("&lt;b&gt;"));
         assert!(html.contains("&amp;Artist"));
         assert!(html.contains("a=1&amp;b=2"));
+    }
+
+    #[test]
+    fn test_resolve_url_utaten_relative() {
+        assert_eq!(
+            resolve_url("/lyric/rq20031716/"),
+            "https://utaten.com/lyric/rq20031716/"
+        );
+    }
+
+    #[test]
+    fn test_resolve_url_absolute() {
+        assert_eq!(
+            resolve_url("https://example.com/song"),
+            "https://example.com/song"
+        );
+    }
+
+    #[test]
+    fn test_resolve_url_qq_music_unchanged() {
+        assert_eq!(
+            resolve_url("qq_music:003WFMXk4O5ywc"),
+            "qq_music:003WFMXk4O5ywc"
+        );
+    }
+
+    #[test]
+    fn test_render_lyrics_html_utaten_url_resolved() {
+        let elements = vec![];
+        let html = render_lyrics_html("テスト曲", "歌手", "/lyric/rq20031716/", &elements, None);
+        assert!(html.contains("https://utaten.com/lyric/rq20031716/"));
     }
 }
