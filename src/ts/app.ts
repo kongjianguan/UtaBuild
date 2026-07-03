@@ -163,14 +163,14 @@ function initControls(): void {
     });
   });
 
-  // Dark mode controls
-  $$('[data-dark]').forEach((btn) => {
+  // Theme controls
+  $$('[data-theme]').forEach((btn) => {
     const button = btn as HTMLElement;
     button.addEventListener('click', () => {
-      const mode = button.dataset.dark;
-      if (!mode) return;
-      document.body.classList.toggle('dark-mode', mode === 'on');
-      saveSettings({ darkMode: mode as AppSettings['darkMode'] });
+      const theme = button.dataset.theme as 'dark' | 'light' | 'mygo';
+      if (!theme) return;
+      document.body.setAttribute('data-theme', theme);
+      saveSettings({ theme });
       updateButtonStates();
     });
   });
@@ -251,14 +251,12 @@ function init(): void {
   initBackButton();
   initBackGesture();
 
-  // Apply saved dark mode
+  // Apply saved theme
   const settings = loadSettings();
-  const effectiveDarkMode = settings.darkMode || 'on';
-  if (effectiveDarkMode === 'on') {
-    document.body.classList.add('dark-mode');
-  }
-  if (!settings.darkMode) {
-    saveSettings({ darkMode: 'on' });
+  const effectiveTheme = settings.theme || 'dark';
+  document.body.setAttribute('data-theme', effectiveTheme);
+  if (!settings.theme) {
+    saveSettings({ theme: 'dark' });
   }
 
   // Sync button states

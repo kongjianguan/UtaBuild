@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'utabuild-settings';
 export const VALID_FONT_SIZES = new Set(['small', 'medium', 'large']);
-export const VALID_DARK_MODES = new Set(['on', 'off']);
+export const VALID_THEMES = new Set(['dark', 'light', 'mygo']);
 export const VALID_ARTWORK_SOURCES = new Set(['auto', 'utaten', 'qq', 'netease']);
 export const DEFAULT_USE_CACHE = true;
 export const DEFAULT_ARTWORK_SOURCE = 'auto';
@@ -9,11 +9,11 @@ function normalizeSettings(rawSettings = {}) {
     if (VALID_FONT_SIZES.has(rawSettings.fontSize)) {
         settings.fontSize = rawSettings.fontSize;
     }
-    if (VALID_DARK_MODES.has(rawSettings.darkMode)) {
-        settings.darkMode = rawSettings.darkMode;
+    if (VALID_THEMES.has(rawSettings.theme)) {
+        settings.theme = rawSettings.theme;
     }
     else {
-        settings.darkMode = 'on';
+        settings.theme = 'dark';
     }
     if (typeof rawSettings.useCache === 'boolean') {
         settings.useCache = rawSettings.useCache;

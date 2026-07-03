@@ -241,15 +241,13 @@ export function updateButtonStates(): void {
   const sizeBtn = document.querySelector(`[data-size="${fontSize}"]`);
   if (sizeBtn) sizeBtn.classList.add('active');
 
-  const darkMode = settings.darkMode || 'off';
-  $$('[data-dark]').forEach((button) => {
+  const theme = settings.theme || 'dark';
+  $$('[data-theme]').forEach((button) => {
     const btn = button as HTMLElement;
-    const isActive = btn.dataset.dark === darkMode;
+    const isActive = btn.dataset.theme === theme;
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-pressed', String(isActive));
   });
-  const darkBtn = document.querySelector(`[data-dark="${darkMode}"]`);
-  if (darkBtn) darkBtn.classList.add('active');
 }
 
 // ==================== LSP Log Visibility (DOM-side) ====================

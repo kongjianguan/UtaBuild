@@ -6,7 +6,8 @@
   <title>UtaBuild - 歌詞ビューア</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="has-bottom-menu">
+<body class="has-bottom-menu" data-theme="dark">
+  <canvas id="mygo-stars" aria-hidden="true" style="display:none"></canvas>
   <main id="app">
     <!-- 搜索界面 -->
     <header id="search-header">
@@ -185,9 +186,10 @@
           <button type="button" data-size="large" aria-pressed="false">大</button>
         </div>
         <div class="control-group">
-          <span>ダークモード:</span>
-          <button type="button" data-dark="on" aria-pressed="false">ON</button>
-          <button type="button" data-dark="off" aria-pressed="true">OFF</button>
+          <span>テーマ:</span>
+          <button type="button" data-theme="dark" aria-pressed="true">暗</button>
+          <button type="button" data-theme="light" aria-pressed="false">亮</button>
+          <button type="button" data-theme="mygo" aria-pressed="false">MyGO</button>
         </div>
         <div class="control-group">
           <button type="button" id="export-lyrics-btn">エクスポート</button>
