@@ -6,6 +6,7 @@
 use crate::cache::{get_lyrics_cache, save_lyrics_cache};
 use crate::cache_manager::CacheManager;
 use crate::commands::history::add_to_history;
+use crate::models::LyricElement;
 use crate::models::SearchResult;
 use crate::models::{LyricsSearchResponse, SearchResponse};
 use crate::output::{ErrorOutput, LyricsOutput, SearchOutput};
@@ -26,29 +27,42 @@ pub async fn execute_from_url(
     format: String,
     _cache_dir: Option<PathBuf>,
 ) -> anyhow::Result<()> {
-    let _format = format;
     let url = match url {
         Some(u) if !u.trim().is_empty() => u.trim().to_string(),
         _ => {
             let output = ErrorOutput::error("必须提供 --url 参数，且不能为空");
-            println!("{}", output.to_json()?);
+            output_result(&output.to_json()?, None)?;
             return Ok(());
         }
     };
 
+    let output_path = output
+        .as_deref()
+        .map(|p| validate_output_format(p, &format))
+        .transpose()?;
+    let output_path_deref = output_path.as_deref();
+
     debug!("从 URL 获取歌词: {}", url);
 
-    // 首先检查缓存
     if let Some(cached_lyrics) = get_lyrics_cache(&url) {
         info!("歌词缓存命中，直接输出");
-        let json_content = cached_lyrics.to_json()?;
-        if let Some(output_path) = output {
-            write_output_to_file(&output_path, &json_content)?;
-            info!("已输出到文件: {}", output_path);
-        } else {
-            println!("{}", json_content);
-        }
-        return Ok(());
+        let title = cached_lyrics.title.as_deref().unwrap_or("");
+        let artist = cached_lyrics.artist.as_deref().unwrap_or("");
+        let lyrics_url = cached_lyrics.url.as_deref().unwrap_or(&url);
+        let elements: Vec<LyricElement> = cached_lyrics
+            .lyrics
+            .as_ref()
+            .map(|content| {
+                content.lines.iter().flat_map(|line| {
+                    line.units.iter().map(|e| LyricElement {
+                        element_type: e.element_type.clone(),
+                        base: e.base.clone(),
+                        ruby: e.ruby.clone(),
+                    })
+                }).collect()
+            })
+            .unwrap_or_default();
+        return format_and_output(title, artist, lyrics_url, &elements, &format, output_path_deref);
     }
 
     let cache = CacheManager::new();
@@ -69,17 +83,11 @@ pub async fn execute_from_url(
                 debug!("保存歌词缓存失败: {}", e);
             }
 
-            let json_content = lyrics_output.to_json()?;
-            if let Some(output_path) = output {
-                write_output_to_file(&output_path, &json_content)?;
-                info!("已输出到文件: {}", output_path);
-            } else {
-                println!("{}", json_content);
-            }
+            format_and_output("", "", &url, &annotations, &format, output_path_deref)?;
         }
         _ => {
-            let output = ErrorOutput::error("无法从该 URL 获取歌词");
-            println!("{}", output.to_json()?);
+            let error_output = ErrorOutput::error("无法从该 URL 获取歌词");
+            output_result(&error_output.to_json()?, None)?;
         }
     }
 
@@ -97,26 +105,6 @@ fn sanitize_filename(s: &str) -> String {
         result = result.replace(c, "_");
     }
     result
-}
-
-/// 根据艺术家和标题生成默认的输出文件名（格式：`艺术家 - 标题.json`）。
-///
-/// - `artist`: 艺术家名称
-/// - `title`: 歌曲标题
-/// 返回: 生成的文件名字符串
-fn generate_default_filename(artist: &str, title: &str) -> String {
-    let artist = sanitize_filename(artist);
-    let title = sanitize_filename(title);
-
-    if artist.is_empty() && title.is_empty() {
-        "unknown.json".to_string()
-    } else if artist.is_empty() {
-        format!("{}.json", title)
-    } else if title.is_empty() {
-        format!("{}.json", artist)
-    } else {
-        format!("{} - {}.json", artist, title)
-    }
 }
 
 /// 将字符串内容写入指定的文件路径，自动创建父目录。
@@ -164,6 +152,51 @@ pub fn validate_output_format(output_path: &str, format: &str) -> anyhow::Result
         }
         None => Ok(format!("{}.{}", output_path, format)),
     }
+}
+
+/// 将内容输出到文件或 stdout。
+fn output_result(content: &str, output_path: Option<&str>) -> anyhow::Result<()> {
+    match output_path {
+        Some(path) => write_output_to_file(path, content),
+        None => {
+            println!("{}", content);
+            Ok(())
+        }
+    }
+}
+
+/// 根据格式生成对应的输出内容，并路由到文件或 stdout。
+///
+/// - `title`: 歌曲标题
+/// - `artist`: 艺术家名称
+/// - `lyrics_url`: 歌词来源 URL
+/// - `elements`: 歌词元素数组
+/// - `format`: 输出格式（"json" 或 "html"）
+/// - `output_path`: 可选的文件输出路径（已通过 validate_output_format 处理）
+fn format_and_output(
+    title: &str,
+    artist: &str,
+    lyrics_url: &str,
+    elements: &[LyricElement],
+    format: &str,
+    output_path: Option<&str>,
+) -> anyhow::Result<()> {
+    let content = match format {
+        "html" => crate::output_html::render_lyrics_html(
+            title, artist, lyrics_url, elements,
+            None,
+        ),
+        _ => {
+            let lyrics_output = LyricsOutput::success(
+                title.to_string(),
+                artist.to_string(),
+                lyrics_url.to_string(),
+                elements,
+            );
+            lyrics_output.to_json()?
+        }
+    };
+    output_result(&content, output_path)
 }
 
 /// 判断搜索结果的标题和艺术家是否与查询条件精确匹配。
@@ -322,15 +355,20 @@ pub async fn execute(
     output: Option<String>,
     format: String,
 ) -> anyhow::Result<()> {
-    let _format = format;
     debug!(
-        "执行搜索: title={:?}, artist={:?}, page={}, select={:?}",
-        title, artist, page, select
+        "执行搜索: title={:?}, artist={:?}, page={}, select={:?}, format={}",
+        title, artist, page, select, format
     );
+
+    let output_path = output
+        .as_deref()
+        .map(|p| validate_output_format(p, &format))
+        .transpose()?;
+    let output_path_deref = output_path.as_deref();
 
     if title.is_none() && artist.is_none() {
         let output = ErrorOutput::error("必须提供 --title 或 --artist 参数");
-        println!("{}", output.to_json()?);
+        output_result(&output.to_json()?, None)?;
         return Ok(());
     }
 
@@ -387,14 +425,23 @@ pub async fn execute(
                 cache_dir.as_ref(),
             )?;
 
-            let json_content = cached_lyrics.to_json()?;
-
-            if let Some(output_path) = output {
-                write_output_to_file(&output_path, &json_content)?;
-                info!("已输出到文件: {}", output_path);
-            } else {
-                println!("{}", json_content);
-            }
+            let title_str = cached_lyrics.title.as_deref().unwrap_or("");
+            let artist_str = cached_lyrics.artist.as_deref().unwrap_or("");
+            let url_str = cached_lyrics.url.as_deref().unwrap_or("");
+            let elements: Vec<LyricElement> = cached_lyrics
+                .lyrics
+                .as_ref()
+                .map(|content| {
+                    content.lines.iter().flat_map(|line| {
+                        line.units.iter().map(|e| LyricElement {
+                            element_type: e.element_type.clone(),
+                            base: e.base.clone(),
+                            ruby: e.ruby.clone(),
+                        })
+                    }).collect()
+                })
+                .unwrap_or_default();
+            format_and_output(title_str, artist_str, url_str, &elements, &format, output_path_deref)?;
             return Ok(());
         }
 
@@ -424,14 +471,14 @@ pub async fn execute(
                 debug!("保存歌词缓存失败: {}", e);
             }
 
-            let json_content = lyrics_output.to_json()?;
-
-            if let Some(output_path) = output {
-                write_output_to_file(&output_path, &json_content)?;
-                info!("已输出到文件: {}", output_path);
-            } else {
-                println!("{}", json_content);
-            }
+            format_and_output(
+                &selected_result.found_title,
+                &selected_result.found_artist,
+                &selected_result.lyrics_url,
+                &selected_result.ruby_annotations,
+                &format,
+                output_path_deref,
+            )?;
         } else {
             let output =
                 ErrorOutput::error(selected_result.error.as_deref().unwrap_or("获取歌词失败"));
@@ -489,14 +536,23 @@ pub async fn execute(
                     cache_dir.as_ref(),
                 )?;
 
-                let json_content = cached_lyrics.to_json()?;
-
-                if let Some(output_path) = output {
-                    write_output_to_file(&output_path, &json_content)?;
-                    info!("已输出到文件: {}", output_path);
-                } else {
-                    println!("{}", json_content);
-                }
+                let title_str = cached_lyrics.title.as_deref().unwrap_or("");
+                let artist_str = cached_lyrics.artist.as_deref().unwrap_or("");
+                let url_str = cached_lyrics.url.as_deref().unwrap_or("");
+                let elements: Vec<LyricElement> = cached_lyrics
+                    .lyrics
+                    .as_ref()
+                    .map(|content| {
+                        content.lines.iter().flat_map(|line| {
+                            line.units.iter().map(|e| LyricElement {
+                                element_type: e.element_type.clone(),
+                                base: e.base.clone(),
+                                ruby: e.ruby.clone(),
+                            })
+                        }).collect()
+                    })
+                    .unwrap_or_default();
+                format_and_output(title_str, artist_str, url_str, &elements, &format, output_path_deref)?;
                 return Ok(());
             }
 
@@ -534,14 +590,14 @@ pub async fn execute(
                     debug!("保存歌词缓存失败: {}", e);
                 }
 
-                let json_content = lyrics_output.to_json()?;
-
-                if let Some(output_path) = output {
-                    write_output_to_file(&output_path, &json_content)?;
-                    info!("已输出到文件: {}", output_path);
-                } else {
-                    println!("{}", json_content);
-                }
+                format_and_output(
+                    &selected_result.found_title,
+                    &selected_result.found_artist,
+                    &selected_result.lyrics_url,
+                    &selected_result.ruby_annotations,
+                    &format,
+                    output_path_deref,
+                )?;
             } else {
                 let output =
                     ErrorOutput::error(selected_result.error.as_deref().unwrap_or("获取歌词失败"));
