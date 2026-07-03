@@ -1,0 +1,37 @@
+// ============================================================
+// Ruby / Furigana Rendering
+// ============================================================
+
+.lyricBody span.ruby {
+  margin-bottom: 0.55em;
+  display: inline-table;
+  position: relative;
+  vertical-align: bottom;
+}
+
+.lyricBody span.ruby span.rb {
+  display: table-row;
+  position: relative;
+  line-height: 1.2;
+}
+
+.lyricBody span.ruby span.rt {
+  display: table-header-group;
+  line-height: 1.8;
+  color: var(--ruby-color);
+  white-space: nowrap;
+  text-align: center;
+  letter-spacing: -0.001em;
+  transition: color var(--motion-slow) ease;
+}
+
+// Font size classes
+.lyricBody div.medium { font-size: 17px; }
+.lyricBody div.medium span.ruby span.rt { font-size: 11px; }
+
+.lyricBody div.small { font-size: 13px; }
+.lyricBody div.small span.ruby span.rt { font-size: 7px; }
+
+.lyricBody div.large { font-size: 21px; }
+.lyricBody div.large span.ruby { line-height: 2.6; }
+.lyricBody div.large span.ruby span.rt { font-size: 14px; }
