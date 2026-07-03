@@ -38,6 +38,7 @@ import { confirmClearAllCaches, clearAllCaches } from './cache.js';
 import { exportLyricsToFile, getExportData } from './export.js';
 import { initBackButton, initBackGesture, handleBack } from './back-gesture.js';
 import { initBottomMenu } from './bottom-menu.js';
+import { initStarfield } from './starfield.js';
 import type { AppSettings } from './types.js';
 
 // ==================== Salt Player Launch Flow ====================
@@ -261,6 +262,9 @@ function init(): void {
 
   // Sync button states
   updateButtonStates();
+
+  // Init starfield canvas
+  initStarfield();
 
   void setBackendLspLogging(settings.lspLogEnabled === true);
   void syncLspSettings();

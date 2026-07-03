@@ -9,6 +9,7 @@ import { confirmClearAllCaches, clearAllCaches } from './cache.js';
 import { exportLyricsToFile, getExportData } from './export.js';
 import { initBackButton, initBackGesture, handleBack } from './back-gesture.js';
 import { initBottomMenu } from './bottom-menu.js';
+import { initStarfield } from './starfield.js';
 // ==================== Salt Player Launch Flow ====================
 async function checkSaltLaunchRequest() {
     if (!isTauriEnv())
@@ -200,6 +201,8 @@ function init() {
     }
     // Sync button states
     updateButtonStates();
+    // Init starfield canvas
+    initStarfield();
     void setBackendLspLogging(settings.lspLogEnabled === true);
     void syncLspSettings();
     void tauriReady.then(checkSaltLaunchRequest);
