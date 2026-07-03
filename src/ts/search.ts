@@ -10,7 +10,7 @@ import {
   resultLongPressTriggered, setResultLongPressTriggered,
 } from './songs.js';
 import { escapeHtml } from './utils.js';
-import { exportLyricsToFile, type ExportData } from './export.js';
+import { setExportData, type ExportData } from './export.js';
 
 // ==================== Search State ====================
 
@@ -653,13 +653,13 @@ async function handleSelectResult(index: number): Promise<void> {
       updateButtonStates();
       router.navigate('lyrics', { resetScroll: true });
 
-      (window as any).__currentLyricsExportData = {
+      setExportData({
         title: result.found_title,
         artist: result.found_artist,
         lyricsUrl: result.lyrics_url,
         rubyAnnotations: result.ruby_annotations,
         coverUrl: result.cover_url ?? null,
-      } satisfies ExportData;
+      });
     } else {
       void appendAppLspLog(
         'lyrics',

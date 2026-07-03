@@ -1,0 +1,10 @@
+{
+  "identifier": "default",
+  "description": "Default capabilities for UtaBuild",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "dialog:allow-save"
+  ]
+}

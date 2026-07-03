@@ -1,4 +1,4 @@
-import { invoke } from './tauri';
+import { invoke, isTauriEnv } from './tauri';
 import type { LyricElement } from './types';
 
 export interface ExportData {
@@ -9,32 +9,41 @@ export interface ExportData {
   coverUrl: string | null;
 }
 
-function downloadBlob(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+let currentExportData: ExportData | null = null;
+
+export function setExportData(data: ExportData): void {
+  currentExportData = data;
+}
+
+export function getExportData(): ExportData | null {
+  return currentExportData;
+}
+
+function defaultFilename(data: ExportData): string {
+  return `${data.artist ?? 'Unknown'} - ${data.title}.html`
+    .replace(/[<>:"/\\|?*]/g, '_');
 }
 
 export async function exportLyricsToFile(data: ExportData): Promise<void> {
-  try {
-    const html = await invoke<string>('export_lyrics_html', {
-      title: data.title,
-      artist: data.artist,
-      lyricsUrl: data.lyricsUrl,
-      rubyAnnotations: data.rubyAnnotations,
-      coverUrl: data.coverUrl,
-    });
-
-    const filename = `${data.artist ?? 'Unknown'} - ${data.title}.html`
-      .replace(/[<>:"/\\|?*]/g, '_');
-    downloadBlob(html, filename, 'text/html');
-  } catch (error) {
-    console.error('导出失败:', error);
+  if (isTauriEnv()) {
+    const dialog = (window as any).__TAURI__?.dialog;
+    if (dialog?.save) {
+      const path = await dialog.save({
+        defaultPath: defaultFilename(data),
+        filters: [{ name: 'HTML', extensions: ['html'] }],
+      });
+      if (!path) return;
+      await invoke('export_lyrics_html', {
+        title: data.title,
+        artist: data.artist,
+        lyricsUrl: data.lyricsUrl,
+        rubyAnnotations: data.rubyAnnotations,
+        coverUrl: data.coverUrl,
+        outputPath: path,
+      });
+      return;
+    }
   }
+  console.warn('Native save dialog unavailable, export skipped');
+  throw new Error('Native save dialog unavailable');
 }

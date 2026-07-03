@@ -1152,7 +1152,7 @@ async fn set_lsp_settings(
     )
 }
 
-/// 将歌词数据渲染为 HTML 字符串，供前端导出使用
+/// 将歌词数据渲染为 HTML 并写入指定文件路径
 #[tauri::command]
 async fn export_lyrics_html(
     title: String,
@@ -1160,7 +1160,8 @@ async fn export_lyrics_html(
     lyrics_url: String,
     ruby_annotations: Vec<utabuild_cli::LyricElement>,
     cover_url: Option<String>,
-) -> Result<String, String> {
+    output_path: String,
+) -> Result<(), String> {
     let artist = artist.unwrap_or_default();
     let html = utabuild_cli::output_html::render_lyrics_html(
         &title,
@@ -1169,13 +1170,15 @@ async fn export_lyrics_html(
         &ruby_annotations,
         cover_url.as_deref(),
     );
-    Ok(html)
+    std::fs::write(&output_path, html).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             #[cfg(debug_assertions)]
             if let Some(window) = app.get_webview_window("main") {

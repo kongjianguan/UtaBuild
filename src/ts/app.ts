@@ -35,7 +35,7 @@ import {
   viewLspLogs,
 } from './lsp.js';
 import { confirmClearAllCaches, clearAllCaches } from './cache.js';
-import { exportLyricsToFile, type ExportData } from './export.js';
+import { exportLyricsToFile, getExportData } from './export.js';
 import { initBackButton, initBackGesture, handleBack } from './back-gesture.js';
 import { initBottomMenu } from './bottom-menu.js';
 import type { AppSettings } from './types.js';
@@ -179,9 +179,17 @@ function initControls(): void {
   const exportBtn = document.getElementById('export-lyrics-btn');
   if (exportBtn) {
     exportBtn.addEventListener('click', async () => {
-      const data = (window as any).__currentLyricsExportData as ExportData | undefined;
+      const data = getExportData();
       if (!data) return;
-      await exportLyricsToFile(data);
+      const btn = exportBtn as HTMLButtonElement;
+      btn.disabled = true;
+      try {
+        await exportLyricsToFile(data);
+      } catch (err) {
+        showError(`エクスポートに失敗しました: ${err}`);
+      } finally {
+        btn.disabled = false;
+      }
     });
   }
 

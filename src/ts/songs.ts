@@ -3,7 +3,7 @@ import { invoke } from './tauri.js';
 import { shouldUseCache, selectedArtworkSource } from './settings.js';
 import { el, $$, showLoading, hideLoading, showError, router, updateButtonStates, currentPageScrollY, setBottomMenuAutoHidden } from './dom.js';
 import { renderLyrics } from './ruby.js';
-import { exportLyricsToFile, type ExportData } from './export.js';
+import { exportLyricsToFile, setExportData, type ExportData } from './export.js';
 
 // ==================== State ====================
 
@@ -640,13 +640,13 @@ export async function openSavedLyrics(url: string): Promise<void> {
     updateButtonStates();
     router.navigate('lyrics', { resetScroll: true });
 
-    (window as any).__currentLyricsExportData = {
+    setExportData({
       title: result.found_title,
       artist: result.found_artist,
       lyricsUrl: url,
       rubyAnnotations: result.ruby_annotations as LyricElement[],
       coverUrl: (result as any).cover_url ?? null,
-    } satisfies ExportData;
+    });
   } catch (err) {
     console.error('Open saved lyrics error:', err);
     showError(`保存済み歌詞の読み込みに失敗しました: ${err}`);
