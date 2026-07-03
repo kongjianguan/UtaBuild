@@ -72,6 +72,8 @@ function onThemeChange(theme) {
     }
 }
 export function initStarfield() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+        return;
     canvas = document.getElementById('mygo-stars');
     if (!canvas)
         return;

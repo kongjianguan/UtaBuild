@@ -82,6 +82,8 @@ function onThemeChange(theme: string): void {
 }
 
 export function initStarfield(): void {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
   canvas = document.getElementById('mygo-stars') as HTMLCanvasElement;
   if (!canvas) return;
   ctx = canvas.getContext('2d');
