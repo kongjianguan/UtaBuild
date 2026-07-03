@@ -1,0 +1,41 @@
+// ============================================================
+// UtaBuild Sass Mixins
+// ============================================================
+
+/// Apply rules only within a specific theme.
+/// Usage: @include theme(dark) { --bg: #000; }
+@mixin theme($name) {
+  body[data-theme="#{$name}"] & {
+    @content;
+  }
+}
+
+/// Frosted glass backdrop.
+/// Usage: @include glass(18px);
+@mixin glass($blur: 18px, $saturate: 150%) {
+  backdrop-filter: blur($blur) saturate($saturate);
+  -webkit-backdrop-filter: blur($blur) saturate($saturate);
+}
+
+/// Focus-visible ring.
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+}
+
+/// Truncate single-line text with ellipsis.
+@mixin text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/// Reduced motion: disable animations.
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}
