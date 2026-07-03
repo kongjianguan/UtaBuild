@@ -18,7 +18,11 @@ node_modules/
 Thumbs.db
 
 # Generated Android build
-src-tauri/gen/
+src-tauri/gen/*
+!src-tauri/gen/android/
+src-tauri/gen/android/tauri.settings.gradle
+src-tauri/gen/android/**/build/
+src-tauri/gen/android/**/.gradle/
 
 # Logs
 *.log

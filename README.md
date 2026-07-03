@@ -127,11 +127,44 @@ cargo tauri build
 # Linux: src-tauri/target/release/bundle/deb/ 或 AppImage
 ```
 
+### Android 镜像配置（中国大陆用户必读）
+
+由于网络原因，中国大陆用户需要配置 Gradle 和 Cargo 镜像以加速下载。
+
+#### Cargo 镜像
+
+在 `%USERPROFILE%\.cargo\config.toml`（Windows）或 `~/.cargo/config.toml`（Linux/macOS）中添加：
+
+```toml
+[source.crates-io]
+replace-with = 'rsproxy-sparse'
+
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/index/"
+
+[net]
+git-fetch-with-cli = true
+```
+
+#### Gradle Wrapper 镜像
+
+`cargo tauri android init` 生成 Android 项目后，修改 `src-tauri/gen/android/gradle/wrapper/gradle-wrapper.properties`：
+
+```properties
+distributionUrl=https\://mirrors.cloud.tencent.com/gradle/gradle-8.14.3-bin.zip
+```
+
+备用镜像（阿里云）：
+```properties
+distributionUrl=https\://mirrors.aliyun.com/gradle/distributions/gradle-8.14.3-bin.zip
+```
+
 ### Android APK
 
 ```bash
 # 1. 如果尚未初始化
 cargo tauri android init
+# ↓ 中国大陆用户：按上方说明配置 Cargo/Gradle 镜像后再继续 ↓
 
 # 2. （可选）注入 LSPosed 模块代码（与 Salt Player 集成）
 scripts/integrate-lsposed-into-tauri-android.sh
