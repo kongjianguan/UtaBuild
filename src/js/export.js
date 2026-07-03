@@ -1,4 +1,4 @@
-import { invoke } from './tauri';
+import { invoke } from './tauri.js';
 let currentExportData = null;
 export function setExportData(data) {
     currentExportData = data;

@@ -1,4 +1,4 @@
-import { invoke } from './tauri';
+import { invoke } from './tauri.js';
 import type { LyricElement } from './types';
 
 export interface ExportData {
