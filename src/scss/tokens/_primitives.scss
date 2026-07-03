@@ -1,0 +1,36 @@
+// ============================================================
+// Shared Primitive Tokens (not theme-dependent)
+// Scale values used across all themes.
+// ============================================================
+
+:root {
+  // Spacing scale (4px step)
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  // Radius scale
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  // Font sizes
+  --font-xs: 0.75rem;
+  --font-sm: 0.85rem;
+  --font-md: 0.95rem;
+  --font-lg: 1.15rem;
+  --font-xl: 1.5rem;
+
+  // Motion durations
+  --motion-fast: 0.15s;
+  --motion-base: 0.25s;
+  --motion-slow: 0.35s;
+}

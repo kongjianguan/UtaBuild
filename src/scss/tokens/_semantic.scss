@@ -1,0 +1,97 @@
+// ============================================================
+// Semantic Tokens
+// Maps primitive theme colors to theme-agnostic names.
+// All components reference ONLY these names.
+// ============================================================
+
+// --- Dark theme (default) ---
+:root {
+  // Background
+  --bg: var(--prim-dark-bg);
+  --bg-secondary: var(--prim-dark-bg-secondary);
+  --surface: var(--prim-dark-surface);
+  --surface-hover: var(--prim-dark-surface-hover);
+  --surface-elevated: var(--prim-dark-surface-elevated);
+
+  // Text
+  --text: var(--prim-dark-text);
+  --text-secondary: var(--prim-dark-text-secondary);
+  --text-muted: var(--prim-dark-text-muted);
+
+  // Ruby
+  --ruby-color: var(--prim-dark-ruby-color);
+
+  // Borders
+  --border: var(--prim-dark-border);
+  --border-focus: var(--prim-dark-border-focus);
+
+  // Primary
+  --primary: var(--prim-dark-primary);
+  --primary-hover: var(--prim-dark-primary-hover);
+  --primary-glow: var(--prim-dark-primary-glow);
+  --primary-dim: var(--prim-dark-primary-dim);
+
+  // Danger
+  --danger: var(--prim-dark-danger);
+  --danger-bg: var(--prim-dark-danger-bg);
+
+  // Shadows
+  --shadow-sm: var(--prim-dark-shadow-sm);
+  --shadow-md: var(--prim-dark-shadow-md);
+  --shadow-lg: var(--prim-dark-shadow-lg);
+}
+
+// --- Light theme ---
+body[data-theme="light"] {
+  --bg: var(--prim-light-bg);
+  --bg-secondary: var(--prim-light-bg-secondary);
+  --surface: var(--prim-light-surface);
+  --surface-hover: var(--prim-light-surface-hover);
+  --surface-elevated: var(--prim-light-surface-elevated);
+  --text: var(--prim-light-text);
+  --text-secondary: var(--prim-light-text-secondary);
+  --text-muted: var(--prim-light-text-muted);
+  --ruby-color: var(--prim-light-ruby-color);
+  --border: var(--prim-light-border);
+  --border-focus: var(--prim-light-border-focus);
+  --primary: var(--prim-light-primary);
+  --primary-hover: var(--prim-light-primary-hover);
+  --primary-glow: var(--prim-light-primary-glow);
+  --primary-dim: var(--prim-light-primary-dim);
+  --danger: var(--prim-light-danger);
+  --danger-bg: var(--prim-light-danger-bg);
+  --shadow-sm: var(--prim-light-shadow-sm);
+  --shadow-md: var(--prim-light-shadow-md);
+  --shadow-lg: var(--prim-light-shadow-lg);
+}
+
+// --- MyGO theme ---
+body[data-theme="mygo"] {
+  --bg: var(--prim-mygo-bg);
+  --bg-secondary: var(--prim-mygo-bg-secondary);
+  --surface: var(--prim-mygo-surface);
+  --surface-hover: var(--prim-mygo-surface-hover);
+  --surface-elevated: var(--prim-mygo-surface-elevated);
+  --text: var(--prim-mygo-text);
+  --text-secondary: var(--prim-mygo-text-secondary);
+  --text-muted: var(--prim-mygo-text-muted);
+  --ruby-color: var(--prim-mygo-ruby-color);
+  --border: var(--prim-mygo-border);
+  --border-focus: var(--prim-mygo-border-focus);
+  --primary: var(--prim-mygo-primary);
+  --primary-hover: var(--prim-mygo-primary-hover);
+  --primary-glow: var(--prim-mygo-primary-glow);
+  --primary-dim: var(--prim-mygo-primary-dim);
+  --danger: var(--prim-mygo-danger);
+  --danger-bg: var(--prim-mygo-danger-bg);
+  --shadow-sm: var(--prim-mygo-shadow-sm);
+  --shadow-md: var(--prim-mygo-shadow-md);
+  --shadow-lg: var(--prim-mygo-shadow-lg);
+
+  // Member accent colors (MyGO only)
+  --accent-tomori: var(--prim-mygo-accent-tomori);
+  --accent-anon: var(--prim-mygo-accent-anon);
+  --accent-rana: var(--prim-mygo-accent-rana);
+  --accent-soyo: var(--prim-mygo-accent-soyo);
+  --accent-taki: var(--prim-mygo-accent-taki);
+}
