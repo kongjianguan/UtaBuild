@@ -1,0 +1,33 @@
+// ============================================================
+// Theme: Light (Product Tool)
+// Direction: Mirror-inverse of Dark.
+// ============================================================
+
+body[data-theme="light"] {
+  --prim-light-bg: #ffffff;
+  --prim-light-bg-secondary: #f6f8fa;
+  --prim-light-surface: #f0f2f5;
+  --prim-light-surface-hover: #e8eaed;
+  --prim-light-surface-elevated: #ffffff;
+
+  --prim-light-text: #1f2328;
+  --prim-light-text-secondary: #656d76;
+  --prim-light-text-muted: #8c959f;
+
+  --prim-light-ruby-color: #656d76;
+
+  --prim-light-border: rgba(31, 35, 40, 0.08);
+  --prim-light-border-focus: rgba(9, 105, 218, 0.30);
+
+  --prim-light-primary: #0969da;
+  --prim-light-primary-hover: #0860ca;
+  --prim-light-primary-glow: rgba(9, 105, 218, 0.20);
+  --prim-light-primary-dim: rgba(9, 105, 218, 0.08);
+
+  --prim-light-danger: #cf222e;
+  --prim-light-danger-bg: rgba(207, 34, 46, 0.08);
+
+  --prim-light-shadow-sm: 0 1px 3px rgba(31, 35, 40, 0.05), 0 0 0 1px rgba(31, 35, 40, 0.04);
+  --prim-light-shadow-md: 0 4px 14px rgba(31, 35, 40, 0.07);
+  --prim-light-shadow-lg: 0 8px 28px rgba(31, 35, 40, 0.10);
+}

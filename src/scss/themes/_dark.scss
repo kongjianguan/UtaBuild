@@ -1,0 +1,40 @@
+// ============================================================
+// Theme: Dark (Product Tool)
+// Direction: Linear / Raycast — neutral slate base.
+// ============================================================
+
+:root {
+  // Background
+  --prim-dark-bg: #0d1117;
+  --prim-dark-bg-secondary: #161b22;
+  --prim-dark-surface: #1c2128;
+  --prim-dark-surface-hover: #242a33;
+  --prim-dark-surface-elevated: #2a313a;
+
+  // Text
+  --prim-dark-text: #e6edf3;
+  --prim-dark-text-secondary: #8b949e;
+  --prim-dark-text-muted: #656d76;
+
+  // Ruby
+  --prim-dark-ruby-color: #7d8590;
+
+  // Borders
+  --prim-dark-border: rgba(240, 246, 252, 0.08);
+  --prim-dark-border-focus: rgba(68, 147, 248, 0.35);
+
+  // Primary
+  --prim-dark-primary: #4493f8;
+  --prim-dark-primary-hover: #58a6ff;
+  --prim-dark-primary-glow: rgba(68, 147, 248, 0.25);
+  --prim-dark-primary-dim: rgba(68, 147, 248, 0.10);
+
+  // Danger
+  --prim-dark-danger: #f85149;
+  --prim-dark-danger-bg: rgba(248, 81, 73, 0.12);
+
+  // Shadows
+  --prim-dark-shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(0, 0, 0, 0.2);
+  --prim-dark-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --prim-dark-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+}

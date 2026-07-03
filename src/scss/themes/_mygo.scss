@@ -1,0 +1,47 @@
+// ============================================================
+// Theme: MyGO!!!!! (Immersive Anime Band)
+// Direction: Deep night-sky + five-member color accents.
+// ============================================================
+
+body[data-theme="mygo"] {
+  // Background
+  --prim-mygo-bg: #080d1a;
+  --prim-mygo-bg-secondary: #0e1627;
+  --prim-mygo-surface: rgba(18, 28, 48, 0.82);
+  --prim-mygo-surface-hover: rgba(28, 40, 62, 0.88);
+  --prim-mygo-surface-elevated: rgba(24, 34, 54, 0.90);
+
+  // Text
+  --prim-mygo-text: #e8edf5;
+  --prim-mygo-text-secondary: #8a9bc0;
+  --prim-mygo-text-muted: #6a7da8;
+
+  // Ruby
+  --prim-mygo-ruby-color: #7d8fb8;
+
+  // Borders
+  --prim-mygo-border: rgba(119, 187, 221, 0.13);
+  --prim-mygo-border-focus: rgba(119, 187, 221, 0.35);
+
+  // Primary (Tomori blue)
+  --prim-mygo-primary: #77BBDD;
+  --prim-mygo-primary-hover: #99CCEE;
+  --prim-mygo-primary-glow: rgba(119, 187, 221, 0.35);
+  --prim-mygo-primary-dim: rgba(119, 187, 221, 0.10);
+
+  // Danger (Anon pink)
+  --prim-mygo-danger: #FF8899;
+  --prim-mygo-danger-bg: rgba(255, 136, 153, 0.12);
+
+  // Member accent colors
+  --prim-mygo-accent-tomori: #77BBDD;
+  --prim-mygo-accent-anon: #FF8899;
+  --prim-mygo-accent-rana: #77DD77;
+  --prim-mygo-accent-soyo: #FFBB12;
+  --prim-mygo-accent-taki: #9988CC;
+
+  // Shadows (with blue glow)
+  --prim-mygo-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 18px rgba(119, 187, 221, 0.04);
+  --prim-mygo-shadow-md: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 28px rgba(119, 187, 221, 0.06);
+  --prim-mygo-shadow-lg: 0 10px 36px rgba(0, 0, 0, 0.45), 0 0 40px rgba(119, 187, 221, 0.08);
+}
