@@ -3,6 +3,7 @@ import { invoke } from './tauri.js';
 import { shouldUseCache, selectedArtworkSource } from './settings.js';
 import { el, $$, showLoading, hideLoading, showError, router, updateButtonStates, currentPageScrollY, setBottomMenuAutoHidden } from './dom.js';
 import { renderLyrics } from './ruby.js';
+import { exportLyricsToFile, type ExportData } from './export.js';
 
 // ==================== State ====================
 
@@ -99,6 +100,29 @@ export function buildSongItem(song: SavedSong): HTMLButtonElement {
 
   body.append(badge, titleEl, meta);
   button.append(art, body);
+
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'song-item__export';
+  exportBtn.setAttribute('aria-label', 'エクスポート');
+  exportBtn.textContent = '⤓';
+  exportBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try {
+      const lyricsData = await invoke<any>('get_saved_lyrics', { url: song.lyrics_url });
+      const data: ExportData = {
+        title: lyricsData.found_title,
+        artist: lyricsData.found_artist,
+        lyricsUrl: lyricsData.lyrics_url,
+        rubyAnnotations: lyricsData.ruby_annotations,
+        coverUrl: lyricsData.cover_url ?? null,
+      };
+      await exportLyricsToFile(data);
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
+  });
+  button.append(exportBtn);
+
   return button;
 }
 
@@ -615,6 +639,14 @@ export async function openSavedLyrics(url: string): Promise<void> {
     el<HTMLElement>('lyrics-body').appendChild(renderLyrics(result.ruby_annotations as LyricElement[]));
     updateButtonStates();
     router.navigate('lyrics', { resetScroll: true });
+
+    (window as any).__currentLyricsExportData = {
+      title: result.found_title,
+      artist: result.found_artist,
+      lyricsUrl: url,
+      rubyAnnotations: result.ruby_annotations as LyricElement[],
+      coverUrl: (result as any).cover_url ?? null,
+    } satisfies ExportData;
   } catch (err) {
     console.error('Open saved lyrics error:', err);
     showError(`保存済み歌詞の読み込みに失敗しました: ${err}`);

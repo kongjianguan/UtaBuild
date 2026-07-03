@@ -563,7 +563,7 @@ body.songs-first-level-scrollbar-disabled::-webkit-scrollbar {
 .song-item {
   width: 100%;
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 64px 1fr auto;
   align-items: center;
   gap: 14px;
   padding: 12px;
@@ -634,6 +634,29 @@ body.songs-first-level-scrollbar-disabled::-webkit-scrollbar {
   border-color: var(--danger);
   box-shadow: 0 0 0 3px var(--danger-bg), var(--shadow-md);
   transform: translateX(4px) scale(0.995);
+}
+
+.song-item__export {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: border-color 0.16s, color 0.16s, background 0.16s;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.song-item__export:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--surface-hover);
 }
 
 .result-item.is-menu-open {
@@ -907,6 +930,25 @@ button.secondary.active {
 button.secondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+button.primary {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #3388BB, #2a7aaa);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(51, 136, 187, 0.22);
+  transition: background 0.2s, transform 0.12s, box-shadow 0.2s;
+}
+
+button.primary:hover {
+  background: linear-gradient(135deg, #4099CC, #3388BB);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(51, 136, 187, 0.28);
 }
 
 #back-btn,

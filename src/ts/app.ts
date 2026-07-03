@@ -35,6 +35,7 @@ import {
   viewLspLogs,
 } from './lsp.js';
 import { confirmClearAllCaches, clearAllCaches } from './cache.js';
+import { exportLyricsToFile, type ExportData } from './export.js';
 import { initBackButton, initBackGesture, handleBack } from './back-gesture.js';
 import { initBottomMenu } from './bottom-menu.js';
 import type { AppSettings } from './types.js';
@@ -173,6 +174,16 @@ function initControls(): void {
       updateButtonStates();
     });
   });
+
+  // Export lyrics button
+  const exportBtn = document.getElementById('export-lyrics-btn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', async () => {
+      const data = (window as any).__currentLyricsExportData as ExportData | undefined;
+      if (!data) return;
+      await exportLyricsToFile(data);
+    });
+  }
 
   // Source tab switching
   el<HTMLElement>('source-tabs').addEventListener('click', (event) => {
