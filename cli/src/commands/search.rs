@@ -19,14 +19,14 @@ use tracing::{debug, info};
 ///
 /// - `url`: 歌词页面的 URL
 /// - `output`: 可选的输出文件路径
-/// - `output_default`: 是否使用默认文件名输出
-/// - `_cache_dir`: 可选的缓存目录路径
+/// - `format`: 输出格式（"json" 或 "html"）
 pub async fn execute_from_url(
     url: Option<String>,
     output: Option<String>,
-    output_default: bool,
+    format: String,
     _cache_dir: Option<PathBuf>,
 ) -> anyhow::Result<()> {
+    let _format = format;
     let url = match url {
         Some(u) if !u.trim().is_empty() => u.trim().to_string(),
         _ => {
@@ -45,12 +45,6 @@ pub async fn execute_from_url(
         if let Some(output_path) = output {
             write_output_to_file(&output_path, &json_content)?;
             info!("已输出到文件: {}", output_path);
-        } else if output_default {
-            let title = cached_lyrics.title.as_deref().unwrap_or("unknown");
-            let artist = cached_lyrics.artist.as_deref().unwrap_or("unknown");
-            let filename = generate_default_filename(artist, title);
-            write_output_to_file(&filename, &json_content)?;
-            info!("已输出到文件: {}", filename);
         } else {
             println!("{}", json_content);
         }
@@ -79,10 +73,6 @@ pub async fn execute_from_url(
             if let Some(output_path) = output {
                 write_output_to_file(&output_path, &json_content)?;
                 info!("已输出到文件: {}", output_path);
-            } else if output_default {
-                let filename = generate_default_filename("", "");
-                write_output_to_file(&filename, &json_content)?;
-                info!("已输出到文件: {}", filename);
             } else {
                 println!("{}", json_content);
             }
@@ -145,6 +135,35 @@ fn write_output_to_file(path: &str, content: &str) -> anyhow::Result<()> {
 
     fs::write(path, content)?;
     Ok(())
+}
+
+/// 根据格式验证并补全输出文件路径。
+///
+/// 如果 `output_path` 有后缀且与 `format` 不匹配，返回错误。
+/// 如果 `output_path` 无后缀或后缀不是 json/html，自动补上格式对应的后缀。
+///
+/// - `output_path`: 用户指定的输出文件路径
+/// - `format`: 输出格式（"json" 或 "html"）
+/// 返回: 验证通过并可能补全后缀的文件路径
+pub fn validate_output_format(output_path: &str, format: &str) -> anyhow::Result<String> {
+    let path = std::path::Path::new(output_path);
+    match path.extension().and_then(|ext| ext.to_str()) {
+        Some(ext) => {
+            let lower = ext.to_lowercase();
+            match (format, lower.as_str()) {
+                ("json", "json") | ("html", "html") => Ok(output_path.to_string()),
+                ("json", "html") | ("html", "json") => {
+                    return Err(anyhow::anyhow!(
+                        "格式冲突: --format {} 与文件后缀 .{} 不匹配",
+                        format,
+                        ext
+                    ));
+                }
+                _ => Ok(format!("{}.{}", output_path, format)),
+            }
+        }
+        None => Ok(format!("{}.{}", output_path, format)),
+    }
 }
 
 /// 判断搜索结果的标题和艺术家是否与查询条件精确匹配。
@@ -293,7 +312,7 @@ async fn parallel_search_all(
 /// - `select`: 可选的选择索引
 /// - `cache_dir`: 可选的缓存目录路径
 /// - `output`: 可选的输出文件路径
-/// - `output_default`: 是否使用默认文件名输出
+/// - `format`: 输出格式（"json" 或 "html"）
 pub async fn execute(
     title: Option<String>,
     artist: Option<String>,
@@ -301,8 +320,9 @@ pub async fn execute(
     select: Option<u32>,
     cache_dir: Option<PathBuf>,
     output: Option<String>,
-    output_default: bool,
+    format: String,
 ) -> anyhow::Result<()> {
+    let _format = format;
     debug!(
         "执行搜索: title={:?}, artist={:?}, page={}, select={:?}",
         title, artist, page, select
@@ -372,12 +392,6 @@ pub async fn execute(
             if let Some(output_path) = output {
                 write_output_to_file(&output_path, &json_content)?;
                 info!("已输出到文件: {}", output_path);
-            } else if output_default {
-                let artist_str = cached_lyrics.artist.as_deref().unwrap_or("");
-                let title_str = cached_lyrics.title.as_deref().unwrap_or("");
-                let filename = generate_default_filename(artist_str, title_str);
-                write_output_to_file(&filename, &json_content)?;
-                info!("已输出到文件: {}", filename);
             } else {
                 println!("{}", json_content);
             }
@@ -415,13 +429,6 @@ pub async fn execute(
             if let Some(output_path) = output {
                 write_output_to_file(&output_path, &json_content)?;
                 info!("已输出到文件: {}", output_path);
-            } else if output_default {
-                let filename = generate_default_filename(
-                    &selected_result.found_artist,
-                    &selected_result.found_title,
-                );
-                write_output_to_file(&filename, &json_content)?;
-                info!("已输出到文件: {}", filename);
             } else {
                 println!("{}", json_content);
             }
@@ -487,12 +494,6 @@ pub async fn execute(
                 if let Some(output_path) = output {
                     write_output_to_file(&output_path, &json_content)?;
                     info!("已输出到文件: {}", output_path);
-                } else if output_default {
-                    let artist_str = cached_lyrics.artist.as_deref().unwrap_or("");
-                    let title_str = cached_lyrics.title.as_deref().unwrap_or("");
-                    let filename = generate_default_filename(artist_str, title_str);
-                    write_output_to_file(&filename, &json_content)?;
-                    info!("已输出到文件: {}", filename);
                 } else {
                     println!("{}", json_content);
                 }
@@ -538,13 +539,6 @@ pub async fn execute(
                 if let Some(output_path) = output {
                     write_output_to_file(&output_path, &json_content)?;
                     info!("已输出到文件: {}", output_path);
-                } else if output_default {
-                    let filename = generate_default_filename(
-                        &selected_result.found_artist,
-                        &selected_result.found_title,
-                    );
-                    write_output_to_file(&filename, &json_content)?;
-                    info!("已输出到文件: {}", filename);
                 } else {
                     println!("{}", json_content);
                 }
@@ -572,4 +566,55 @@ pub async fn execute(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod format_tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_output_format_json_match() {
+        let result = validate_output_format("output.json", "json").unwrap();
+        assert_eq!(result, "output.json");
+    }
+
+    #[test]
+    fn test_validate_output_format_html_match() {
+        let result = validate_output_format("output.html", "html").unwrap();
+        assert_eq!(result, "output.html");
+    }
+
+    #[test]
+    fn test_validate_output_format_conflict() {
+        let result = validate_output_format("output.json", "html");
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("格式冲突"));
+        assert!(err.contains("html"));
+        assert!(err.contains("json"));
+    }
+
+    #[test]
+    fn test_validate_output_format_conflict_reverse() {
+        let result = validate_output_format("output.html", "json");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_output_format_no_extension_json() {
+        let result = validate_output_format("output", "json").unwrap();
+        assert_eq!(result, "output.json");
+    }
+
+    #[test]
+    fn test_validate_output_format_no_extension_html() {
+        let result = validate_output_format("output", "html").unwrap();
+        assert_eq!(result, "output.html");
+    }
+
+    #[test]
+    fn test_validate_output_format_unknown_extension() {
+        let result = validate_output_format("output.txt", "html").unwrap();
+        assert_eq!(result, "output.txt.html");
+    }
 }

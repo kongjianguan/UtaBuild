@@ -38,7 +38,7 @@ pub enum HistoryAction {
 /// - `log_path`: 可选的日志文件路径
 /// - `cache_dir`: 可选的缓存目录路径
 /// - `output`: 可选的输出文件路径
-/// - `output_default`: 是否使用默认文件名输出
+/// - `format`: 输出格式（"json" 或 "html"）
 pub async fn handle_search(
     title: Option<String>,
     artist: Option<String>,
@@ -47,21 +47,12 @@ pub async fn handle_search(
     log_path: Option<PathBuf>,
     cache_dir: Option<PathBuf>,
     output: Option<String>,
-    output_default: bool,
+    format: String,
 ) -> anyhow::Result<()> {
     if log_path.is_some() {
         crate::logger::init_logger_with_pathbuf(log_path);
     }
-    search::execute(
-        title,
-        artist,
-        page,
-        select,
-        cache_dir,
-        output,
-        output_default,
-    )
-    .await
+    search::execute(title, artist, page, select, cache_dir, output, format).await
 }
 
 /// 处理通过 URL 获取歌词的命令
@@ -70,20 +61,20 @@ pub async fn handle_search(
 ///
 /// - `url`: 可选的歌词 URL
 /// - `output`: 可选的输出文件路径
-/// - `output_default`: 是否使用默认文件名输出
+/// - `format`: 输出格式（"json" 或 "html"）
 /// - `log_path`: 可选的日志文件路径
 /// - `cache_dir`: 可选的缓存目录路径
 pub async fn handle_url_lyrics(
     url: Option<String>,
     output: Option<String>,
-    output_default: bool,
+    format: String,
     log_path: Option<PathBuf>,
     cache_dir: Option<PathBuf>,
 ) -> anyhow::Result<()> {
     if log_path.is_some() {
         crate::logger::init_logger_with_pathbuf(log_path);
     }
-    search::execute_from_url(url, output, output_default, cache_dir).await
+    search::execute_from_url(url, output, format, cache_dir).await
 }
 
 /// 处理历史记录命令

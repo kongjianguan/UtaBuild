@@ -41,13 +41,13 @@ enum Commands {
         #[arg(short, long, help = "选择缓存中的结果索引")]
         select: Option<u32>,
 
+        /// 输出格式（json 或 html）
+        #[arg(short = 'f', long, default_value = "json", help = "输出格式（json 或 html）")]
+        format: String,
+
         /// 输出到指定路径文件
         #[arg(short, long, value_name = "PATH", help = "输出到指定路径文件")]
         output: Option<String>,
-
-        /// 按默认格式输出 (${artist} - ${title}.json)
-        #[arg(short = 'd', long, help = "按默认格式输出 (${artist} - ${title}.json)")]
-        output_default: bool,
 
         /// 启用日志
         #[arg(long, help = "启用日志")]
@@ -86,29 +86,19 @@ async fn main() -> anyhow::Result<()> {
             url,
             page,
             select,
+            format,
             output,
-            output_default,
             log,
             log_path,
             cache_dir,
         } => {
-            if url.is_some() {
-                // URL 模式：跳过搜索直接获取歌词
-                return handle_url_lyrics(
-                    url,
-                    output,
-                    output_default,
-                    log_path,
-                    cache_dir,
-                )
-                .await;
-            }
-            // 校验：--output 和 --output-default 不能同时使用
-            if output.is_some() && output_default {
-                eprintln!("错误: --output 和 --output-default 不能同时使用");
+            if !matches!(format.as_str(), "json" | "html") {
+                eprintln!("错误: --format 必须是 json 或 html");
                 std::process::exit(1);
             }
-            // 如果启用了日志但未指定路径，使用默认路径
+            if url.is_some() {
+                return handle_url_lyrics(url, output, format, log_path, cache_dir).await;
+            }
             let effective_log_path = if log {
                 log_path.or_else(|| Some(std::path::PathBuf::from("utabuild-cli.log")))
             } else {
@@ -122,7 +112,7 @@ async fn main() -> anyhow::Result<()> {
                 effective_log_path,
                 cache_dir,
                 output,
-                output_default,
+                format,
             )
             .await?;
         }
