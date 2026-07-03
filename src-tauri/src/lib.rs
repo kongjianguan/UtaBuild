@@ -1152,6 +1152,26 @@ async fn set_lsp_settings(
     )
 }
 
+/// 将歌词数据渲染为 HTML 字符串，供前端导出使用
+#[tauri::command]
+async fn export_lyrics_html(
+    title: String,
+    artist: Option<String>,
+    lyrics_url: String,
+    ruby_annotations: Vec<utabuild_cli::LyricElement>,
+    cover_url: Option<String>,
+) -> Result<String, String> {
+    let artist = artist.unwrap_or_default();
+    let html = utabuild_cli::output_html::render_lyrics_html(
+        &title,
+        &artist,
+        &lyrics_url,
+        &ruby_annotations,
+        cover_url.as_deref(),
+    );
+    Ok(html)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1203,6 +1223,7 @@ pub fn run() {
             append_lsp_log,
             get_lsp_logs,
             set_lsp_settings,
+            export_lyrics_html,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
