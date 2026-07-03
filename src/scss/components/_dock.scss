@@ -1,0 +1,140 @@
+// ============================================================
+// Bottom Navigation Dock
+// Dark/Light: simple solid bar with dot indicator
+// MyGO: liquid glass with backdrop-filter and caustics
+// ============================================================
+
+.bottom-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: var(--space-2) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bottom-menu__track {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-xl);
+  position: relative;
+  pointer-events: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+// ── Dark/Light active indicator: 3px dot ──
+.bottom-menu__slider {
+  position: absolute;
+  bottom: 3px;
+  height: 3px;
+  width: 3px;
+  border-radius: 50%;
+  background: var(--primary);
+  transition: left var(--motion-base) ease;
+}
+
+.bottom-menu__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 18px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--font-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: color var(--motion-fast), background var(--motion-fast);
+  position: relative;
+  z-index: 1;
+}
+
+.bottom-menu__item:hover {
+  color: var(--primary);
+}
+
+.bottom-menu__item.active {
+  color: var(--primary);
+}
+
+.bottom-menu__item:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+// ── MyGO: liquid glass dock ──
+body[data-theme="mygo"] .bottom-menu__track {
+  background: rgba(15, 24, 42, 0.38);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgba(119, 187, 221, 0.22);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 0 40px rgba(119, 187, 221, 0.06);
+}
+
+// MyGO: caustics on dock surface
+body[data-theme="mygo"] .bottom-menu__track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.7;
+  background:
+    radial-gradient(ellipse 50% 35% at 18% 22%, rgba(119, 187, 221, 0.10), transparent 60%),
+    radial-gradient(ellipse 35% 25% at 82% 12%, rgba(153, 136, 204, 0.06), transparent 50%),
+    radial-gradient(ellipse 45% 25% at 48% 88%, rgba(255, 187, 18, 0.05), transparent 60%),
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 35%,
+      transparent 65%,
+      rgba(0, 0, 0, 0.10) 100%);
+}
+
+// MyGO: active tab glow
+body[data-theme="mygo"] .bottom-menu__item.active {
+  color: var(--primary);
+  background: rgba(119, 187, 221, 0.10);
+  text-shadow: 0 0 8px rgba(119, 187, 221, 0.5);
+}
+
+// MyGO: bottom light bar
+body[data-theme="mygo"] .bottom-menu__slider {
+  width: 60%;
+  height: 1px;
+  border-radius: 0;
+  left: 20% !important;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(119, 187, 221, 0.35),
+    rgba(119, 187, 221, 0.15),
+    transparent
+  );
+  animation: dock-shimmer 4s ease-in-out infinite;
+}
+
+@keyframes dock-shimmer {
+  0%, 100% { opacity: 0.30; }
+  50% { opacity: 0.65; }
+}
+
+// ── Reduced motion ──
+@media (prefers-reduced-motion: reduce) {
+  .bottom-menu__slider {
+    animation: none;
+  }
+}
