@@ -1,0 +1,164 @@
+// ============================================================
+// Search View (app home)
+// ============================================================
+
+#search-header {
+  padding: var(--space-10) var(--space-4) var(--space-4);
+  text-align: center;
+}
+
+#search-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-1);
+}
+
+.subtitle {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.subtitle-note {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--space-6);
+}
+
+// Ruby sample pill — removed from search UI;
+// CSS preserved but will not match any visible element.
+// (Rules can be removed in a future cleanup.)
+
+.search-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 400px;
+  margin: 0 auto var(--space-8);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-form input {
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-secondary);
+  color: var(--text);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.search-form input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-form input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--primary-dim);
+}
+
+#search-btn {
+  padding: 10px 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: background var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+#search-btn:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 0 12px var(--primary-glow);
+}
+
+// Search history
+.search-history {
+  max-width: 400px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.search-history__title {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.search-history__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.search-history__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--primary-dim);
+  transition: background var(--motion-fast), border-color var(--motion-fast);
+  cursor: pointer;
+}
+
+.search-history__item:hover {
+  background: var(--surface-hover);
+  border-left-color: var(--primary);
+}
+
+.search-history__item .title {
+  font-size: var(--font-sm);
+  font-weight: 500;
+}
+
+.search-history__item .artist {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.search-history__item .remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: color var(--motion-fast);
+}
+
+.search-history__item .remove:hover {
+  color: var(--danger);
+}
+
+.search-history__empty {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--space-6) 0;
+}
+
+// MyGO: search history item with source-based member accent color
+// Applied dynamically by TS based on search source field.
+body[data-theme="mygo"] .search-history__item[data-source="utaten"] {
+  border-left-color: var(--accent-taki);
+}
+
+body[data-theme="mygo"] .search-history__item[data-source="qq_music"] {
+  border-left-color: var(--accent-rana);
+}
+
+body[data-theme="mygo"] .search-history__item[data-source="netease"] {
+  border-left-color: var(--accent-anon);
+}
