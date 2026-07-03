@@ -1,0 +1,167 @@
+// ============================================================
+// Settings View + LSP Settings + LSP Logs
+// ============================================================
+
+.settings-view,
+.lsp-settings-view {
+  padding: var(--space-4) var(--space-5) var(--space-8);
+}
+
+.settings-view h2,
+.lsp-settings-view h2 {
+  font-size: var(--font-lg);
+  margin-bottom: var(--space-1);
+}
+
+.settings-view > p,
+.lsp-settings-view > p {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--space-6);
+}
+
+.subpage-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.subpage-header button {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font-size: var(--font-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+
+.subpage-header button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--motion-fast), border-color var(--motion-fast);
+}
+
+.settings-item:hover {
+  border-color: var(--primary-dim);
+}
+
+.settings-item__text {
+  min-width: 0;
+}
+
+.settings-item__label {
+  display: block;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.settings-item__description {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.settings-item input[type="checkbox"] {
+  width: 40px;
+  height: 24px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.settings-item--select {
+  cursor: default;
+}
+
+.settings-select {
+  padding: 4px 8px;
+  font-size: var(--font-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.settings-item--button {
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.settings-subpanel {
+  padding-left: var(--space-4);
+}
+
+.settings-subpanel.hidden { display: none; }
+
+.settings-subpanel__button {
+  padding: 4px 14px;
+  font-size: var(--font-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+
+.settings-subpanel__button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+// LSP Log view
+.lsp-log-view {
+  padding: var(--space-4) var(--space-5);
+}
+
+.lsp-log-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.lsp-log-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lsp-log-frame {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+}
+
+.lsp-log-content {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: var(--space-3);
+  color: var(--text);
+  white-space: pre;
+  margin: 0;
+}
