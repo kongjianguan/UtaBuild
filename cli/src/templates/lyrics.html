@@ -5,48 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TITLE - ARTIST</title>
 <style>
-/* === Synced with src/css/style.css === */
-/* Theme variables: style.css:8-58 (dark), style.css:61-89 (light) */
-/* Ruby rendering: style.css:1146-1178 */
-/* Font sizes: style.css:1180-1207 */
-/* Controls: style.css:1099-1143 */
+/* === Synced with src/scss/ design system === */
+/* Three themes: dark (default), light, mygo */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --primary: #3388BB;
-  --primary-hover: #4099CC;
-  --bg: #060b16;
-  --bg-secondary: #0c1220;
-  --surface: #111b2e;
-  --surface-hover: #192540;
-  --text: #e2eaf5;
-  --text-secondary: #7a8faf;
-  --ruby-color: #7a8da0;
-  --border: rgba(51, 136, 187, 0.12);
+  --primary: #4493f8;
+  --primary-hover: #58a6ff;
+  --bg: #0d1117;
+  --bg-secondary: #161b22;
+  --surface: #1c2128;
+  --surface-hover: #242a33;
+  --text: #e6edf3;
+  --text-secondary: #8b949e;
+  --ruby-color: #7d8590;
+  --border: rgba(240, 246, 252, 0.08);
+  --border-focus: rgba(68, 147, 248, 0.35);
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.20);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.24);
+  --motion-fast: 0.15s;
+  --motion-slow: 0.35s;
 }
 
-body.light {
-  --bg: #f0f4fa;
-  --bg-secondary: #e4eaf2;
-  --surface: #ffffff;
-  --surface-hover: #f2f6fc;
-  --text: #1a2332;
-  --text-secondary: #4a5d78;
-  --ruby-color: #667a8a;
-  --border: rgba(51, 136, 187, 0.12);
+body[data-theme="light"] {
+  --primary: #0969da;
+  --primary-hover: #0860ca;
+  --bg: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --surface: #f0f2f5;
+  --surface-hover: #e8eaed;
+  --text: #1f2328;
+  --text-secondary: #656d76;
+  --ruby-color: #656d76;
+  --border: rgba(31, 35, 40, 0.08);
   --shadow-sm: 0 2px 8px rgba(51, 68, 102, 0.08);
   --shadow-md: 0 6px 18px rgba(51, 68, 102, 0.10);
 }
 
+body[data-theme="mygo"] {
+  --primary: #77BBDD;
+  --primary-hover: #99CCEE;
+  --bg: #080d1a;
+  --bg-secondary: #0e1627;
+  --surface: rgba(18, 28, 48, 0.82);
+  --surface-hover: rgba(28, 40, 62, 0.88);
+  --text: #e8edf5;
+  --text-secondary: #8a9bc0;
+  --ruby-color: #7d8fb8;
+  --border: rgba(119, 187, 221, 0.13);
+  --border-focus: rgba(119, 187, 221, 0.35);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
 body {
   font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", "Meiryo", sans-serif;
+  font-feature-settings: "palt";
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
   min-height: 100vh;
+  transition: background var(--motion-slow) ease, color var(--motion-slow) ease;
+}
+
+body[data-theme="mygo"] {
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(119, 187, 221, 0.06), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 75% 30%, rgba(255, 136, 153, 0.03), transparent),
+    radial-gradient(ellipse 35% 25% at 20% 60%, rgba(153, 136, 204, 0.04), transparent);
 }
 
 .container {
@@ -78,34 +105,38 @@ body {
   color: var(--text-secondary);
   font-size: 40px;
   overflow: hidden;
+  transition: border-color var(--motion-slow), box-shadow var(--motion-slow);
 }
 
 .cover-art.has-cover {
-  border-color: rgba(51, 136, 187, 0.20);
+  border-color: var(--border-focus);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
 }
 
-.header-info {
-  min-width: 0;
+body[data-theme="mygo"] .cover-art.has-cover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), 0 0 40px rgba(119, 187, 221, 0.12);
 }
+
+.header-info { min-width: 0; }
 
 .header-info h1 {
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 4px;
   line-height: 1.3;
+  letter-spacing: 0.02em;
 }
 
 .header-info h1 a {
   color: var(--text);
   text-decoration: none;
-  transition: color 0.16s, text-shadow 0.16s;
+  transition: color var(--motion-fast), text-shadow var(--motion-fast);
 }
 
 .header-info h1 a:hover,
 .header-info h1 a:focus-visible {
   color: var(--primary);
-  text-shadow: 0 0 12px var(--primary);
+  text-shadow: 0 0 14px rgba(68, 147, 248, 0.3);
   outline: none;
 }
 
@@ -120,12 +151,18 @@ body {
   flex-wrap: wrap;
   gap: 16px;
   justify-content: center;
-  padding: 12px;
+  padding: 10px 14px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
+  transition: background var(--motion-slow), border-color var(--motion-slow);
+  backdrop-filter: blur(12px);
+}
+
+body[data-theme="mygo"] .controls {
+  backdrop-filter: blur(20px) saturate(130%);
 }
 
 .control-group {
@@ -135,19 +172,23 @@ body {
 }
 
 .control-group span {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--text-secondary);
+  letter-spacing: 0.03em;
 }
 
 .control-group button {
-  padding: 4px 10px;
-  font-size: 0.8rem;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: border-color 0.16s, color 0.16s, background 0.16s;
+  transition: all var(--motion-fast) ease;
+  letter-spacing: 0.02em;
 }
 
 .control-group button:hover {
@@ -155,23 +196,39 @@ body {
   color: var(--primary);
 }
 
-.control-group button.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
+.control-group button:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
 }
 
-/* === Ruby Rendering (synced with style.css:1146-1207) === */
+.control-group button.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 12px rgba(68, 147, 248, 0.25);
+}
+
+body[data-theme="mygo"] .control-group button.active {
+  box-shadow: 0 0 16px rgba(119, 187, 221, 0.35);
+}
+
+/* === Ruby Rendering === */
 .lyricBody {
   user-select: none;
   letter-spacing: 1px;
   line-height: 2.3;
-  padding: 20px;
+  padding: 28px 24px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 24px;
+  border-radius: 20px;
   box-shadow: var(--shadow-md);
   min-height: 200px;
+  transition: background var(--motion-slow), border-color var(--motion-slow), box-shadow var(--motion-slow);
+  backdrop-filter: blur(8px);
+}
+
+body[data-theme="mygo"] .lyricBody {
+  backdrop-filter: blur(16px) saturate(110%);
 }
 
 .lyricBody span.ruby {
@@ -194,6 +251,7 @@ body {
   white-space: nowrap;
   text-align: center;
   letter-spacing: -0.001em;
+  transition: color var(--motion-slow);
 }
 
 .lyricBody div.medium { font-size: 17px; }
@@ -209,12 +267,13 @@ body {
   text-align: center;
   margin-top: 32px;
   color: var(--text-secondary);
-  font-size: 0.8rem;
-  opacity: 0.6;
+  font-size: 0.78rem;
+  opacity: 0.55;
+  letter-spacing: 0.04em;
 }
 </style>
 </head>
-<body class="dark">
+<body data-theme="dark">
 <div class="container">
 
 <div class="header">
@@ -227,15 +286,16 @@ body {
 
 <div class="controls">
   <div class="control-group">
-    <span>文字サイズ:</span>
+    <span>文字サイズ</span>
     <button data-size="small">小</button>
     <button data-size="medium" class="active">中</button>
     <button data-size="large">大</button>
   </div>
   <div class="control-group">
-    <span>テーマ:</span>
+    <span>テーマ</span>
     <button data-theme="dark" class="active">暗</button>
     <button data-theme="light">亮</button>
+    <button data-theme="mygo">MyGO</button>
   </div>
 </div>
 
@@ -259,6 +319,12 @@ RUBY_HTML
     });
   }
 
+  function applyTheme(theme) {
+    body.setAttribute('data-theme', theme);
+    setActive('[data-theme]', theme, 'theme');
+    try { localStorage.setItem('utabuild-theme', theme); } catch(e) {}
+  }
+
   document.querySelectorAll('[data-size]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var size = btn.dataset.size;
@@ -270,10 +336,7 @@ RUBY_HTML
 
   document.querySelectorAll('[data-theme]').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      var theme = btn.dataset.theme;
-      body.classList.toggle('light', theme === 'light');
-      setActive('[data-theme]', theme, 'theme');
-      try { localStorage.setItem('utabuild-theme', theme); } catch(e) {}
+      applyTheme(btn.dataset.theme);
     });
   });
 
@@ -285,8 +348,7 @@ RUBY_HTML
     }
     var savedTheme = localStorage.getItem('utabuild-theme');
     if (savedTheme) {
-      body.classList.toggle('light', savedTheme === 'light');
-      setActive('[data-theme]', savedTheme, 'theme');
+      applyTheme(savedTheme);
     }
   } catch(e) {}
 })();
