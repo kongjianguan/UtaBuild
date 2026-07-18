@@ -77,8 +77,6 @@ const VIEW_ORDER: Record<ViewType, number> = {
   lyrics: 3,
 };
 
-const SONGS_SCROLLBAR_CLASS = 'songs-first-level-scrollbar-disabled';
-
 const _viewScroll = new Map<ViewType, number>();
 
 function _saveScroll(): void {
@@ -87,12 +85,6 @@ function _saveScroll(): void {
 
 function _restoreScroll(view: ViewType): void {
   _repeatScrollTo(_viewScroll.get(view) || 0);
-}
-
-function _setFirstLevelScrollbar(view: ViewType): void {
-  const isSongs = view === 'songs';
-  document.documentElement.classList.toggle(SONGS_SCROLLBAR_CLASS, isSongs);
-  document.body.classList.toggle(SONGS_SCROLLBAR_CLASS, isSongs);
 }
 
 function _syncBottomMenu(activeTab: string): void {
@@ -183,7 +175,6 @@ export class Router {
     this._current = view;
 
     _toggleViewElements(view);
-    _setFirstLevelScrollbar(view);
     _setBottomMenu(FIRST_LEVEL.has(view), view);
 
     if (opts?.resetScroll) {
@@ -217,7 +208,6 @@ export class Router {
       _saveScroll();
       this._current = state.view;
       _toggleViewElements(state.view);
-      _setFirstLevelScrollbar(state.view);
       _setBottomMenu(FIRST_LEVEL.has(state.view), state.view);
       _restoreScroll(state.view);
     }

@@ -64,22 +64,9 @@ html {
   scrollbar-width: thin;
 }
 
-html.songs-first-level-scrollbar-disabled,
-body.songs-first-level-scrollbar-disabled {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
 *::-webkit-scrollbar {
   width: 9px;
   height: 9px;
-}
-
-html.songs-first-level-scrollbar-disabled::-webkit-scrollbar,
-body.songs-first-level-scrollbar-disabled::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
 }
 
 *::-webkit-scrollbar-track {

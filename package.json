@@ -1,7 +1,7 @@
 {
   "name": "utabuild-frontend",
   "private": true,
-  "version": "1.1.1",
+  "version": "1.1.3",
   "scripts": {
     "prebuild": "bash scripts/check-env.sh",
     "build:ts": "tsc",

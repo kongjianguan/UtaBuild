@@ -184,6 +184,13 @@ cargo tauri android build --target aarch64 --apk
 > ```
 > 这将会构建 arm64-v8a、armeabi-v7a、x86、x86_64 四种架构的 APK。
 
+### GitHub Actions Android 构建
+
+`.github/workflows/release.yml` 中的 `build-android` job 会在桌面构建完成后，使用
+Java 17、Android SDK 36、NDK 27.2 和 `aarch64` Rust target 构建 Android APK，并将未签名的
+`arm64-v8a` APK 上传到同一个草稿 Release。工作流可通过推送 `v*` 标签或手动触发；如需发布可安装的 APK，
+还需要在工作流中接入 Android keystore 签名。
+
 ### CLI 独立构建
 
 CLI 库和可执行文件可以脱离 Tauri 独立构建：

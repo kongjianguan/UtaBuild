@@ -61,18 +61,12 @@ const VIEW_ORDER = {
     results: 3,
     lyrics: 3,
 };
-const SONGS_SCROLLBAR_CLASS = 'songs-first-level-scrollbar-disabled';
 const _viewScroll = new Map();
 function _saveScroll() {
     _viewScroll.set(router._current, currentPageScrollY());
 }
 function _restoreScroll(view) {
     _repeatScrollTo(_viewScroll.get(view) || 0);
-}
-function _setFirstLevelScrollbar(view) {
-    const isSongs = view === 'songs';
-    document.documentElement.classList.toggle(SONGS_SCROLLBAR_CLASS, isSongs);
-    document.body.classList.toggle(SONGS_SCROLLBAR_CLASS, isSongs);
 }
 function _syncBottomMenu(activeTab) {
     const menu = el('bottom-menu');
@@ -157,7 +151,6 @@ export class Router {
         const prev = this._current;
         this._current = view;
         _toggleViewElements(view);
-        _setFirstLevelScrollbar(view);
         _setBottomMenu(FIRST_LEVEL.has(view), view);
         if (opts?.resetScroll) {
             _repeatScrollTo(0);
@@ -185,7 +178,6 @@ export class Router {
             _saveScroll();
             this._current = state.view;
             _toggleViewElements(state.view);
-            _setFirstLevelScrollbar(state.view);
             _setBottomMenu(FIRST_LEVEL.has(state.view), state.view);
             _restoreScroll(state.view);
         }

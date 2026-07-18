@@ -195,6 +195,11 @@ button.primary {
   }
 }
 
+@keyframes first-level-fade {
+  from { opacity: 0.88; }
+  to { opacity: 1; }
+}
+
 // Responsive
 @media (max-width: 768px) {
   #app {
@@ -238,6 +243,11 @@ button.primary {
   .lsp-log-frame {
     height: 58vh;
     min-height: 300px;
+  }
+
+  .first-level-slide-from-right,
+  .first-level-slide-from-left {
+    animation-name: first-level-fade;
   }
 }
 
