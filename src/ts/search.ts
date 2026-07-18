@@ -10,7 +10,7 @@ import {
   resultLongPressTriggered, setResultLongPressTriggered,
 } from './songs.js';
 import { escapeHtml } from './utils.js';
-import { setExportData, type ExportData } from './export.js';
+import { setExportData } from './export.js';
 
 // ==================== Search State ====================
 
