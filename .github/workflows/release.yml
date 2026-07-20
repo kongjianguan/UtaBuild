@@ -110,6 +110,9 @@ jobs:
         with:
           targets: aarch64-linux-android
 
+      - name: Install Rust Tauri CLI
+        run: cargo install tauri-cli --version 2.11.3 --locked
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
