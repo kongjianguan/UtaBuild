@@ -3,8 +3,12 @@
 // ============================================================
 
 #result-list {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 0 36px;
+
   h2 {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
 }
 
@@ -26,23 +30,23 @@
 // Result item cards
 .result-item {
   width: 100%;
-  padding: 12px 16px;
+  padding: 11px 13px;
   text-align: left;
   color: inherit;
   font: inherit;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  box-shadow: none;
   cursor: pointer;
   transition: background 0.18s, transform 0.1s, box-shadow 0.18s, border-color 0.18s;
 
   &:hover {
-    background: var(--primary);
+    background: var(--surface-hover);
     color: white;
     border-color: var(--primary);
-    transform: translateX(4px);
-    box-shadow: 0 8px 24px var(--primary-glow);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
   }
 
   .title {
@@ -57,20 +61,26 @@
   }
 
   &:hover .artist {
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--text-secondary);
   }
 
   &.is-menu-open {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--primary-dim), var(--shadow-md);
-    transform: translateX(4px) scale(0.995);
+    transform: scale(0.995);
   }
 }
 
 // Source tabs
 .source-tabs {
   display: flex;
-  gap: 8px;
+  gap: 2px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
   margin-bottom: 14px;
   overflow-x: auto;
   scrollbar-width: none;
@@ -83,12 +93,12 @@
 
 .source-tab {
   flex-shrink: 0;
-  padding: 6px 16px;
+  padding: 6px 11px;
   font-size: 0.85rem;
   font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
   transition: background 0.18s, color 0.18s, border-color 0.18s, box-shadow 0.18s;
@@ -99,10 +109,10 @@
   }
 
   &.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-    box-shadow: 0 4px 12px var(--primary-glow);
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+    box-shadow: var(--shadow-sm);
   }
 
   .tab-count {
@@ -153,7 +163,7 @@
   font-size: 0.9rem;
   text-align: center;
   background: var(--danger-bg);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   margin: 12px 0;
 }
 

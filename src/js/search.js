@@ -59,9 +59,10 @@ function updatePagination() {
 }
 // ==================== Results Summary ====================
 function updateResultsSummary(data) {
-    const utatenCount = data?.sources?.utaten?.data?.results?.length ?? 0;
-    const qqCount = data?.sources?.qq_music?.data?.results?.length ?? 0;
-    const neCount = data?.sources?.netease?.data?.results?.length ?? 0;
+    const loadedResults = data?.allResults || [];
+    const utatenCount = loadedResults.filter((item) => item.source === 'utaten').length;
+    const qqCount = loadedResults.filter((item) => item.source === 'qq_music').length;
+    const neCount = loadedResults.filter((item) => item.source === 'netease').length;
     const totalCount = utatenCount + qqCount + neCount;
     const { loadedPages, totalPages, loadingMore } = getPaginationInfo();
     const title = data?.query?.title ?? currentSearchQuery?.title ?? '';
@@ -317,6 +318,11 @@ export async function handleSearch() {
         return;
     const title = el('search-title').value.trim();
     const artist = el('search-artist').value.trim() || null;
+    if (!title) {
+        showError('曲名を入力してください');
+        el('search-title').focus();
+        return;
+    }
     currentSearchQuery = { title, artist };
     currentSearchRunId += 1;
     isLoadingMoreResults = false;
@@ -325,13 +331,18 @@ export async function handleSearch() {
     addSearchHistory(title, artist);
     void appendAppLspLog('ui', `search requested title="${title}" artist="${artist || ''}"`);
     isSearching = true;
-    el('search-btn').classList.add('is-searching');
+    const searchButton = el('search-btn');
+    searchButton.classList.add('is-searching');
+    searchButton.disabled = true;
+    searchButton.setAttribute('aria-busy', 'true');
     try {
         await performSearch(1, currentSearchRunId);
     }
     finally {
         isSearching = false;
-        el('search-btn').classList.remove('is-searching');
+        searchButton.classList.remove('is-searching');
+        searchButton.disabled = false;
+        searchButton.removeAttribute('aria-busy');
     }
 }
 // ==================== Render Result List ====================
@@ -390,9 +401,10 @@ function updateSourceTabs(data) {
     if (!el('source-tabs'))
         return;
     const tabs = el('source-tabs').querySelectorAll('.source-tab');
-    const utatenCount = data?.sources?.utaten?.data?.results?.length ?? 0;
-    const qqCount = data?.sources?.qq_music?.data?.results?.length ?? 0;
-    const neCount = data?.sources?.netease?.data?.results?.length ?? 0;
+    const loadedResults = data?.allResults || [];
+    const utatenCount = loadedResults.filter((item) => item.source === 'utaten').length;
+    const qqCount = loadedResults.filter((item) => item.source === 'qq_music').length;
+    const neCount = loadedResults.filter((item) => item.source === 'netease').length;
     const totalCount = utatenCount + qqCount + neCount;
     const utatenErr = data?.sources?.utaten?.error ?? null;
     const qqErr = data?.sources?.qq_music?.error ?? null;

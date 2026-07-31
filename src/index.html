@@ -10,26 +10,28 @@
   <canvas id="mygo-stars" aria-hidden="true" style="display:none; position:fixed; inset:0; pointer-events:none; z-index:-1;"></canvas>
   <main id="app">
     <!-- 搜索界面 -->
-    <header id="search-header">
-      <h1>UtaBuild</h1>
+    <header id="search-header" aria-labelledby="app-title">
+      <h1 id="app-title">UtaBuild</h1>
       <p class="subtitle">Ruby 歌詞ビューア</p>
       <p class="subtitle-note">搜索日文歌词，并以假名注音辅助阅读。</p>
       
-      <div class="search-form">
+      <form id="search-form" class="search-form" role="search">
+        <label class="visually-hidden" for="search-title">曲名</label>
         <input
           type="text"
           id="search-title"
           placeholder="曲名を入力..."
           autocomplete="off"
         />
+        <label class="visually-hidden" for="search-artist">アーティスト名（任意）</label>
         <input 
           type="text" 
           id="search-artist" 
           placeholder="アーティスト名（任意）"
           autocomplete="off"
         />
-        <button id="search-btn" type="button">検索</button>
-      </div>
+        <button id="search-btn" type="submit">検索</button>
+      </form>
 
       <section class="search-history">
         <h2 class="search-history__title">検索履歴</h2>
@@ -39,10 +41,10 @@
     </header>
 
     <!-- 歌曲页面 -->
-    <section id="songs-view" class="songs-view hidden">
+    <section id="songs-view" class="songs-view hidden" aria-labelledby="songs-title" aria-hidden="true">
       <div class="songs-header">
         <div>
-          <h2>保存済みの曲</h2>
+          <h2 id="songs-title">保存済みの曲</h2>
           <p>已永久保存的歌词会显示在这里。</p>
         </div>
         <div class="songs-sort" aria-label="保存済み曲の並び替え">
@@ -55,8 +57,8 @@
     </section>
 
     <!-- 设置页面 -->
-    <section id="settings-view" class="settings-view hidden">
-      <h2>設定</h2>
+    <section id="settings-view" class="settings-view hidden" aria-labelledby="settings-title" aria-hidden="true">
+      <h2 id="settings-title">設定</h2>
       <div class="settings-list">
         <label class="settings-item" for="setting-use-cache">
           <div class="settings-item__text">
@@ -83,7 +85,7 @@
             <span class="settings-item__description">清除搜索结果、歌词缓存文件和内存缓存。</span>
           </div>
         </button>
-        <button id="setting-goto-lsp" type="button" class="settings-item settings-item--button">
+        <button id="setting-goto-lsp" type="button" class="settings-item settings-item--button hidden" aria-hidden="true" tabindex="-1">
           <div class="settings-item__text">
             <span class="settings-item__label">LSP相关</span>
             <span class="settings-item__description">配置LSP日志、Hi UtaBuild通知和自动跳转行为。</span>
@@ -93,11 +95,11 @@
     </section>
 
     <!-- LSP设置页面 -->
-    <section id="lsp-settings-view" class="lsp-settings-view hidden">
+    <section id="lsp-settings-view" class="lsp-settings-view hidden" aria-labelledby="lsp-settings-title" aria-hidden="true">
       <div class="subpage-header">
         <button id="lsp-settings-back-btn" type="button" class="secondary">設定に戻る</button>
         <div>
-          <h2>LSP設定</h2>
+          <h2 id="lsp-settings-title">LSP設定</h2>
           <p>配置 LSPosed 模块的行为。</p>
         </div>
       </div>
@@ -133,11 +135,11 @@
     </section>
 
     <!-- LSP日志页面 -->
-    <section id="lsp-log-view" class="lsp-log-view hidden">
+    <section id="lsp-log-view" class="lsp-log-view hidden" aria-labelledby="lsp-log-title" aria-hidden="true">
       <div class="subpage-header">
         <button id="lsp-log-back-btn" type="button" class="secondary">設定に戻る</button>
         <div>
-          <h2>LSPログ</h2>
+          <h2 id="lsp-log-title">LSPログ</h2>
           <p>不换行显示，可横向/纵向滑动，并支持缩放字体。</p>
         </div>
       </div>
@@ -155,8 +157,8 @@
     </section>
 
     <!-- 搜索结果列表 -->
-    <section id="result-list" class="hidden">
-      <h2>検索結果</h2>
+    <section id="result-list" class="hidden" aria-labelledby="results-title" aria-hidden="true">
+      <h2 id="results-title">検索結果</h2>
       <div id="source-tabs" class="source-tabs" role="tablist" aria-label="検索ソース">
         <button type="button" class="source-tab active" data-source="all" role="tab" aria-selected="true">全部</button>
         <button type="button" class="source-tab" data-source="utaten" role="tab" aria-selected="false">UtaTen</button>
@@ -172,7 +174,7 @@
     </section>
 
     <!-- 歌词显示 -->
-    <section id="lyrics-view" class="hidden">
+    <section id="lyrics-view" class="hidden" aria-labelledby="lyrics-title" aria-hidden="true">
       <div id="lyrics-header">
         <h2 id="lyrics-title"></h2>
         <p id="lyrics-artist"></p>

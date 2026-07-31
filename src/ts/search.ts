@@ -84,9 +84,10 @@ function updatePagination(): void {
 // ==================== Results Summary ====================
 
 function updateResultsSummary(data: SearchData | null): void {
-  const utatenCount = data?.sources?.utaten?.data?.results?.length ?? 0;
-  const qqCount = data?.sources?.qq_music?.data?.results?.length ?? 0;
-  const neCount = data?.sources?.netease?.data?.results?.length ?? 0;
+  const loadedResults = data?.allResults || [];
+  const utatenCount = loadedResults.filter((item) => item.source === 'utaten').length;
+  const qqCount = loadedResults.filter((item) => item.source === 'qq_music').length;
+  const neCount = loadedResults.filter((item) => item.source === 'netease').length;
   const totalCount = utatenCount + qqCount + neCount;
   const { loadedPages, totalPages, loadingMore } = getPaginationInfo();
   const title = data?.query?.title ?? currentSearchQuery?.title ?? '';
@@ -404,6 +405,12 @@ export async function handleSearch(): Promise<void> {
   const title = el<HTMLInputElement>('search-title').value.trim();
   const artist = el<HTMLInputElement>('search-artist').value.trim() || null;
 
+  if (!title) {
+    showError('曲名を入力してください');
+    el<HTMLInputElement>('search-title').focus();
+    return;
+  }
+
   currentSearchQuery = { title, artist };
   currentSearchRunId += 1;
   isLoadingMoreResults = false;
@@ -417,13 +424,18 @@ export async function handleSearch(): Promise<void> {
   );
 
   isSearching = true;
-  el<HTMLButtonElement>('search-btn').classList.add('is-searching');
+  const searchButton = el<HTMLButtonElement>('search-btn');
+  searchButton.classList.add('is-searching');
+  searchButton.disabled = true;
+  searchButton.setAttribute('aria-busy', 'true');
 
   try {
     await performSearch(1, currentSearchRunId);
   } finally {
     isSearching = false;
-    el<HTMLButtonElement>('search-btn').classList.remove('is-searching');
+    searchButton.classList.remove('is-searching');
+    searchButton.disabled = false;
+    searchButton.removeAttribute('aria-busy');
   }
 }
 
@@ -493,9 +505,10 @@ function updateSourceTabs(data: SearchData | null): void {
   if (!el<HTMLElement>('source-tabs')) return;
 
   const tabs = el<HTMLElement>('source-tabs').querySelectorAll('.source-tab');
-  const utatenCount = data?.sources?.utaten?.data?.results?.length ?? 0;
-  const qqCount = data?.sources?.qq_music?.data?.results?.length ?? 0;
-  const neCount = data?.sources?.netease?.data?.results?.length ?? 0;
+  const loadedResults = data?.allResults || [];
+  const utatenCount = loadedResults.filter((item) => item.source === 'utaten').length;
+  const qqCount = loadedResults.filter((item) => item.source === 'qq_music').length;
+  const neCount = loadedResults.filter((item) => item.source === 'netease').length;
   const totalCount = utatenCount + qqCount + neCount;
   const utatenErr = data?.sources?.utaten?.error ?? null;
   const qqErr = data?.sources?.qq_music?.error ?? null;

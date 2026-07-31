@@ -165,7 +165,7 @@ function initControls(): void {
   });
 
   // Theme controls
-  $$('[data-theme]').forEach((btn) => {
+  $$('.lyrics-controls [data-theme]').forEach((btn) => {
     const button = btn as HTMLElement;
     button.addEventListener('click', () => {
       const theme = button.dataset.theme as 'dark' | 'light' | 'mygo';
@@ -210,18 +210,19 @@ function initControls(): void {
 // ==================== Init ====================
 
 function init(): void {
-  // Search button
-  el<HTMLButtonElement>('search-btn').addEventListener('click', () => {
+  // Native form submission keeps mouse, keyboard and IME flows consistent.
+  el<HTMLFormElement>('search-form').addEventListener('submit', (event) => {
+    event.preventDefault();
     void handleSearch();
   });
 
-  // Enter key search
-  el<HTMLInputElement>('search-title').addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.key === 'Enter') void handleSearch();
-  });
-  el<HTMLInputElement>('search-artist').addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.key === 'Enter') void handleSearch();
-  });
+  const submitOnEnter = (event: KeyboardEvent) => {
+    if (event.key !== 'Enter' || event.isComposing) return;
+    event.preventDefault();
+    void handleSearch();
+  };
+  el<HTMLInputElement>('search-title').addEventListener('keydown', submitOnEnter);
+  el<HTMLInputElement>('search-artist').addEventListener('keydown', submitOnEnter);
 
   // Back buttons
   el<HTMLButtonElement>('back-btn').addEventListener('click', () => {

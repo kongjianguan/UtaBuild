@@ -3,14 +3,14 @@
 // ============================================================
 
 .settings-view {
-  max-width: 400px;
+  max-width: 640px;
   margin: 24px auto 0;
-  padding: 40px 0;
+  padding: 28px 0 36px;
   text-align: left;
 
   h2 {
-    margin-bottom: 16px;
-    text-align: center;
+    margin-bottom: 12px;
+    text-align: left;
     font-weight: 700;
     letter-spacing: -0.02em;
   }
@@ -19,14 +19,14 @@
 // LSP settings subviews share the same layout
 .lsp-settings-view,
 .lsp-log-view {
-  max-width: 400px;
+  max-width: 640px;
   margin: 24px auto 0;
-  padding: 40px 0;
+  padding: 28px 0 36px;
   text-align: left;
 
   h2 {
-    margin-bottom: 16px;
-    text-align: center;
+    margin-bottom: 12px;
+    text-align: left;
     font-weight: 700;
     letter-spacing: -0.02em;
   }
@@ -60,7 +60,7 @@
     padding: 10px 16px;
     font-size: 0.95rem;
     border: 1px solid var(--border);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     background: var(--surface);
     color: var(--text);
     cursor: pointer;
@@ -88,7 +88,7 @@
   gap: 16px;
   padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
@@ -103,7 +103,7 @@
     &:hover {
       border-color: var(--primary);
       background: var(--surface-hover);
-      box-shadow: 0 8px 24px var(--primary-glow);
+      box-shadow: var(--shadow-md);
     }
   }
 
@@ -190,7 +190,7 @@
   max-width: 42vw;
   padding: 9px 34px 9px 12px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   color: var(--text);
   font: inherit;
   font-size: 0.9rem;
@@ -234,7 +234,7 @@
     padding: 10px 16px;
     font-size: 0.95rem;
     border: 1px solid var(--border);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-md);
     background: var(--surface);
     color: var(--text);
     cursor: pointer;
@@ -275,7 +275,7 @@
   min-height: 320px;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 24px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: var(--shadow-md);
 }

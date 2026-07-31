@@ -112,7 +112,7 @@ function initControls() {
         });
     });
     // Theme controls
-    $$('[data-theme]').forEach((btn) => {
+    $$('.lyrics-controls [data-theme]').forEach((btn) => {
         const button = btn;
         button.addEventListener('click', () => {
             const theme = button.dataset.theme;
@@ -157,19 +157,19 @@ function initControls() {
 }
 // ==================== Init ====================
 function init() {
-    // Search button
-    el('search-btn').addEventListener('click', () => {
+    // Native form submission keeps mouse, keyboard and IME flows consistent.
+    el('search-form').addEventListener('submit', (event) => {
+        event.preventDefault();
         void handleSearch();
     });
-    // Enter key search
-    el('search-title').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter')
-            void handleSearch();
-    });
-    el('search-artist').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter')
-            void handleSearch();
-    });
+    const submitOnEnter = (event) => {
+        if (event.key !== 'Enter' || event.isComposing)
+            return;
+        event.preventDefault();
+        void handleSearch();
+    };
+    el('search-title').addEventListener('keydown', submitOnEnter);
+    el('search-artist').addEventListener('keydown', submitOnEnter);
     // Back buttons
     el('back-btn').addEventListener('click', () => {
         handleBack();

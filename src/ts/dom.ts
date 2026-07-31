@@ -4,6 +4,7 @@ import { loadSettings } from './settings.js';
 // ==================== Element Accessors ====================
 
 const _elCache = new Map<string, Element>();
+let errorToastTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function el<T extends Element>(id: string): T {
   if (!_elCache.has(id)) {
@@ -47,16 +48,24 @@ function _repeatScrollTo(y: number): void {
 
 export function showLoading(): void {
   show(el<HTMLElement>('loading'));
+  el<HTMLElement>('app').setAttribute('aria-busy', 'true');
+  document.body.classList.add('is-loading');
 }
 
 export function hideLoading(): void {
   hide(el<HTMLElement>('loading'));
+  el<HTMLElement>('app').removeAttribute('aria-busy');
+  document.body.classList.remove('is-loading');
 }
 
 export function showError(msg: string): void {
   el<HTMLElement>('error-message').textContent = msg;
   show(el<HTMLElement>('error-toast'));
-  setTimeout(() => hide(el<HTMLElement>('error-toast')), 5000);
+  if (errorToastTimer) clearTimeout(errorToastTimer);
+  errorToastTimer = setTimeout(() => {
+    hide(el<HTMLElement>('error-toast'));
+    errorToastTimer = null;
+  }, 5000);
 }
 
 export function setBottomMenuAutoHidden(isHidden: boolean): void {
@@ -126,37 +135,54 @@ function _toggleViewElements(view: ViewType): void {
     lyrics: 'lyrics-view',
   };
   for (const id of ids) {
-    if (id === viewIdMap[view]) {
-      el<HTMLElement>(id).classList.remove('hidden');
-    } else {
-      el<HTMLElement>(id).classList.add('hidden');
-    }
+    const viewEl = el<HTMLElement>(id);
+    const isActive = id === viewIdMap[view];
+    viewEl.classList.toggle('hidden', !isActive);
+    viewEl.setAttribute('aria-hidden', String(!isActive));
   }
 }
 
 function _animateEntry(view: ViewType, direction: 'forward' | 'back'): void {
-  if (!FIRST_LEVEL.has(view)) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   const viewElMap: Record<string, string> = {
     search: 'search-header',
     songs: 'songs-view',
     settings: 'settings-view',
+    lspSettings: 'lsp-settings-view',
+    lspLogs: 'lsp-log-view',
+    results: 'result-list',
+    lyrics: 'lyrics-view',
   };
   const targetId = viewElMap[view];
   if (!targetId) return;
 
   for (const id of Object.values(viewElMap)) {
-    el<HTMLElement>(id).classList.remove('first-level-slide-from-left', 'first-level-slide-from-right');
+    el<HTMLElement>(id).classList.remove('view-enter-from-left', 'view-enter-from-right');
   }
 
   const target = el<HTMLElement>(targetId);
-  const className = direction === 'back'
-    ? 'first-level-slide-from-left'
-    : 'first-level-slide-from-right';
+  const className = direction === 'back' ? 'view-enter-from-left' : 'view-enter-from-right';
   target.classList.add(className);
 
-  setTimeout(() => target.classList.remove(className), 420);
+  setTimeout(() => target.classList.remove(className), 260);
+}
+
+function _focusView(view: ViewType): void {
+  const viewIdMap: Record<string, string> = {
+    search: 'search-header',
+    songs: 'songs-view',
+    settings: 'settings-view',
+    lspSettings: 'lsp-settings-view',
+    lspLogs: 'lsp-log-view',
+    results: 'result-list',
+    lyrics: 'lyrics-view',
+  };
+  const viewEl = el<HTMLElement>(viewIdMap[view]);
+  const heading = viewEl.querySelector('h1, h2') as HTMLElement | null;
+  if (!heading) return;
+  if (!heading.hasAttribute('tabindex')) heading.tabIndex = -1;
+  heading.focus({ preventScroll: true });
 }
 
 export class Router {
@@ -186,6 +212,8 @@ export class Router {
       _animateEntry(view, dir);
     }
 
+    _focusView(view);
+
     if (!this._navigatingBack) {
       history.pushState({ view }, '', '');
     }
@@ -210,6 +238,7 @@ export class Router {
       _toggleViewElements(state.view);
       _setBottomMenu(FIRST_LEVEL.has(state.view), state.view);
       _restoreScroll(state.view);
+      _focusView(state.view);
     }
   }
 }
@@ -232,7 +261,7 @@ export function updateButtonStates(): void {
   if (sizeBtn) sizeBtn.classList.add('active');
 
   const theme = settings.theme || 'dark';
-  $$('[data-theme]').forEach((button) => {
+  $$('.lyrics-controls [data-theme]').forEach((button) => {
     const btn = button as HTMLElement;
     const isActive = btn.dataset.theme === theme;
     btn.classList.toggle('active', isActive);

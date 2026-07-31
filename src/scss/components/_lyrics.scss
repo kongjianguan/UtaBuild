@@ -3,7 +3,9 @@
 // ============================================================
 
 #lyrics-view {
-  padding: var(--space-4) var(--space-5) var(--space-8);
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--space-5) 0 var(--space-8);
 }
 
 #lyrics-header {
@@ -29,7 +31,7 @@
   padding: var(--space-3);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   margin-bottom: var(--space-5);
   transition: background var(--motion-slow), border-color var(--motion-slow);
@@ -53,7 +55,7 @@
   font-size: 0.78rem;
   font-weight: 600;
   border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
@@ -82,10 +84,10 @@
   user-select: none;
   letter-spacing: 1px;
   line-height: 2.3;
-  padding: 28px 24px;
+  padding: 24px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   min-height: 200px;
   transition: background var(--motion-slow), border-color var(--motion-slow), box-shadow var(--motion-slow);
@@ -100,7 +102,7 @@ body[data-theme="mygo"] .lyricBody {
 #export-lyrics-btn {
   font-size: 0.8rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
@@ -118,7 +120,7 @@ body[data-theme="mygo"] .lyricBody {
   padding: 6px 20px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: 0.85rem;
   cursor: pointer;
@@ -133,6 +135,9 @@ body[data-theme="mygo"] .lyricBody {
 // Responsive
 @media (max-width: 768px) {
   .lyricBody {
+    width: calc(100% + 16px);
+    margin-left: -8px;
+    margin-right: -8px;
     padding: 12px;
   }
 
