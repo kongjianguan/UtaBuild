@@ -1,7 +1,6 @@
 # UtaBuild
 
 跨平台歌词搜索与显示工具，复刻 utaten.com 的歌词搜索与振假名（Ruby）显示体验。  
-同时也是一个 **LSPosed 模块**，可为 Salt Player 提供日语歌词振假名渲染支持。
 
 ---
 
@@ -11,8 +10,13 @@
 - **Ruby/振假名渲染** — 在汉字的顶部标注读音假名
 - **跨平台桌面应用** — Windows / Linux / macOS（Tauri v2）
 - **Android APK** — 移动端歌词浏览
-- **LSPosed 集成** — 为 Salt Player 注入日语歌词优化显示（暂未完成实现）
 - **CLI 工具** — 命令行歌词搜索与解析
+
+---
+
+## 目标功能
+
+- **LSPosed 集成** — 为 Salt Player 提供日语歌词优化显示（尚未实现）
 
 ---
 
@@ -92,10 +96,7 @@ pnpm exec tsc
 # 1. 首次构建前需初始化 Android 项目
 cargo tauri android init
 
-# 2. （如需要 LSPosed 集成）注入 LSPosed 模块代码
-scripts/integrate-lsposed-into-tauri-android.sh
-
-# 3. 在已连接的 Android 设备上运行开发版本
+# 2. 在已连接的 Android 设备上运行开发版本
 cargo tauri android dev
 ```
 
@@ -166,10 +167,7 @@ distributionUrl=https\://mirrors.aliyun.com/gradle/distributions/gradle-8.14.3-b
 cargo tauri android init
 # ↓ 中国大陆用户：按上方说明配置 Cargo/Gradle 镜像后再继续 ↓
 
-# 2. （可选）注入 LSPosed 模块代码（与 Salt Player 集成）
-scripts/integrate-lsposed-into-tauri-android.sh
-
-# 3. 构建发布版 APK
+# 2. 构建发布版 APK
 cargo tauri android build --target aarch64 --apk
 # 输出路径: src-tauri/gen/android/app/build/outputs/apk/universal/release/
 # 生成文件: app-universal-release-unsigned.apk
@@ -238,18 +236,14 @@ utabuild-tauri/
 │   └── test-ruby.html      # Ruby 渲染测试页
 ├── src-tauri/              # Tauri v2 Rust 后端
 │   ├── src/                # Rust 源码（IPC 命令、App 入口）
-│   ├── android-lsposed/    # LSPosed 模块覆盖层（Java）
+│   ├── android-lsposed/    # LSPosed 模块源码（目标功能）
 │   ├── gen/android/        # 自动生成的 Android 项目（不提交）
 │   └── tauri.conf.json     # Tauri 配置
 ├── cli/                    # 可复用的 Rust 歌词库 + CLI 工具
 │   ├── src/                # 搜索、解析、缓存、历史
 │   └── tests/              # 单元测试（主要测试集中在此）
-├── lsposed-module/         # LSPosed 模块开发脚手架（仅用于快速编译检查）
-├── scripts/                # 辅助脚本
-│   ├── integrate-lsposed-into-tauri-android.sh  # LSPosed 注入脚本
-│   └── sync-to-windows.sh  # Windows 镜像同步脚本
-└── docs/
-    └── LSPOSED_INTEGRATION.md   # LSPosed 集成文档
+└── scripts/                # 辅助脚本
+    └── check-env.sh        # 环境检查脚本
 ```
 
 ---
