@@ -37,7 +37,9 @@ src-tauri/gen/android/**/.gradle/
 .deepseek/
 .playwright-mcp/
 .worktrees/
-.opencode
+.opencode/
+.reasonix/
+
 
 # Project docs (generated / research)
 AGENTS.md
