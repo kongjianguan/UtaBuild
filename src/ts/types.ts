@@ -76,7 +76,11 @@ export interface UtatenPageState {
 
 export interface SearchData {
   query: { title: string; artist: string | null };
-  sources: Record<string, { data: SearchResponse | null; error: string | null }>;
+  sources: Record<string, {
+    data: SearchResponse | null;
+    error: string | null;
+    loading?: boolean;
+  }>;
   allResults: SearchItem[];
 }
 

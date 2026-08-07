@@ -40,22 +40,30 @@ export async function appendAppLspLog(scope, message) {
     }
 }
 // ==================== View LSP Logs ====================
+let lspLogRequestId = 0;
 export async function viewLspLogs() {
+    const requestId = ++lspLogRequestId;
     showLoading();
     el('lsp-log-content').textContent = 'LSPログを読み込み中です...';
     void appendAppLspLog('settings', 'view lsp logs');
     try {
         await tauriReady;
         const logs = await invoke('get_lsp_logs');
+        if (requestId !== lspLogRequestId)
+            return;
         el('lsp-log-content').textContent =
             logs && String(logs).trim() ? String(logs) : 'LSPログはまだありません';
     }
     catch (err) {
+        if (requestId !== lspLogRequestId)
+            return;
         console.error('Read lsp logs error:', err);
         el('lsp-log-content').textContent = `LSPログの読み込みに失敗しました: ${err}`;
     }
     finally {
-        hideLoading();
+        if (requestId === lspLogRequestId) {
+            hideLoading();
+        }
     }
 }
 // ==================== LSP Log Zoom ====================

@@ -7,7 +7,7 @@ export function getExportData() {
     return currentExportData;
 }
 export async function exportLyricsToFile(data) {
-    await invoke('export_lyrics_html', {
+    return invoke('export_lyrics_html', {
         title: data.title,
         artist: data.artist,
         lyricsUrl: data.lyricsUrl,

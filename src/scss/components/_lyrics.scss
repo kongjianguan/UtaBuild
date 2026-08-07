@@ -135,9 +135,6 @@ body[data-theme="mygo"] .lyricBody {
 // Responsive
 @media (max-width: 768px) {
   .lyricBody {
-    width: calc(100% + 16px);
-    margin-left: -8px;
-    margin-right: -8px;
     padding: 12px;
   }
 

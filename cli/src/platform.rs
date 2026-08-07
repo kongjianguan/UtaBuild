@@ -9,11 +9,11 @@ use std::path::PathBuf;
 /// - Windows: `%LOCALAPPDATA%\utabuild`
 /// - macOS: `~/Library/Caches/utabuild`
 /// - Linux: `~/.cache/utabuild`
-/// - Android: `/data/data/com.utabuild.app/cache`
+/// - Android: `/data/data/fyi.kongjianguan.utabuild/cache`
 pub fn get_cache_dir() -> PathBuf {
     #[cfg(target_os = "android")]
     {
-        PathBuf::from("/data/data/com.utabuild.app/cache")
+        PathBuf::from("/data/data/fyi.kongjianguan.utabuild/cache")
     }
 
     #[cfg(not(target_os = "android"))]
@@ -29,11 +29,11 @@ pub fn get_cache_dir() -> PathBuf {
 /// - Windows: `%APPDATA%\utabuild`
 /// - macOS: `~/Library/Application Support/utabuild`
 /// - Linux: `~/.local/share/utabuild`
-/// - Android: `/data/data/com.utabuild.app/files`
+/// - Android: `/data/data/fyi.kongjianguan.utabuild/files`
 pub fn get_data_dir() -> PathBuf {
     #[cfg(target_os = "android")]
     {
-        PathBuf::from("/data/data/com.utabuild.app/files")
+        PathBuf::from("/data/data/fyi.kongjianguan.utabuild/files")
     }
 
     #[cfg(not(target_os = "android"))]

@@ -137,6 +137,11 @@ impl NeteaseSource {
             .await
             .ok()?;
 
+        if !resp.status().is_success() {
+            warn!("NetEase login returned HTTP {}", resp.status());
+            return None;
+        }
+
         // Save headers BEFORE consuming the body
         // 在消费响应体之前保存 Set-Cookie 响应头
         let set_cookie_headers: Vec<String> = resp
@@ -148,7 +153,9 @@ impl NeteaseSource {
 
         let resp_bytes = resp.bytes().await.ok()?;
         let decrypted = ne_crypto::aes_ecb_decrypt(&resp_bytes)?;
-        debug!("NetEase login response: {}", &decrypted[..decrypted.len().min(200)]);
+        // Slice on a char boundary — byte slicing can panic mid multi-byte char.
+        let preview: String = decrypted.chars().take(200).collect();
+        debug!("NetEase login response: {}", preview);
 
         let json: serde_json::Value = serde_json::from_str(&decrypted).ok()?;
 
@@ -231,6 +238,11 @@ impl NeteaseSource {
             .send()
             .await
             .ok()?;
+
+        if !resp.status().is_success() {
+            warn!("NetEase EAPI request returned HTTP {}", resp.status());
+            return None;
+        }
 
         let resp_bytes = resp.bytes().await.ok()?;
         let decrypted = ne_crypto::aes_ecb_decrypt(&resp_bytes)?;

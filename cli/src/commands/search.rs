@@ -25,7 +25,7 @@ pub async fn execute_from_url(
     url: Option<String>,
     output: Option<String>,
     format: String,
-    _cache_dir: Option<PathBuf>,
+    cache_dir: Option<PathBuf>,
 ) -> anyhow::Result<()> {
     let url = match url {
         Some(u) if !u.trim().is_empty() => u.trim().to_string(),
@@ -44,7 +44,7 @@ pub async fn execute_from_url(
 
     debug!("从 URL 获取歌词: {}", url);
 
-    if let Some(cached_lyrics) = get_lyrics_cache(&url) {
+    if let Some(cached_lyrics) = get_lyrics_cache(&url, cache_dir.as_ref()) {
         info!("歌词缓存命中，直接输出");
         let title = cached_lyrics.title.as_deref().unwrap_or("");
         let artist = cached_lyrics.artist.as_deref().unwrap_or("");
@@ -79,7 +79,7 @@ pub async fn execute_from_url(
             );
 
             info!("保存歌词到缓存: {}", url);
-            if let Err(e) = save_lyrics_cache(&url, lyrics_output.clone()) {
+            if let Err(e) = save_lyrics_cache(&url, lyrics_output.clone(), cache_dir.as_ref()) {
                 debug!("保存歌词缓存失败: {}", e);
             }
 
@@ -413,7 +413,7 @@ pub async fn execute(
         let lyrics_url = &selected_search_result.url;
 
         info!("检查歌词缓存: {}", lyrics_url);
-        if let Some(cached_lyrics) = get_lyrics_cache(lyrics_url) {
+        if let Some(cached_lyrics) = get_lyrics_cache(lyrics_url, cache_dir.as_ref()) {
             info!("歌词缓存命中，直接输出");
 
             add_to_history(
@@ -467,7 +467,11 @@ pub async fn execute(
             );
 
             info!("保存歌词到缓存: {}", selected_result.lyrics_url);
-            if let Err(e) = save_lyrics_cache(&selected_result.lyrics_url, lyrics_output.clone()) {
+            if let Err(e) = save_lyrics_cache(
+                &selected_result.lyrics_url,
+                lyrics_output.clone(),
+                cache_dir.as_ref(),
+            ) {
                 debug!("保存歌词缓存失败: {}", e);
             }
 
@@ -524,7 +528,7 @@ pub async fn execute(
             );
             info!("检查歌词缓存: {}", lyrics_url);
 
-            if let Some(cached_lyrics) = get_lyrics_cache(lyrics_url) {
+            if let Some(cached_lyrics) = get_lyrics_cache(lyrics_url, cache_dir.as_ref()) {
                 info!("歌词缓存命中，直接输出");
 
                 add_to_history(
@@ -584,9 +588,11 @@ pub async fn execute(
                 );
 
                 info!("保存歌词到缓存: {}", selected_result.lyrics_url);
-                if let Err(e) =
-                    save_lyrics_cache(&selected_result.lyrics_url, lyrics_output.clone())
-                {
+                if let Err(e) = save_lyrics_cache(
+                    &selected_result.lyrics_url,
+                    lyrics_output.clone(),
+                    cache_dir.as_ref(),
+                ) {
                     debug!("保存歌词缓存失败: {}", e);
                 }
 

@@ -45,7 +45,10 @@ export async function appendAppLspLog(scope: string, message: string): Promise<v
 
 // ==================== View LSP Logs ====================
 
+let lspLogRequestId = 0;
+
 export async function viewLspLogs(): Promise<void> {
+  const requestId = ++lspLogRequestId;
   showLoading();
   el<HTMLPreElement>('lsp-log-content').textContent = 'LSPログを読み込み中です...';
   void appendAppLspLog('settings', 'view lsp logs');
@@ -53,13 +56,17 @@ export async function viewLspLogs(): Promise<void> {
   try {
     await tauriReady;
     const logs = await invoke<string>('get_lsp_logs');
+    if (requestId !== lspLogRequestId) return;
     el<HTMLPreElement>('lsp-log-content').textContent =
       logs && String(logs).trim() ? String(logs) : 'LSPログはまだありません';
   } catch (err) {
+    if (requestId !== lspLogRequestId) return;
     console.error('Read lsp logs error:', err);
     el<HTMLPreElement>('lsp-log-content').textContent = `LSPログの読み込みに失敗しました: ${err}`;
   } finally {
-    hideLoading();
+    if (requestId === lspLogRequestId) {
+      hideLoading();
+    }
   }
 }
 

@@ -61,7 +61,7 @@ public final class UtaBuildLyricProvider {
         }
         Cursor cursor = null;
         try {
-            Uri uri = Uri.parse("content://com.utabuild.app.lyrics/lyrics")
+            Uri uri = Uri.parse("content://fyi.kongjianguan.utabuild.lyrics/lyrics")
                     .buildUpon()
                     .appendQueryParameter("title", title == null ? "" : title)
                     .appendQueryParameter("artist", artist == null ? "" : artist)

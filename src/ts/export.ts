@@ -19,8 +19,8 @@ export function getExportData(): ExportData | null {
   return currentExportData;
 }
 
-export async function exportLyricsToFile(data: ExportData): Promise<void> {
-  await invoke('export_lyrics_html', {
+export async function exportLyricsToFile(data: ExportData): Promise<boolean> {
+  return invoke<boolean>('export_lyrics_html', {
     title: data.title,
     artist: data.artist,
     lyricsUrl: data.lyricsUrl,

@@ -12,6 +12,8 @@ import {
   $$,
   hide,
   showError,
+  showInfo,
+  showSuccess,
   router,
   updateButtonStates,
   syncLspLogVisibility,
@@ -21,6 +23,7 @@ import { loadSavedLyrics, initSongsControls, initSongsDockAutoHide } from './son
 import {
   handleSearch,
   initInfiniteScroll,
+  initSourceTabKeyboardNav,
   setPendingSaltRequest,
   setCurrentActiveTab,
   currentSearchData,
@@ -60,7 +63,7 @@ async function checkSaltLaunchRequest(): Promise<void> {
       'salt',
       `launch request received title="${request.title}" artist="${request.artist || ''}"`,
     );
-    showError(
+    showInfo(
       `Salt Player から「${request.title}」を受け取りました。検索して候補を選ぶと、確認後にこの曲へ Ruby 表示を適用します。`,
     );
   } catch (err) {
@@ -84,7 +87,7 @@ function initControls(): void {
     const artworkSource = VALID_ARTWORK_SOURCES.has(val as "auto" | "utaten" | "qq" | "netease") ? val : DEFAULT_ARTWORK_SOURCE;
     saveSettings({ artworkSource: artworkSource as AppSettings['artworkSource'] });
     if (router.current === 'songs') {
-      void loadSavedLyrics();
+      void loadSavedLyrics({ refreshArtwork: true });
     }
   });
 
@@ -185,7 +188,12 @@ function initControls(): void {
       const btn = exportBtn as HTMLButtonElement;
       btn.disabled = true;
       try {
-        await exportLyricsToFile(data);
+        const exported = await exportLyricsToFile(data);
+        if (exported) {
+          showSuccess('エクスポートしました');
+        } else {
+          showInfo('エクスポートをキャンセルしました');
+        }
       } catch (err) {
         showError(`エクスポートに失敗しました: ${err}`);
       } finally {
@@ -248,6 +256,7 @@ function init(): void {
 
   // Results infinite scroll
   initInfiniteScroll();
+  initSourceTabKeyboardNav();
 
   // Android back button support
   initBackButton();

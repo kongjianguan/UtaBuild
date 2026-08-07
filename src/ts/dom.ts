@@ -6,6 +6,8 @@ import { loadSettings } from './settings.js';
 const _elCache = new Map<string, Element>();
 let errorToastTimer: ReturnType<typeof setTimeout> | null = null;
 
+type ToastTone = 'error' | 'success' | 'info';
+
 export function el<T extends Element>(id: string): T {
   if (!_elCache.has(id)) {
     const node = document.querySelector(`#${id}`);
@@ -58,14 +60,31 @@ export function hideLoading(): void {
   document.body.classList.remove('is-loading');
 }
 
-export function showError(msg: string): void {
+export function showToast(msg: string, tone: ToastTone = 'error'): void {
+  const toast = el<HTMLElement>('error-toast');
+  toast.classList.remove('is-success', 'is-info');
+  if (tone !== 'error') toast.classList.add(`is-${tone}`);
+  toast.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+  toast.setAttribute('aria-live', tone === 'error' ? 'assertive' : 'polite');
   el<HTMLElement>('error-message').textContent = msg;
-  show(el<HTMLElement>('error-toast'));
+  show(toast);
   if (errorToastTimer) clearTimeout(errorToastTimer);
   errorToastTimer = setTimeout(() => {
-    hide(el<HTMLElement>('error-toast'));
+    hide(toast);
     errorToastTimer = null;
   }, 5000);
+}
+
+export function showError(msg: string): void {
+  showToast(msg, 'error');
+}
+
+export function showSuccess(msg: string): void {
+  showToast(msg, 'success');
+}
+
+export function showInfo(msg: string): void {
+  showToast(msg, 'info');
 }
 
 export function setBottomMenuAutoHidden(isHidden: boolean): void {
@@ -227,12 +246,17 @@ export class Router {
   back(): void {
     this._navigatingBack = true;
     window.history.back();
+    // If no popstate fires (e.g. already at the first history entry),
+    // don't leave the flag stuck, which would break the next navigate().
+    setTimeout(() => {
+      this._navigatingBack = false;
+    }, 0);
   }
 
   handlePopstate(event: PopStateEvent): void {
+    this._navigatingBack = false;
     const state = event.state as { view?: ViewType } | null;
     if (state?.view) {
-      this._navigatingBack = true;
       _saveScroll();
       this._current = state.view;
       _toggleViewElements(state.view);

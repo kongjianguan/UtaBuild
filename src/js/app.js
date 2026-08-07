@@ -1,9 +1,9 @@
 import { isTauriEnv, invoke, tauriReady } from './tauri.js';
 import { loadSettings, saveSettings, shouldUseCache, selectedArtworkSource, VALID_ARTWORK_SOURCES, DEFAULT_ARTWORK_SOURCE, } from './settings.js';
-import { el, $$, hide, showError, router, updateButtonStates, syncLspLogVisibility, } from './dom.js';
+import { el, $$, hide, showError, showInfo, showSuccess, router, updateButtonStates, syncLspLogVisibility, } from './dom.js';
 import { renderSearchHistory } from './search-history.js';
 import { loadSavedLyrics, initSongsControls, initSongsDockAutoHide } from './songs.js';
-import { handleSearch, initInfiniteScroll, setPendingSaltRequest, setCurrentActiveTab, currentSearchData, renderResultList, } from './search.js';
+import { handleSearch, initInfiniteScroll, initSourceTabKeyboardNav, setPendingSaltRequest, setCurrentActiveTab, currentSearchData, renderResultList, } from './search.js';
 import { syncLspLogZoom, adjustLspLogZoom, syncLspSettings, setBackendLspLogging, appendAppLspLog, viewLspLogs, } from './lsp.js';
 import { confirmClearAllCaches, clearAllCaches } from './cache.js';
 import { exportLyricsToFile, getExportData } from './export.js';
@@ -23,7 +23,7 @@ async function checkSaltLaunchRequest() {
         el('search-artist').value = request.artist || '';
         router.navigate('search', { resetScroll: true });
         void appendAppLspLog('salt', `launch request received title="${request.title}" artist="${request.artist || ''}"`);
-        showError(`Salt Player から「${request.title}」を受け取りました。検索して候補を選ぶと、確認後にこの曲へ Ruby 表示を適用します。`);
+        showInfo(`Salt Player から「${request.title}」を受け取りました。検索して候補を選ぶと、確認後にこの曲へ Ruby 表示を適用します。`);
     }
     catch (err) {
         console.warn('Salt launch request check failed:', err);
@@ -43,7 +43,7 @@ function initControls() {
         const artworkSource = VALID_ARTWORK_SOURCES.has(val) ? val : DEFAULT_ARTWORK_SOURCE;
         saveSettings({ artworkSource: artworkSource });
         if (router.current === 'songs') {
-            void loadSavedLyrics();
+            void loadSavedLyrics({ refreshArtwork: true });
         }
     });
     // Clear cache button
@@ -133,7 +133,13 @@ function initControls() {
             const btn = exportBtn;
             btn.disabled = true;
             try {
-                await exportLyricsToFile(data);
+                const exported = await exportLyricsToFile(data);
+                if (exported) {
+                    showSuccess('エクスポートしました');
+                }
+                else {
+                    showInfo('エクスポートをキャンセルしました');
+                }
             }
             catch (err) {
                 showError(`エクスポートに失敗しました: ${err}`);
@@ -189,6 +195,7 @@ function init() {
     renderSearchHistory();
     // Results infinite scroll
     initInfiniteScroll();
+    initSourceTabKeyboardNav();
     // Android back button support
     initBackButton();
     initBackGesture();

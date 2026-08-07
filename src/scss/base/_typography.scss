@@ -35,10 +35,18 @@ h1, h2, h3 {
   letter-spacing: 0;
 }
 
+// Programmatic view focus (router) must stay visible for keyboard users;
+// remove the outline only for mouse clicks.
 h1:focus,
 h2:focus,
 h3:focus {
   outline: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }
 
 h1 { font-size: var(--font-xl); font-weight: 700; }

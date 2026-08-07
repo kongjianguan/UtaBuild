@@ -81,6 +81,11 @@ impl LyricsCache {
         self.cache.insert(url, lyrics).await;
     }
 
+    /// 根据 URL 失效单个缓存条目
+    pub async fn invalidate(&self, url: &str) {
+        self.cache.invalidate(url).await;
+    }
+
     /// 清空所有歌词缓存
     pub async fn clear(&self) {
         self.cache.invalidate_all();
@@ -121,15 +126,18 @@ impl SearchCache {
     }
 
     /// 生成缓存键：`标题|歌手|搜索类型|页码`（全部小写）
+    ///
+    /// 分隔符 `|` 在标题/歌手中出现时会被转义为 `\|`，避免
+    /// `"A|B" + "C"` 与 `"A" + "B|C"` 这类组合碰撞。
     fn make_key_with_options(
         title: &str,
         artist: Option<&str>,
         search_type: &str,
         page: u32,
     ) -> String {
-        let title_lower = title.to_lowercase().trim().to_string();
+        let title_lower = title.to_lowercase().trim().replace('|', "\\|");
         let artist_lower = artist
-            .map(|a| a.to_lowercase().trim().to_string())
+            .map(|a| a.to_lowercase().trim().replace('|', "\\|"))
             .unwrap_or_default();
         format!("{}|{}|{}|{}", title_lower, artist_lower, search_type, page)
     }

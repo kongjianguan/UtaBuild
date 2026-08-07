@@ -167,6 +167,17 @@
   margin: 12px 0;
 }
 
+.source-loading {
+  padding: 24px 16px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  margin: 12px 0;
+}
+
 // Pagination
 .pagination {
   display: flex;

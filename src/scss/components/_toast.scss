@@ -22,6 +22,18 @@
   box-shadow: var(--shadow-md);
 }
 
+#error-toast.is-success {
+  background: var(--success-bg);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+#error-toast.is-info {
+  background: var(--info-bg);
+  border-color: var(--info);
+  color: var(--info);
+}
+
 #error-toast.hidden { display: none; }
 
 #error-close {
@@ -34,4 +46,12 @@
   min-height: 28px;
   padding: 0 2px;
   line-height: 1;
+}
+
+#error-toast.is-success #error-close {
+  color: var(--success);
+}
+
+#error-toast.is-info #error-close {
+  color: var(--info);
 }

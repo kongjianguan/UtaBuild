@@ -47,15 +47,30 @@ export function hideLoading() {
     el('app').removeAttribute('aria-busy');
     document.body.classList.remove('is-loading');
 }
-export function showError(msg) {
+export function showToast(msg, tone = 'error') {
+    const toast = el('error-toast');
+    toast.classList.remove('is-success', 'is-info');
+    if (tone !== 'error')
+        toast.classList.add(`is-${tone}`);
+    toast.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+    toast.setAttribute('aria-live', tone === 'error' ? 'assertive' : 'polite');
     el('error-message').textContent = msg;
-    show(el('error-toast'));
+    show(toast);
     if (errorToastTimer)
         clearTimeout(errorToastTimer);
     errorToastTimer = setTimeout(() => {
-        hide(el('error-toast'));
+        hide(toast);
         errorToastTimer = null;
     }, 5000);
+}
+export function showError(msg) {
+    showToast(msg, 'error');
+}
+export function showSuccess(msg) {
+    showToast(msg, 'success');
+}
+export function showInfo(msg) {
+    showToast(msg, 'info');
 }
 export function setBottomMenuAutoHidden(isHidden) {
     el('bottom-menu').classList.toggle('is-auto-hidden', Boolean(isHidden));
@@ -197,11 +212,16 @@ export class Router {
     back() {
         this._navigatingBack = true;
         window.history.back();
+        // If no popstate fires (e.g. already at the first history entry),
+        // don't leave the flag stuck, which would break the next navigate().
+        setTimeout(() => {
+            this._navigatingBack = false;
+        }, 0);
     }
     handlePopstate(event) {
+        this._navigatingBack = false;
         const state = event.state;
         if (state?.view) {
-            this._navigatingBack = true;
             _saveScroll();
             this._current = state.view;
             _toggleViewElements(state.view);
