@@ -5,12 +5,20 @@
 
 use crate::models::LyricElement;
 
-/// 将 UtaTen 相对路径补全为完整 URL，其他 URL 原样返回。
+/// 将 UtaTen 相对路径补全为完整 URL。
+///
+/// 只允许 http(s)、UtaTen 相对路径和 `ne:` / `qq_music:` 内部标识——
+/// `javascript:` / `data:` / `vbscript:` 等危险协议原样透传会在导出的
+/// HTML 中形成可点击的脚本入口，因此一律清空。
 fn resolve_url(url: &str) -> String {
     if url.starts_with("/lyric/") {
         format!("https://utaten.com{}", url)
-    } else {
+    } else if url.starts_with("http://") || url.starts_with("https://")
+        || url.starts_with("ne:") || url.starts_with("qq_music:")
+    {
         url.to_string()
+    } else {
+        String::new()
     }
 }
 

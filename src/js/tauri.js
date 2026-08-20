@@ -121,6 +121,8 @@ function createMockInvoke() {
         }
         if (cmd === 'clear_cache')
             return null;
+        if (cmd === 'export_lyrics_html')
+            return true;
         if (cmd === 'set_lsp_logging_enabled') {
             console.log('[Mock] set lsp logging', args);
             return null;

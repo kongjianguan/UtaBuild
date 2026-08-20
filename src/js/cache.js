@@ -1,5 +1,5 @@
 import { invoke } from './tauri.js';
-import { el, show, hide, showLoading, hideLoading, showError, } from './dom.js';
+import { el, show, hide, showLoading, hideLoading, showError, showSuccess, } from './dom.js';
 // ==================== Cache Clearing State ====================
 export let clearCacheConfirmationActive = false;
 let activeConfirmationCleanup = null;
@@ -7,7 +7,7 @@ const CLEAR_CACHE_CONFIRMATION_COOLDOWN_MS = 3000;
 const CLEAR_CACHE_CONFIRMATION_STEPS = [
     {
         title: 'キャッシュを削除',
-        message: '検索結果と歌詞キャッシュを削除します。保存済みの表示状態もリセットされます。',
+        message: '検索結果キャッシュとメモリキャッシュを削除します。保存済みの曲は削除されません。',
         confirmLabel: '1回目の確認',
     },
     {
@@ -26,7 +26,7 @@ export async function clearAllCaches() {
     showLoading();
     try {
         await invoke('clear_cache');
-        showError('キャッシュを削除しました');
+        showSuccess('検索キャッシュを削除しました。保存済みの曲は削除されていません');
     }
     catch (err) {
         console.error('Clear cache error:', err);

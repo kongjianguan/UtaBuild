@@ -10,7 +10,7 @@
   left: 0;
   right: 0;
   z-index: 100;
-  padding: var(--space-2) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  padding: var(--space-2) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
   display: flex;
   justify-content: center;
   pointer-events: none;
@@ -21,7 +21,7 @@
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   position: relative;
   pointer-events: auto;
   background: var(--bg-secondary);
@@ -37,6 +37,7 @@
   width: 3px;
   border-radius: 50%;
   background: var(--primary);
+  display: none;
   transition: left var(--motion-base) ease;
 }
 
@@ -45,7 +46,8 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 18px;
+  min-width: 82px;
+  padding: 7px 14px;
   background: transparent;
   border: none;
   color: var(--text-secondary);
@@ -54,7 +56,7 @@
   font-weight: 500;
   letter-spacing: 0.04em;
   cursor: pointer;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   transition: color var(--motion-fast), background var(--motion-fast);
   position: relative;
   z-index: 1;
@@ -66,6 +68,8 @@
 
 .bottom-menu__item.active {
   color: var(--primary);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .bottom-menu__item:focus-visible {
@@ -113,6 +117,7 @@ body[data-theme="mygo"] .bottom-menu__item.active {
 
 // MyGO: bottom light bar
 body[data-theme="mygo"] .bottom-menu__slider {
+  display: block;
   width: 60%;
   height: 1px;
   border-radius: 0;

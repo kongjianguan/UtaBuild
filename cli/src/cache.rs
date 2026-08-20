@@ -479,9 +479,14 @@ impl LyricsCache {
 
 /// 获取歌词缓存目录路径。
 ///
-/// * 返回平台缓存目录下的 "lyrics" 子目录路径。
-fn get_lyrics_cache_dir() -> PathBuf {
-    get_cache_dir().join("lyrics")
+/// * `cache_dir` - 可选的缓存目录，如果提供则使用其下的 `lyrics` 子目录；
+///   否则使用默认缓存目录下的 `lyrics` 子目录。
+fn get_lyrics_cache_dir(cache_dir: Option<&PathBuf>) -> PathBuf {
+    if let Some(dir) = cache_dir {
+        dir.join("lyrics")
+    } else {
+        get_cache_dir().join("lyrics")
+    }
 }
 
 /// 获取歌词注释缓存目录路径。
@@ -515,9 +520,14 @@ fn url_to_cache_filename(url: &str) -> String {
 ///
 /// * `url` - 歌词来源 URL，用作缓存键。
 /// * `lyrics` - 歌词输出数据。
+/// * `cache_dir` - 可选的缓存目录，与搜索缓存保持一致；`None` 时使用默认目录。
 /// * 成功时返回 `Ok(())`，失败时返回错误。
-pub fn save_lyrics_cache(url: &str, lyrics: LyricsOutput) -> anyhow::Result<()> {
-    let cache_dir = get_lyrics_cache_dir();
+pub fn save_lyrics_cache(
+    url: &str,
+    lyrics: LyricsOutput,
+    cache_dir: Option<&PathBuf>,
+) -> anyhow::Result<()> {
+    let cache_dir = get_lyrics_cache_dir(cache_dir);
     fs::create_dir_all(&cache_dir)?;
 
     let cache = LyricsCache::new(url.to_string(), lyrics);
@@ -534,9 +544,10 @@ pub fn save_lyrics_cache(url: &str, lyrics: LyricsOutput) -> anyhow::Result<()> 
 /// 从缓存中读取歌词数据。
 ///
 /// * `url` - 歌词来源 URL，用作缓存键。
+/// * `cache_dir` - 可选的缓存目录，与搜索缓存保持一致；`None` 时使用默认目录。
 /// * 如果缓存有效（歌词缓存永不过期）且文件存在，返回 `Some(LyricsOutput)`，否则返回 `None`。
-pub fn get_lyrics_cache(url: &str) -> Option<LyricsOutput> {
-    let cache_dir = get_lyrics_cache_dir();
+pub fn get_lyrics_cache(url: &str, cache_dir: Option<&PathBuf>) -> Option<LyricsOutput> {
+    let cache_dir = get_lyrics_cache_dir(cache_dir);
     let filename = url_to_cache_filename(url);
     let path = cache_dir.join(&filename);
 
@@ -548,13 +559,21 @@ pub fn get_lyrics_cache(url: &str) -> Option<LyricsOutput> {
     match fs::read_to_string(&path) {
         Ok(content) => match serde_json::from_str::<LyricsCache>(&content) {
             Ok(cache) => {
-                if cache.is_valid() {
+                if cache.is_valid() && cache.url.as_str() == url {
                     debug!("歌词缓存有效: {:?}", path);
                     Some(cache.data)
                 } else {
-                    debug!("歌词缓存已过期: {:?}", path);
+                    if cache.is_valid() {
+                        warn!(
+                            "歌词缓存 URL 不匹配 (期望 {}，实际 {:?})，忽略",
+                            url,
+                            cache.url
+                        );
+                    } else {
+                        debug!("歌词缓存已过期: {:?}", path);
+                    }
                     if let Err(e) = fs::remove_file(&path) {
-                        warn!("删除过期缓存失败: {}", e);
+                        warn!("删除无效缓存失败: {}", e);
                     }
                     None
                 }
@@ -837,9 +856,9 @@ pub fn clear_lyrics_annotations_cache(cache_dir: Option<&PathBuf>) -> anyhow::Re
 
 /// 清空歌词缓存目录。
 ///
-/// * 成功时返回 `Ok(())`，失败时返回错误。
-pub fn clear_lyrics_cache() -> anyhow::Result<()> {
-    let cache_dir = get_lyrics_cache_dir();
+/// * `cache_dir` - 可选的缓存目录；`None` 时使用默认目录。
+pub fn clear_lyrics_cache(cache_dir: Option<&PathBuf>) -> anyhow::Result<()> {
+    let cache_dir = get_lyrics_cache_dir(cache_dir);
     if cache_dir.exists() {
         fs::remove_dir_all(&cache_dir)?;
         debug!("歌词缓存已清除");

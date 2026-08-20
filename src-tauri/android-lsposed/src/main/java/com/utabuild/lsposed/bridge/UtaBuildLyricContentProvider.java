@@ -27,7 +27,7 @@ import java.util.Set;
  * lyric JSON and can later be backed by the full UtaBuild search/cache pipeline.</p>
  */
 public final class UtaBuildLyricContentProvider extends ContentProvider {
-    public static final String AUTHORITY = "com.utabuild.app.lyrics";
+    public static final String AUTHORITY = "fyi.kongjianguan.utabuild.lyrics";
     public static final String PATH_LYRICS = "lyrics";
     public static final String PATH_PENDING = "pending";
     public static final String PATH_LOGS = "logs";

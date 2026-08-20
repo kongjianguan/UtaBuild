@@ -1,13 +1,23 @@
 import type { SearchData, SearchItem, SearchResponse, UtatenPageState } from './types.js';
 import { invoke, isTauriEnv } from './tauri.js';
 import { shouldUseCache, selectedArtworkSource } from './settings.js';
-import { el, show, hide, showLoading, hideLoading, showError, router, updateButtonStates } from './dom.js';
+import {
+  el,
+  show,
+  hide,
+  showLoading,
+  hideLoading,
+  showError,
+  router,
+  updateButtonStates,
+} from './dom.js';
 import { renderLyrics } from './ruby.js';
 import { addSearchHistory } from './search-history.js';
 import { appendAppLspLog } from './lsp.js';
 import {
   attachResultLongPressMenu,
-  resultLongPressTriggered, setResultLongPressTriggered,
+  cancelPendingResultLongPress,
+  consumeResultLongPressClick,
 } from './songs.js';
 import { escapeHtml } from './utils.js';
 import { setExportData } from './export.js';
@@ -28,6 +38,15 @@ export let utatenPageState: UtatenPageState = {
 };
 let _pendingSaltRequest: { title?: string; artist?: string | null } | null = null;
 export let isSearching = false;
+let currentLyricsRequestId = 0;
+
+type SearchSourceKey = 'utaten' | 'qq_music' | 'netease';
+
+const SEARCH_SOURCES: Array<{ key: SearchSourceKey; label: string }> = [
+  { key: 'utaten', label: 'UtaTen' },
+  { key: 'qq_music', label: 'QQ音楽' },
+  { key: 'netease', label: '网易雲' },
+];
 
 export function getPendingSaltRequest(): {
   title?: string;
@@ -84,11 +103,15 @@ function updatePagination(): void {
 // ==================== Results Summary ====================
 
 function updateResultsSummary(data: SearchData | null): void {
-  const utatenCount = data?.sources?.utaten?.data?.results?.length ?? 0;
-  const qqCount = data?.sources?.qq_music?.data?.results?.length ?? 0;
-  const neCount = data?.sources?.netease?.data?.results?.length ?? 0;
+  const loadedResults = data?.allResults || [];
+  const utatenCount = loadedResults.filter((item) => item.source === 'utaten').length;
+  const qqCount = loadedResults.filter((item) => item.source === 'qq_music').length;
+  const neCount = loadedResults.filter((item) => item.source === 'netease').length;
   const totalCount = utatenCount + qqCount + neCount;
   const { loadedPages, totalPages, loadingMore } = getPaginationInfo();
+  const loadingSources = Object.values(data?.sources || {}).filter(
+    (source) => source.loading,
+  ).length;
   const title = data?.query?.title ?? currentSearchQuery?.title ?? '';
   const artist = data?.query?.artist ?? currentSearchQuery?.artist;
   const queryLabel = artist ? `${title} / ${artist}` : title;
@@ -98,7 +121,17 @@ function updateResultsSummary(data: SearchData | null): void {
     return;
   }
 
-  const loadingSuffix = loadingMore ? '・続きを取得中' : '';
+  if (loadingSources > 0 && totalCount === 0) {
+    el<HTMLElement>('results-summary').textContent = `「${queryLabel}」の検索結果を取得中...`;
+    show(el<HTMLElement>('results-summary'));
+    return;
+  }
+
+  const loadingSuffix = loadingMore
+    ? '・続きを取得中'
+    : loadingSources > 0
+      ? `・${loadingSources}件のソースを読み込み中`
+      : '';
   const perSource =
     totalCount > 0
       ? `（UtaTen: ${utatenCount} / QQ: ${qqCount} / NE: ${neCount}）`
@@ -127,6 +160,15 @@ export function initInfiniteScroll(): void {
     window.addEventListener('resize', maybeLoadMoreResults);
     resultsScrollEventsInitialized = true;
   }
+
+  el<HTMLElement>('results-container').addEventListener('click', (event) => {
+    const target = (event.target as HTMLElement).closest<HTMLButtonElement>('.result-item');
+    if (!target) return;
+    if (consumeResultLongPressClick(target, event)) return;
+    const index = Number(target.dataset.index);
+    if (!Number.isInteger(index)) return;
+    void handleSelectResult(index);
+  });
 
   if (typeof window.IntersectionObserver === 'function') {
     resultsScrollObserver = new window.IntersectionObserver(
@@ -268,6 +310,7 @@ async function performSearch(
   }
 
   showLoading();
+  let firstSourceSettled = false;
 
   console.log(
     '\u{1F50D} 搜索:',
@@ -279,120 +322,141 @@ async function performSearch(
   );
 
   try {
-    const results = await Promise.allSettled([
-      invoke<SearchResponse>('search_lyrics', {
-        title,
-        artist,
-        page,
-        useCache: shouldUseCache(),
-        lyricSource: 'utaten',
-      }),
-      invoke<SearchResponse>('search_lyrics', {
-        title,
-        artist,
-        page,
-        useCache: shouldUseCache(),
-        lyricSource: 'qq_music',
-      }),
-      invoke<SearchResponse>('search_lyrics', {
-        title,
-        artist,
-        page,
-        useCache: shouldUseCache(),
-        lyricSource: 'netease',
-      }),
-    ]);
-
-    if (searchRunId !== currentSearchRunId) return;
-
-    // eslint-disable-next-line no-inner-declarations
-    function extractResult(
-      index: number,
-      sourceName: string,
-    ): {
-      data: SearchResponse | null;
-      sourceError: string | null;
-    } {
-      if (results[index].status !== 'fulfilled') {
-        return {
-          data: null,
-          sourceError:
-            (results[index] as PromiseRejectedResult).reason?.message ||
-            (results[index] as PromiseRejectedResult).reason ||
-            `${sourceName} 検索に失敗しました`,
-        };
-      }
-      const val = (results[index] as PromiseFulfilledResult<SearchResponse>).value;
-      if (val && val.status === 'select' && val.results && val.results.length > 0) {
-        return { data: val, sourceError: null };
-      }
-      return { data: null, sourceError: `${sourceName} で結果が見つかりませんでした` };
-    }
-
-    const utatenInfo = extractResult(0, 'UtaTen');
-    const qqMusicInfo = extractResult(1, 'QQ音楽');
-    const neteaseInfo = extractResult(2, '网易雲');
-
-    const utatenItems = (utatenInfo.data?.results || []).map((item) => ({
-      ...item,
-      source: 'utaten' as const,
-    }));
-    const qqMusicItems = (qqMusicInfo.data?.results || []).map((item) => ({
-      ...item,
-      source: 'qq_music' as const,
-    }));
-    const neteaseItems = (neteaseInfo.data?.results || []).map((item) => ({
-      ...item,
-      source: 'netease' as const,
-    }));
-
     currentSearchData = {
       query: { title, artist },
       sources: {
-        utaten: { data: utatenInfo.data ?? null, error: utatenInfo.sourceError },
-        qq_music: {
-          data: qqMusicInfo.data ?? null,
-          error: qqMusicInfo.sourceError,
-        },
-        netease: {
-          data: neteaseInfo.data ?? null,
-          error: neteaseInfo.sourceError,
-        },
+        utaten: { data: null, error: null, loading: true },
+        qq_music: { data: null, error: null, loading: true },
+        netease: { data: null, error: null, loading: true },
       },
-      allResults: [...utatenItems, ...qqMusicItems, ...neteaseItems],
+      allResults: [],
     };
     currentActiveTab = 'all';
-
     utatenPageState = {
-      currentPage: utatenInfo.data?.pagination?.current_page || 1,
-      totalPages: utatenInfo.data?.pagination?.total_pages || 1,
-      hasNext: utatenInfo.data?.pagination?.has_next ?? false,
+      currentPage: 1,
+      totalPages: 1,
+      hasNext: false,
       loadedPages: 1,
       loadingMore: false,
     };
+    router.navigate('results', { resetScroll: true });
+    renderResultList(currentSearchData);
 
+    const sourceResults = SEARCH_SOURCES.map(async ({ key, label }) => {
+      try {
+        const result = await invoke<SearchResponse>('search_lyrics', {
+          title,
+          artist,
+          page,
+          useCache: shouldUseCache(),
+          lyricSource: key,
+        });
+
+        if (searchRunId !== currentSearchRunId || !currentSearchData) return;
+
+        const hasResults =
+          result?.status === 'select' && Array.isArray(result.results) && result.results.length > 0;
+        const items = hasResults
+          ? result.results.map((item) => ({ ...item, source: key }))
+          : [];
+
+        currentSearchData = {
+          ...currentSearchData,
+          sources: {
+            ...currentSearchData.sources,
+            [key]: {
+              data: hasResults ? result : null,
+              error: hasResults ? null : result?.error || `${label} で結果が見つかりませんでした`,
+              loading: false,
+            },
+          },
+          allResults: [
+            ...currentSearchData.allResults,
+            ...items.filter(
+              (item) => !currentSearchData?.allResults.some((existing) => existing.url === item.url),
+            ),
+          ],
+        };
+
+        if (key === 'utaten') {
+          utatenPageState = {
+            currentPage: result?.pagination?.current_page || 1,
+            totalPages: result?.pagination?.total_pages || 1,
+            hasNext: result?.pagination?.has_next ?? false,
+            loadedPages: 1,
+            loadingMore: false,
+          };
+        }
+
+        renderResultList(currentSearchData);
+        if (key === 'utaten') {
+          maybeLoadMoreResults();
+        }
+        if (!firstSourceSettled) {
+          firstSourceSettled = true;
+          hideLoading();
+        }
+      } catch (err) {
+        if (searchRunId !== currentSearchRunId || !currentSearchData) return;
+
+        const reason = err as { message?: string } | null;
+        currentSearchData = {
+          ...currentSearchData,
+          sources: {
+            ...currentSearchData.sources,
+            [key]: {
+              data: null,
+              error: reason?.message || String(err) || `${label} 検索に失敗しました`,
+              loading: false,
+            },
+          },
+        };
+        renderResultList(currentSearchData);
+        if (!firstSourceSettled) {
+          firstSourceSettled = true;
+          hideLoading();
+        }
+      }
+    });
+
+    await Promise.all(sourceResults);
+
+    if (searchRunId !== currentSearchRunId || !currentSearchData) return;
+
+    const counts = SEARCH_SOURCES.map(({ key }) =>
+      currentSearchData?.allResults.filter((item) => item.source === key).length || 0,
+    );
     if (currentSearchData.allResults.length > 0) {
       void appendAppLspLog(
         'search',
-        `search success utaten=${utatenItems.length} qq=${qqMusicItems.length} ne=${neteaseItems.length}`,
+        `search success utaten=${counts[0]} qq=${counts[1]} ne=${counts[2]}`,
       );
-      renderResultList(currentSearchData);
-      if (router.current === 'results') {
-        router.navigate('results');
-      } else {
-        router.navigate('results');
-      }
       maybeLoadMoreResults();
     } else {
-      void appendAppLspLog('search', 'search not_found');
-      showError('結果が見つかりませんでした');
+      const sourceStates = SEARCH_SOURCES.map(
+        ({ key }) => currentSearchData?.sources?.[key],
+      );
+      const realErrors = sourceStates
+        .map((source) => source?.error)
+        .filter(
+          (error): error is string => !!error && !error.includes('見つかりませんでした'),
+        );
+      if (realErrors.length > 0) {
+        void appendAppLspLog('search', `search failed: ${realErrors[0]}`);
+        showError(realErrors[0]);
+      } else {
+        void appendAppLspLog('search', 'search not_found');
+        showError('結果が見つかりませんでした');
+      }
     }
   } catch (err) {
     console.error('Search error:', err);
     void appendAppLspLog('search', `search error ${String(err)}`);
     showError(`検索エラー: ${err}`);
   } finally {
-    hideLoading();
+    if (searchRunId === currentSearchRunId && !firstSourceSettled) {
+      hideLoading();
+    }
   }
 }
 
@@ -404,8 +468,15 @@ export async function handleSearch(): Promise<void> {
   const title = el<HTMLInputElement>('search-title').value.trim();
   const artist = el<HTMLInputElement>('search-artist').value.trim() || null;
 
+  if (!title) {
+    showError('曲名を入力してください');
+    el<HTMLInputElement>('search-title').focus();
+    return;
+  }
+
   currentSearchQuery = { title, artist };
   currentSearchRunId += 1;
+  currentLyricsRequestId += 1;
   isLoadingMoreResults = false;
   currentSearchData = null;
   currentActiveTab = 'all';
@@ -417,19 +488,25 @@ export async function handleSearch(): Promise<void> {
   );
 
   isSearching = true;
-  el<HTMLButtonElement>('search-btn').classList.add('is-searching');
+  const searchButton = el<HTMLButtonElement>('search-btn');
+  searchButton.classList.add('is-searching');
+  searchButton.disabled = true;
+  searchButton.setAttribute('aria-busy', 'true');
 
   try {
     await performSearch(1, currentSearchRunId);
   } finally {
     isSearching = false;
-    el<HTMLButtonElement>('search-btn').classList.remove('is-searching');
+    searchButton.classList.remove('is-searching');
+    searchButton.disabled = false;
+    searchButton.removeAttribute('aria-busy');
   }
 }
 
 // ==================== Render Result List ====================
 
 export function renderResultList(data: SearchData | null): void {
+  cancelPendingResultLongPress();
   el<HTMLElement>('results-container').innerHTML = '';
   updateResultsSummary(data);
   updatePagination();
@@ -446,6 +523,14 @@ export function renderResultList(data: SearchData | null): void {
 
   if (filteredResults.length === 0 && currentActiveTab !== 'all') {
     const sourceData = data?.sources?.[currentActiveTab];
+    if (sourceData?.loading) {
+      const loadingEl = document.createElement('div');
+      loadingEl.className = 'source-loading';
+      loadingEl.setAttribute('role', 'status');
+      loadingEl.textContent = 'このソースの検索結果を読み込み中...';
+      el<HTMLElement>('results-container').appendChild(loadingEl);
+      return;
+    }
     if (sourceData?.error) {
       const errorEl = document.createElement('div');
       errorEl.className = 'source-error';
@@ -454,6 +539,18 @@ export function renderResultList(data: SearchData | null): void {
       el<HTMLElement>('results-container').appendChild(errorEl);
       return;
     }
+  }
+
+  if (
+    filteredResults.length === 0 &&
+    currentActiveTab === 'all' &&
+    Object.values(data?.sources || {}).some((source) => source.loading)
+  ) {
+    const loadingEl = document.createElement('div');
+    loadingEl.className = 'source-loading';
+    loadingEl.setAttribute('role', 'status');
+    loadingEl.textContent = '検索結果を読み込み中...';
+    el<HTMLElement>('results-container').appendChild(loadingEl);
   }
 
   filteredResults.forEach((item) => {
@@ -477,14 +574,8 @@ export function renderResultList(data: SearchData | null): void {
     `;
 
     const realIndex = (data?.allResults || []).indexOf(item);
+    button.dataset.index = String(realIndex);
     attachResultLongPressMenu(button, item);
-    button.addEventListener('click', () => {
-      if (resultLongPressTriggered) {
-        setResultLongPressTriggered(false);
-        return;
-      }
-      void handleSelectResult(realIndex);
-    });
     el<HTMLElement>('results-container').appendChild(button);
   });
 }
@@ -493,9 +584,10 @@ function updateSourceTabs(data: SearchData | null): void {
   if (!el<HTMLElement>('source-tabs')) return;
 
   const tabs = el<HTMLElement>('source-tabs').querySelectorAll('.source-tab');
-  const utatenCount = data?.sources?.utaten?.data?.results?.length ?? 0;
-  const qqCount = data?.sources?.qq_music?.data?.results?.length ?? 0;
-  const neCount = data?.sources?.netease?.data?.results?.length ?? 0;
+  const loadedResults = data?.allResults || [];
+  const utatenCount = loadedResults.filter((item) => item.source === 'utaten').length;
+  const qqCount = loadedResults.filter((item) => item.source === 'qq_music').length;
+  const neCount = loadedResults.filter((item) => item.source === 'netease').length;
   const totalCount = utatenCount + qqCount + neCount;
   const utatenErr = data?.sources?.utaten?.error ?? null;
   const qqErr = data?.sources?.qq_music?.error ?? null;
@@ -508,6 +600,8 @@ function updateSourceTabs(data: SearchData | null): void {
 
     tabEl.classList.toggle('active', source === currentActiveTab);
     tabEl.setAttribute('aria-selected', String(source === currentActiveTab));
+    // Roving tabindex: only the active tab stays in the tab order.
+    tabEl.tabIndex = source === currentActiveTab ? 0 : -1;
 
     let countEl = tabEl.querySelector('.tab-count') as HTMLElement | null;
     let count = totalCount;
@@ -529,7 +623,12 @@ function updateSourceTabs(data: SearchData | null): void {
       tabEl.appendChild(countEl);
     }
 
-    if (errorMsg) {
+    const sourceData = source === 'all' ? null : data?.sources?.[source];
+    if (sourceData?.loading) {
+      countEl.textContent = '…';
+      tabEl.dataset.empty = 'false';
+      tabEl.title = `${source} を読み込み中`;
+    } else if (errorMsg) {
       countEl.textContent = '\u2715';
       tabEl.dataset.empty = 'true';
       tabEl.title = errorMsg;
@@ -550,6 +649,7 @@ async function handleSelectResult(index: number): Promise<void> {
   const selectedItem = currentSearchData.allResults[index];
   if (!selectedItem) return;
 
+  const requestId = ++currentLyricsRequestId;
   const saltRequest = _pendingSaltRequest;
 
   if (saltRequest) {
@@ -559,8 +659,9 @@ async function handleSelectResult(index: number): Promise<void> {
     if (!confirmed) {
       void appendAppLspLog(
         'salt',
-        `binding cancelled selected="${selectedItem.title}"`,
+        `binding cancelled salt="${saltRequest.title || ''}"`,
       );
+      clearPendingSaltRequest();
       return;
     }
   }
@@ -585,9 +686,9 @@ async function handleSelectResult(index: number): Promise<void> {
         'lyrics',
         `QQ failed for "${selectedItem.title}", trying UtaTen fallback`,
       );
-      const utatenResults =
-        currentSearchData?.sources?.utaten?.data?.results || [];
-      const match = utatenResults.find(
+      const utatenItems =
+        (currentSearchData?.allResults || []).filter((r) => r.source === 'utaten');
+      const match = utatenItems.find(
         (r) =>
           r.title === selectedItem.title && r.artist === selectedItem.artist,
       );
@@ -610,9 +711,9 @@ async function handleSelectResult(index: number): Promise<void> {
         'lyrics',
         `NetEase failed for "${selectedItem.title}", trying UtaTen fallback`,
       );
-      const utatenResults =
-        currentSearchData?.sources?.utaten?.data?.results || [];
-      const match = utatenResults.find(
+      const utatenItems =
+        (currentSearchData?.allResults || []).filter((r) => r.source === 'utaten');
+      const match = utatenItems.find(
         (r) =>
           r.title === selectedItem.title && r.artist === selectedItem.artist,
       );
@@ -630,6 +731,9 @@ async function handleSelectResult(index: number): Promise<void> {
     }
 
     if (result.status === 'success') {
+      // A newer selection or a navigation away invalidates this request:
+      // never render stale lyrics or force-navigate back to them.
+      if (requestId !== currentLyricsRequestId || router.current !== 'results') return;
       if (saltRequest) {
         await invoke('bind_salt_song_lyrics', {
           saltTitle: saltRequest.title || selectedItem.title,
@@ -642,6 +746,7 @@ async function handleSelectResult(index: number): Promise<void> {
           `binding saved salt="${saltRequest.title || ''}" selected="${selectedItem.title}"`,
         );
       }
+      if (requestId !== currentLyricsRequestId || router.current !== 'results') return;
 
       el<HTMLElement>('lyrics-title').textContent = result.found_title;
       el<HTMLElement>('lyrics-artist').textContent = result.found_artist;
@@ -678,4 +783,28 @@ async function handleSelectResult(index: number): Promise<void> {
 
 export function setCurrentActiveTab(val: string): void {
   currentActiveTab = val;
+}
+
+const SOURCE_TAB_ORDER = ['all', 'utaten', 'qq_music', 'netease'];
+
+export function initSourceTabKeyboardNav(): void {
+  el<HTMLElement>('source-tabs').addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+    const tabs = Array.from(
+      el<HTMLElement>('source-tabs').querySelectorAll<HTMLElement>('.source-tab'),
+    );
+    if (tabs.length === 0) return;
+
+    event.preventDefault();
+    const currentIndex = SOURCE_TAB_ORDER.indexOf(currentActiveTab);
+    const delta = event.key === 'ArrowRight' ? 1 : -1;
+    const nextIndex = (currentIndex + delta + SOURCE_TAB_ORDER.length) % SOURCE_TAB_ORDER.length;
+    const nextSource = SOURCE_TAB_ORDER[nextIndex];
+    if (!nextSource) return;
+
+    setCurrentActiveTab(nextSource);
+    renderResultList(currentSearchData);
+    tabs[nextIndex]?.focus();
+  });
 }

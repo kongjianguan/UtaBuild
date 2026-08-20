@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 use utabuild_cli::cache::{
-    clear_lyrics_annotations_cache, clear_search_response_cache, delete_lyrics_annotations_cache,
+    clear_search_response_cache, delete_lyrics_annotations_cache,
     get_lyrics_annotations_cache_entry, get_search_response_cache, list_lyrics_annotations_cache,
     save_lyrics_annotations_cache_with_metadata, save_search_response_cache,
 };
@@ -170,7 +170,12 @@ async fn get_lyrics(
 
     // QQ Music path
     if lyric_preference == LyricSourcePreference::QqMusic {
-        let qq_cache_key = format!("qq:{}:{}", title, artist.as_deref().unwrap_or(""));
+        // Key by the selected song's mid when available so different songs
+        // with identical title+artist never share lyrics.
+        let qq_cache_key = url
+            .strip_prefix("qq_music:")
+            .map(|mid| format!("qq:{}", mid))
+            .unwrap_or_else(|| format!("qq:{}:{}", title, artist.as_deref().unwrap_or("")));
 
         if use_cache {
             if let Some(cached_annotations) = searcher.cache().lyrics().get(&qq_cache_key).await {
@@ -184,7 +189,7 @@ async fn get_lyrics(
                     None,
                 );
                 if save_salt_bridge {
-                    save_salt_bridge_cache(&app, &response)?;
+                    best_effort_save(save_salt_bridge_cache(&app, &response), "save_salt_bridge_cache");
                 }
                 write_app_lsp_log_if_enabled(
                     &app,
@@ -197,8 +202,11 @@ async fn get_lyrics(
             }
         }
 
+        let qq_song_id = url
+            .strip_prefix("qq_music:")
+            .and_then(|mid| mid.parse::<i64>().ok());
         let annotations = searcher
-            .fetch_qq_music_lyrics(&title, artist.as_deref())
+            .fetch_qq_music_lyrics(&title, artist.as_deref(), qq_song_id)
             .await
             .unwrap_or_default();
 
@@ -234,9 +242,9 @@ async fn get_lyrics(
             None,
         );
         if save_salt_bridge {
-            save_salt_bridge_cache(&app, &response)?;
+            best_effort_save(save_salt_bridge_cache(&app, &response), "save_salt_bridge_cache");
         }
-        save_saved_lyrics_from_response(&response)?;
+        best_effort_save(save_saved_lyrics_from_response(&response), "save_saved_lyrics_from_response");
         write_app_lsp_log_if_enabled(
             &app,
             &state,
@@ -264,7 +272,7 @@ async fn get_lyrics(
                     None,
                 );
                 if save_salt_bridge {
-                    save_salt_bridge_cache(&app, &response)?;
+                    best_effort_save(save_salt_bridge_cache(&app, &response), "save_salt_bridge_cache");
                 }
                 return Ok(response);
             }
@@ -276,9 +284,9 @@ async fn get_lyrics(
             drop(searcher);
             let response = lyrics_success_response(title, artist, ne_cache_key, &annotations, None, None);
             if save_salt_bridge {
-                save_salt_bridge_cache(&app, &response)?;
+                best_effort_save(save_salt_bridge_cache(&app, &response), "save_salt_bridge_cache");
             }
-            save_saved_lyrics_from_response(&response)?;
+            best_effort_save(save_saved_lyrics_from_response(&response), "save_saved_lyrics_from_response");
             return Ok(response);
         }
 
@@ -302,20 +310,22 @@ async fn get_lyrics(
             let cover_url = existing_entry
                 .as_ref()
                 .and_then(|entry| entry.cover_url.clone());
-            save_lyrics_annotations_cache_with_metadata(
-                &url,
-                &cached_annotations,
-                Some(&title),
-                artist.as_deref(),
-                album.as_deref(),
-                cover_url.as_deref(),
-                None,
-            )
-            .map_err(|e| e.to_string())?;
+            best_effort_save(
+                save_lyrics_annotations_cache_with_metadata(
+                    &url,
+                    &cached_annotations,
+                    Some(&title),
+                    artist.as_deref(),
+                    album.as_deref(),
+                    cover_url.as_deref(),
+                    None,
+                ),
+                "save_lyrics_annotations_cache_with_metadata",
+            );
             let response =
                 lyrics_success_response(title, artist, url, &cached_annotations, album, cover_url);
             if save_salt_bridge {
-                save_salt_bridge_cache(&app, &response)?;
+                best_effort_save(save_salt_bridge_cache(&app, &response), "save_salt_bridge_cache");
             }
             drop(searcher);
             write_app_lsp_log_if_enabled(&app, &state, "lyrics", "get_lyrics memory cache hit")
@@ -341,16 +351,18 @@ async fn get_lyrics(
                 .lyrics()
                 .insert(url.clone(), cached_annotations.clone())
                 .await;
-            save_lyrics_annotations_cache_with_metadata(
-                &url,
-                &cached_annotations,
-                Some(&response_title),
-                response_artist.as_deref(),
-                album.as_deref(),
-                cover_url.as_deref(),
-                None,
-            )
-            .map_err(|e| e.to_string())?;
+            best_effort_save(
+                save_lyrics_annotations_cache_with_metadata(
+                    &url,
+                    &cached_annotations,
+                    Some(&response_title),
+                    response_artist.as_deref(),
+                    album.as_deref(),
+                    cover_url.as_deref(),
+                    None,
+                ),
+                "save_lyrics_annotations_cache_with_metadata",
+            );
             let response = lyrics_success_response(
                 response_title,
                 response_artist,
@@ -360,7 +372,7 @@ async fn get_lyrics(
                 cover_url,
             );
             if save_salt_bridge {
-                save_salt_bridge_cache(&app, &response)?;
+                best_effort_save(save_salt_bridge_cache(&app, &response), "save_salt_bridge_cache");
             }
             drop(searcher);
             write_app_lsp_log_if_enabled(&app, &state, "lyrics", "get_lyrics disk cache hit").await;
@@ -387,16 +399,18 @@ async fn get_lyrics(
                 .insert(url.clone(), elements.clone())
                 .await;
             drop(searcher);
-            save_lyrics_annotations_cache_with_metadata(
-                &url,
-                &elements,
-                Some(&title),
-                artist.as_deref(),
-                metadata.album.as_deref(),
-                metadata.cover_url.as_deref(),
-                None,
-            )
-            .map_err(|e| e.to_string())?;
+            best_effort_save(
+                save_lyrics_annotations_cache_with_metadata(
+                    &url,
+                    &elements,
+                    Some(&title),
+                    artist.as_deref(),
+                    metadata.album.as_deref(),
+                    metadata.cover_url.as_deref(),
+                    None,
+                ),
+                "save_lyrics_annotations_cache_with_metadata",
+            );
             let response = lyrics_success_response(
                 title,
                 artist,
@@ -406,7 +420,7 @@ async fn get_lyrics(
                 metadata.cover_url,
             );
             if save_salt_bridge {
-                save_salt_bridge_cache(&app, &response)?;
+                best_effort_save(save_salt_bridge_cache(&app, &response), "save_salt_bridge_cache");
             }
             write_app_lsp_log_if_enabled(
                 &app,
@@ -435,6 +449,14 @@ fn save_salt_bridge_cache(app: &AppHandle, response: &serde_json::Value) -> Resu
         .and_then(|value| value.as_str())
         .unwrap_or("untitled");
     save_salt_bridge_cache_for_title(app, title, response)
+}
+
+/// Best-effort side-effect persistence: failures are logged but never fail the
+/// main command — the lyrics themselves were already fetched successfully.
+fn best_effort_save<E: std::fmt::Display>(result: Result<(), E>, context: &str) {
+    if let Err(err) = result {
+        eprintln!("[UtaBuild] {context} failed (ignored): {err}");
+    }
 }
 
 fn save_saved_lyrics_from_response(response: &serde_json::Value) -> Result<(), String> {
@@ -927,8 +949,8 @@ async fn search_and_get(
     if process_result.status == "success" {
         drop(searcher);
         let response = serde_json::to_value(process_result).map_err(|e| e.to_string())?;
-        save_saved_lyrics_from_response(&response)?;
-        save_salt_bridge_cache(&app, &response)?;
+        best_effort_save(save_saved_lyrics_from_response(&response), "save_saved_lyrics_from_response");
+        best_effort_save(save_salt_bridge_cache(&app, &response), "save_salt_bridge_cache");
         write_app_lsp_log_if_enabled(&app, &state, "search", "search_and_get direct success").await;
         return Ok(response);
     }
@@ -938,8 +960,8 @@ async fn search_and_get(
         let result = searcher.select_result(process_result, 0).await;
         drop(searcher);
         let response = serde_json::to_value(result).map_err(|e| e.to_string())?;
-        save_saved_lyrics_from_response(&response)?;
-        save_salt_bridge_cache(&app, &response)?;
+        best_effort_save(save_saved_lyrics_from_response(&response), "save_saved_lyrics_from_response");
+        best_effort_save(save_salt_bridge_cache(&app, &response), "save_salt_bridge_cache");
         write_app_lsp_log_if_enabled(
             &app,
             &state,
@@ -1098,7 +1120,16 @@ async fn hydrate_saved_lyrics_metadata(
 }
 
 #[tauri::command]
-async fn delete_saved_lyrics(url: String) -> Result<bool, String> {
+async fn delete_saved_lyrics(
+    state: State<'_, AppState>,
+    url: String,
+) -> Result<bool, String> {
+    let searcher = state.searcher.lock().await;
+    // Invalidate the in-memory lyrics cache too: otherwise a later memory
+    // cache hit would re-save the deleted entry back to disk and the song
+    // would "resurrect" in the saved list.
+    searcher.cache().lyrics().invalidate(&url).await;
+    drop(searcher);
     delete_lyrics_annotations_cache(&url, None).map_err(|e| e.to_string())
 }
 
@@ -1120,7 +1151,6 @@ async fn clear_cache(state: State<'_, AppState>) -> Result<(), String> {
     let searcher = state.searcher.lock().await;
     searcher.cache().clear_all().await;
     clear_search_response_cache(None).map_err(|e| e.to_string())?;
-    clear_lyrics_annotations_cache(None).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1161,7 +1191,7 @@ async fn export_lyrics_html(
     lyrics_url: String,
     ruby_annotations: Vec<utabuild_cli::LyricElement>,
     cover_url: Option<String>,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let artist = artist.unwrap_or_default();
     let html = utabuild_cli::output_html::render_lyrics_html(
         &title,
@@ -1187,8 +1217,9 @@ async fn export_lyrics_html(
     if let Some(path) = path {
         let path_buf = path.into_path().map_err(|e| e.to_string())?;
         std::fs::write(&path_buf, html).map_err(|e| e.to_string())?;
+        return Ok(true);
     }
-    Ok(())
+    Ok(false)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

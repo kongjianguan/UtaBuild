@@ -136,6 +136,7 @@ function createMockInvoke(): InvokeFn {
     }
 
     if (cmd === 'clear_cache') return null;
+    if (cmd === 'export_lyrics_html') return true;
     if (cmd === 'set_lsp_logging_enabled') { console.log('[Mock] set lsp logging', args); return null; }
     if (cmd === 'append_lsp_log') { console.log('[Mock] lsp log', args); return null; }
     if (cmd === 'get_lsp_logs') return '[Mock] LSPログはまだありません。';

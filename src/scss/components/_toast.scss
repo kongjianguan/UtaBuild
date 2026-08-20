@@ -11,14 +11,27 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 12px 10px 14px;
   background: var(--danger-bg);
   border: 1px solid var(--danger);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   color: var(--danger);
   font-size: var(--font-sm);
   font-weight: 600;
   box-shadow: var(--shadow-md);
+}
+
+#error-toast.is-success {
+  background: var(--success-bg);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+#error-toast.is-info {
+  background: var(--info-bg);
+  border-color: var(--info);
+  color: var(--info);
 }
 
 #error-toast.hidden { display: none; }
@@ -29,6 +42,16 @@
   color: var(--danger);
   font-size: 1.2rem;
   cursor: pointer;
+  min-width: 28px;
+  min-height: 28px;
   padding: 0 2px;
   line-height: 1;
+}
+
+#error-toast.is-success #error-close {
+  color: var(--success);
+}
+
+#error-toast.is-info #error-close {
+  color: var(--info);
 }

@@ -1,6 +1,6 @@
 import { invoke } from './tauri.js';
 import { shouldUseCache, selectedArtworkSource } from './settings.js';
-import { el, $$, showLoading, hideLoading, showError, router, updateButtonStates, currentPageScrollY, setBottomMenuAutoHidden } from './dom.js';
+import { el, $$, showLoading, hideLoading, showError, showInfo, showSuccess, router, updateButtonStates, currentPageScrollY, setBottomMenuAutoHidden, } from './dom.js';
 import { renderLyrics } from './ruby.js';
 import { exportLyricsToFile, setExportData } from './export.js';
 // ==================== State ====================
@@ -14,17 +14,47 @@ export let songLongPressTriggered = false;
 export let resultLongPressTriggered = false;
 let songLongPressTimer = null;
 let resultLongPressTimer = null;
-export function setResultLongPressTriggered(val) {
-    resultLongPressTriggered = val;
+let savedLyricsLoadId = 0;
+let savedLyricsOpenRequestId = 0;
+let metadataHydrationRunId = 0;
+let metadataHydrationRequestId = 0;
+const metadataHydrationRequests = new Map();
+let songLongPressTarget = null;
+let resultLongPressTarget = null;
+export function consumeSongLongPressClick(target, event) {
+    const shouldIgnore = event.detail > 0 && songLongPressTriggered && songLongPressTarget === target;
+    songLongPressTarget = null;
+    songLongPressTriggered = false;
+    return shouldIgnore;
+}
+export function consumeResultLongPressClick(target, event) {
+    const shouldIgnore = event.detail > 0 && resultLongPressTriggered && resultLongPressTarget === target;
+    resultLongPressTarget = null;
+    resultLongPressTriggered = false;
+    return shouldIgnore;
+}
+// Called before the results list is re-rendered: a pending long-press timer
+// anchored to a button that is about to be destroyed must not pop a menu for
+// a detached node. If the menu is already open it stays functional (its DOM
+// lives on document.body), so its flags are preserved for click consumption.
+export function cancelPendingResultLongPress() {
+    if (resultLongPressTimer) {
+        clearTimeout(resultLongPressTimer);
+        resultLongPressTimer = null;
+    }
+    if (!activeResultContextMenu) {
+        resultLongPressTarget = null;
+        resultLongPressTriggered = false;
+    }
 }
 // ==================== Helpers ====================
-function artworkSourceForSong(song) {
+function artworkSourceForSong(song, preferredSource) {
     const url = (song && song.lyrics_url) || '';
     if (url.startsWith('ne:'))
         return 'netease';
     if (url.startsWith('qq:'))
         return 'qq';
-    return 'utaten';
+    return preferredSource ?? selectedArtworkSource();
 }
 function formatSongSubtitle(song) {
     const artist = song.artist || 'アーティスト不明';
@@ -51,8 +81,9 @@ function applySongCoverArt(artEl, coverUrl) {
 }
 // ==================== Build Song Item ====================
 export function buildSongItem(song) {
-    const button = document.createElement('button');
-    button.type = 'button';
+    const button = document.createElement('div');
+    button.setAttribute('role', 'button');
+    button.tabIndex = 0;
     button.className = 'song-item';
     button.dataset.lyricsUrl = song.lyrics_url || '';
     button.draggable = false;
@@ -94,8 +125,15 @@ export function buildSongItem(song) {
     exportBtn.textContent = '⤓';
     exportBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        exportBtn.disabled = true;
+        showLoading();
         try {
-            const lyricsData = await invoke('get_saved_lyrics', { url: song.lyrics_url });
+            const lyricsData = await invoke('get_saved_lyrics', {
+                url: song.lyrics_url,
+            });
+            if (lyricsData.status !== 'success') {
+                throw new Error(lyricsData.error || '保存済み歌詞の読み込みに失敗しました');
+            }
             const data = {
                 title: lyricsData.found_title,
                 artist: lyricsData.found_artist,
@@ -103,10 +141,21 @@ export function buildSongItem(song) {
                 rubyAnnotations: lyricsData.ruby_annotations,
                 coverUrl: lyricsData.cover_url ?? null,
             };
-            await exportLyricsToFile(data);
+            const exported = await exportLyricsToFile(data);
+            if (exported) {
+                showSuccess('エクスポートしました');
+            }
+            else {
+                showInfo('エクスポートをキャンセルしました');
+            }
         }
         catch (err) {
             console.error('Export failed:', err);
+            showError(`エクスポートに失敗しました: ${err}`);
+        }
+        finally {
+            hideLoading();
+            exportBtn.disabled = false;
         }
     });
     button.append(exportBtn);
@@ -133,18 +182,30 @@ export function updateRenderedSongMetadata(metadata) {
     }
 }
 // ==================== Hydrate Missing Metadata ====================
-export async function hydrateMissingSongMetadata(songs) {
-    const missing = songs.filter((song) => song.lyrics_url && !normalizeCoverUrl(song.cover_url));
-    for (const song of missing) {
-        if (hydratingSongMetadataUrls.has(song.lyrics_url))
+export async function hydrateMissingSongMetadata(songs, options = {}) {
+    const refreshArtwork = options.refreshArtwork === true;
+    const runId = options.runId ?? ++metadataHydrationRunId;
+    const artworkSource = selectedArtworkSource();
+    const candidates = songs.filter((song) => song.lyrics_url &&
+        (refreshArtwork || !normalizeCoverUrl(song.cover_url)));
+    for (const song of candidates) {
+        if (runId !== metadataHydrationRunId)
+            return;
+        const activeRequest = metadataHydrationRequests.get(song.lyrics_url);
+        if (!refreshArtwork && activeRequest?.runId === runId)
             continue;
+        const requestId = ++metadataHydrationRequestId;
+        metadataHydrationRequests.set(song.lyrics_url, { requestId, runId });
         hydratingSongMetadataUrls.add(song.lyrics_url);
         try {
             const metadata = await invoke('hydrate_saved_lyrics_metadata', {
                 url: song.lyrics_url,
-                artworkSource: artworkSourceForSong(song),
+                forceRefresh: refreshArtwork,
+                artworkSource: artworkSourceForSong(song, artworkSource),
             });
-            if (metadata?.status === 'success') {
+            if (metadata?.status === 'success' &&
+                metadataHydrationRunId === runId &&
+                metadataHydrationRequests.get(song.lyrics_url)?.requestId === requestId) {
                 updateRenderedSongMetadata(metadata);
             }
         }
@@ -152,7 +213,10 @@ export async function hydrateMissingSongMetadata(songs) {
             console.warn('Hydrate saved song metadata failed:', song.lyrics_url, err);
         }
         finally {
-            hydratingSongMetadataUrls.delete(song.lyrics_url);
+            if (metadataHydrationRequests.get(song.lyrics_url)?.requestId === requestId) {
+                metadataHydrationRequests.delete(song.lyrics_url);
+                hydratingSongMetadataUrls.delete(song.lyrics_url);
+            }
         }
     }
 }
@@ -189,6 +253,11 @@ async function refreshSavedSongArtwork(song) {
         return;
     }
     hydratingSongMetadataUrls.add(song.lyrics_url);
+    const requestId = ++metadataHydrationRequestId;
+    metadataHydrationRequests.set(song.lyrics_url, {
+        requestId,
+        runId: metadataHydrationRunId,
+    });
     showLoading();
     try {
         const metadata = await invoke('hydrate_saved_lyrics_metadata', {
@@ -196,7 +265,8 @@ async function refreshSavedSongArtwork(song) {
             forceRefresh: true,
             artworkSource: artworkSourceForSong(song),
         });
-        if (metadata?.status === 'success') {
+        const isCurrent = metadataHydrationRequests.get(song.lyrics_url)?.requestId === requestId;
+        if (metadata?.status === 'success' && isCurrent) {
             song.cover_url = metadata.cover_url || song.cover_url || '';
             song.album = metadata.album || song.album || '';
             updateRenderedSongMetadata({
@@ -204,9 +274,12 @@ async function refreshSavedSongArtwork(song) {
                 cover_url: song.cover_url,
                 album: song.album,
             });
-            showError(song.cover_url
+            showSuccess(song.cover_url
                 ? 'ジャケット画像を更新しました'
-                : 'UtaTen でジャケット画像が見つかりませんでした');
+                : 'ジャケット画像が見つかりませんでした');
+        }
+        else if (metadata?.status === 'success') {
+            console.warn('Artwork refresh superseded by a newer metadata request:', song.lyrics_url);
         }
         else {
             showError(metadata?.error || 'ジャケット画像の更新に失敗しました');
@@ -217,7 +290,10 @@ async function refreshSavedSongArtwork(song) {
         showError(`ジャケット画像の更新に失敗しました: ${err}`);
     }
     finally {
-        hydratingSongMetadataUrls.delete(song.lyrics_url);
+        if (metadataHydrationRequests.get(song.lyrics_url)?.requestId === requestId) {
+            metadataHydrationRequests.delete(song.lyrics_url);
+            hydratingSongMetadataUrls.delete(song.lyrics_url);
+        }
         hideLoading();
     }
 }
@@ -232,7 +308,7 @@ async function deleteSavedSong(song) {
     showLoading();
     try {
         await invoke('delete_saved_lyrics', { url: song.lyrics_url });
-        showError('保存済み歌詞を削除しました');
+        showSuccess('保存済み歌詞を削除しました');
         await loadSavedLyrics();
     }
     catch (err) {
@@ -279,13 +355,16 @@ export function showSongContextMenu(song, trigger, event) {
     });
 }
 export function attachSongLongPressMenu(button, song) {
+    button.setAttribute('aria-haspopup', 'menu');
     button.addEventListener('pointerdown', (event) => {
         if (event.pointerType === 'mouse' && event.button !== 0)
             return;
         closeSongContextMenu();
         songLongPressTriggered = false;
+        songLongPressTarget = null;
         songLongPressTimer = setTimeout(() => {
             songLongPressTriggered = true;
+            songLongPressTarget = button;
             if (event.pointerType !== 'mouse') {
                 try {
                     button.setPointerCapture?.(event.pointerId);
@@ -307,7 +386,10 @@ export function attachSongLongPressMenu(button, song) {
     });
     button.addEventListener('contextmenu', (event) => {
         event.preventDefault();
-        songLongPressTriggered = true;
+        if (!(songLongPressTriggered && songLongPressTarget === button)) {
+            songLongPressTriggered = false;
+            songLongPressTarget = null;
+        }
         showSongContextMenu(song, button, event);
     });
 }
@@ -381,7 +463,7 @@ async function copyResultItemJson(item) {
         const json = JSON.stringify(obj, null, 2);
         try {
             await navigator.clipboard.writeText(json);
-            showError('JSONをクリップボードにコピーしました');
+            showSuccess('JSONをクリップボードにコピーしました');
         }
         catch (_err) {
             const textarea = document.createElement('textarea');
@@ -392,7 +474,7 @@ async function copyResultItemJson(item) {
             textarea.select();
             try {
                 document.execCommand('copy');
-                showError('JSONをクリップボードにコピーしました');
+                showSuccess('JSONをクリップボードにコピーしました');
             }
             catch (_e) {
                 showError('クリップボードへのコピーに失敗しました');
@@ -437,13 +519,16 @@ export function showResultContextMenu(item, trigger, event) {
     });
 }
 export function attachResultLongPressMenu(button, item) {
+    button.setAttribute('aria-haspopup', 'menu');
     button.addEventListener('pointerdown', (event) => {
         if (event.pointerType === 'mouse' && event.button !== 0)
             return;
         closeResultContextMenu();
         resultLongPressTriggered = false;
+        resultLongPressTarget = null;
         resultLongPressTimer = setTimeout(() => {
             resultLongPressTriggered = true;
+            resultLongPressTarget = button;
             if (event.pointerType !== 'mouse') {
                 try {
                     button.setPointerCapture?.(event.pointerId);
@@ -465,12 +550,15 @@ export function attachResultLongPressMenu(button, item) {
     });
     button.addEventListener('contextmenu', (event) => {
         event.preventDefault();
-        resultLongPressTriggered = true;
+        if (!(resultLongPressTriggered && resultLongPressTarget === button)) {
+            resultLongPressTriggered = false;
+            resultLongPressTarget = null;
+        }
         showResultContextMenu(item, button, event);
     });
 }
 // ==================== Render & Load Saved Lyrics ====================
-export function renderSavedLyrics(songs) {
+export function renderSavedLyrics(songs, options = {}) {
     if (!el('songs-list') || !el('songs-empty'))
         return;
     closeSongContextMenu();
@@ -481,20 +569,30 @@ export function renderSavedLyrics(songs) {
         button.__songArtist =
             song.artist || 'アーティスト不明';
         attachSongLongPressMenu(button, song);
-        button.addEventListener('click', () => {
-            if (songLongPressTriggered) {
-                songLongPressTriggered = false;
+        button.addEventListener('click', (event) => {
+            if (consumeSongLongPressClick(button, event)) {
                 return;
             }
             void openSavedLyrics(song.lyrics_url);
         });
+        // role="button" div: activate on Enter/Space like a native button.
+        button.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ')
+                return;
+            if (event.target !== button)
+                return;
+            event.preventDefault();
+            void openSavedLyrics(song.lyrics_url);
+        });
         el('songs-list').appendChild(button);
     });
-    void hydrateMissingSongMetadata(songs);
+    void hydrateMissingSongMetadata(songs, options);
 }
-export async function loadSavedLyrics() {
+export async function loadSavedLyrics(options = {}) {
     if (!el('songs-list') || !el('songs-empty'))
         return;
+    const loadId = ++savedLyricsLoadId;
+    const runId = ++metadataHydrationRunId;
     el('songs-list').innerHTML = '';
     el('songs-empty').textContent = '保存済み歌詞を読み込み中です...';
     el('songs-empty').classList.remove('hidden');
@@ -502,12 +600,19 @@ export async function loadSavedLyrics() {
         const result = await invoke('list_saved_lyrics', {
             sortBy: songsSortBy,
         });
+        if (loadId !== savedLyricsLoadId)
+            return;
         const songs = Array.isArray(result?.songs) ? result.songs : [];
         el('songs-empty').textContent =
-            '保存済みの歌詞はまだありません。搜索并打开歌词后会永久保存到这里。';
-        renderSavedLyrics(songs);
+            '保存済みの歌詞はまだありません。検索して歌詞を開くと、ここに保存されます。';
+        renderSavedLyrics(songs, {
+            refreshArtwork: options.refreshArtwork === true,
+            runId,
+        });
     }
     catch (err) {
+        if (loadId !== savedLyricsLoadId)
+            return;
         console.error('Load saved lyrics error:', err);
         el('songs-empty').textContent = `保存済み歌詞の読み込みに失敗しました: ${err}`;
     }
@@ -517,9 +622,14 @@ export async function openSavedLyrics(url) {
         showError('保存済み歌詞の URL がありません');
         return;
     }
+    const requestId = ++savedLyricsOpenRequestId;
     showLoading();
     try {
         const result = await invoke('get_saved_lyrics', { url });
+        // A newer open request or a navigation away invalidates this one:
+        // never render stale lyrics or force-navigate back to them.
+        if (requestId !== savedLyricsOpenRequestId || router.current !== 'songs')
+            return;
         if (result.status !== 'success') {
             showError(result.error || '保存済み歌詞の読み込みに失敗しました');
             return;

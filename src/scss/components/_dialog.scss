@@ -21,7 +21,7 @@
   padding: var(--space-6);
   background: var(--surface-elevated);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   text-align: center;
 }
@@ -52,7 +52,7 @@
 
 .confirm-dialog__actions button {
   padding: 8px 24px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   font-size: var(--font-sm);
   font-weight: 600;
   cursor: pointer;

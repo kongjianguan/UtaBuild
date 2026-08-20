@@ -405,6 +405,21 @@ impl UtaTenSearcher {
             }
         };
 
+        // Non-success responses (404/403/500/...) are error pages, not "no
+        // results" — fail loudly and never cache them as empty results.
+        if !http_response.status().is_success() {
+            error!(
+                "Search request returned HTTP {}",
+                http_response.status()
+            );
+            response.status = "error".to_string();
+            response.error = Some(format!(
+                "搜索请求失败: HTTP {}",
+                http_response.status()
+            ));
+            return response;
+        }
+
         debug!(
             "Response: status={}, content-length={:?}",
             http_response.status(),
@@ -440,38 +455,43 @@ impl UtaTenSearcher {
         }
         .to_string();
 
-        let (found_title, found_artist, lyrics_url) = response
-            .results
-            .first()
-            .map(|result| {
-                (
-                    result.title.clone(),
-                    result.artist.clone(),
-                    result.url.clone(),
+        // Only cache searches that actually found results: caching empty
+        // ("not_found") responses would mask upstream recovery for the whole
+        // cache TTL (e.g. a transient block page parsed as "no results").
+        if !response.results.is_empty() {
+            let (found_title, found_artist, lyrics_url) = response
+                .results
+                .first()
+                .map(|result| {
+                    (
+                        result.title.clone(),
+                        result.artist.clone(),
+                        result.url.clone(),
+                    )
+                })
+                .unwrap_or_else(|| (String::new(), String::new(), String::new()));
+            let search_results_json: Vec<serde_json::Value> = response
+                .results
+                .iter()
+                .filter_map(|result| serde_json::to_value(result).ok())
+                .collect();
+            self.cache
+                .search()
+                .insert_with_options(
+                    trimmed_query,
+                    trimmed_artist,
+                    search_type,
+                    page,
+                    SearchResultEntry::new(
+                        search_results_json,
+                        found_title,
+                        found_artist,
+                        lyrics_url,
+                        response.pagination.clone(),
+                    ),
                 )
-            })
-            .unwrap_or_else(|| (String::new(), String::new(), String::new()));
-        let search_results_json: Vec<serde_json::Value> = response
-            .results
-            .iter()
-            .filter_map(|result| serde_json::to_value(result).ok())
-            .collect();
-        self.cache
-            .search()
-            .insert_with_options(
-                trimmed_query,
-                trimmed_artist,
-                search_type,
-                page,
-                SearchResultEntry::new(
-                    search_results_json,
-                    found_title,
-                    found_artist,
-                    lyrics_url,
-                    response.pagination.clone(),
-                ),
-            )
-            .await;
+                .await;
+        }
 
         response
     }
@@ -1087,6 +1107,7 @@ impl UtaTenSearcher {
         &self,
         title: &str,
         artist: Option<&str>,
+        song_id: Option<i64>,
     ) -> Option<(String, String)> {
         let query = Self::song_query(title, artist);
         if query.is_empty() {
@@ -1137,46 +1158,61 @@ impl UtaTenSearcher {
             .pointer("/req_0/data/body/item_song")
             .and_then(|v| v.as_array())?;
 
-        // Find best matching song and extract all needed metadata
-        let (song_id, song_title, singer_name, album_name, interval) = songs
-            .iter()
-            .filter_map(|song| {
-                let result = Self::qq_song_to_search_result(song, title, artist)?;
-                let score = Self::score_artwork_candidate(
-                    Some(&result.title),
-                    Some(&result.artist),
-                    title,
-                    artist,
-                );
-                let id = song.get("id").and_then(|v| v.as_i64())?;
-                let song_title = song
-                    .get("name")
-                    .or_else(|| song.get("title"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
-                let singer_name = song
-                    .get("singer")
-                    .and_then(|v| v.as_array())
-                    .map(|singers| {
-                        singers
-                            .iter()
-                            .filter_map(|s| s.get("name").and_then(|n| n.as_str()))
-                            .collect::<Vec<_>>()
-                            .join("/")
-                    })
-                    .unwrap_or_default();
-                let album_name = song
-                    .get("album")
-                    .and_then(|v| v.get("name"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
-                let interval = song.get("interval").and_then(|v| v.as_i64()).unwrap_or(0);
-                Some((score, id, song_title, singer_name, album_name, interval))
-            })
-            .max_by_key(|(score, _, _, _, _, _)| *score)
-            .map(|(_, id, title, singer, album, interval)| (id, title, singer, album, interval))?;
+        // Find the exact song the user selected (by id) when available,
+        // otherwise fall back to the best fuzzy title/artist match.
+        let (song_id, song_title, singer_name, album_name, interval) = {
+            let candidates: Vec<(i32, i64, String, String, String, i64)> = songs
+                .iter()
+                .filter_map(|song| {
+                    let result = Self::qq_song_to_search_result(song, title, artist)?;
+                    let score = Self::score_artwork_candidate(
+                        Some(&result.title),
+                        Some(&result.artist),
+                        title,
+                        artist,
+                    );
+                    let id = song.get("id").and_then(|v| v.as_i64())?;
+                    let song_title = song
+                        .get("name")
+                        .or_else(|| song.get("title"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let singer_name = song
+                        .get("singer")
+                        .and_then(|v| v.as_array())
+                        .map(|singers| {
+                            singers
+                                .iter()
+                                .filter_map(|s| s.get("name").and_then(|n| n.as_str()))
+                                .collect::<Vec<_>>()
+                                .join("/")
+                        })
+                        .unwrap_or_default();
+                    let album_name = song
+                        .get("album")
+                        .and_then(|v| v.get("name"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let interval = song.get("interval").and_then(|v| v.as_i64()).unwrap_or(0);
+                    Some((score, id, song_title, singer_name, album_name, interval))
+                })
+                .collect();
+            if let Some(exact) = song_id
+                .and_then(|wanted| candidates.iter().find(|(_, id, _, _, _, _)| *id == wanted))
+            {
+                let (_, id, song_title, singer_name, album_name, interval) = exact;
+                (id.clone(), song_title.clone(), singer_name.clone(), album_name.clone(), *interval)
+            } else {
+                candidates
+                    .into_iter()
+                    .max_by_key(|(score, _, _, _, _, _)| *score)
+                    .map(|(_, id, title, singer, album, interval)| {
+                        (id, title, singer, album, interval)
+                    })?
+            }
+        };
 
         // Step 2: Fetch lyrics with lyrico-compatible parameters
         let engine = base64::engine::general_purpose::STANDARD;
@@ -1442,8 +1478,9 @@ impl UtaTenSearcher {
         &self,
         title: &str,
         artist: Option<&str>,
+        song_id: Option<i64>,
     ) -> Option<Vec<LyricElement>> {
-        let (lyric_xml, roma_xml) = self.fetch_qq_music_qrc(title, artist).await?;
+        let (lyric_xml, roma_xml) = self.fetch_qq_music_qrc(title, artist, song_id).await?;
 
         let original_lines = crate::qrc_parser::parse_qrc(&lyric_xml)?;
         let romaji_lines = crate::qrc_parser::parse_qrc(&roma_xml)?;
@@ -1554,10 +1591,20 @@ impl UtaTenSearcher {
     pub async fn get_lyrics_with_ruby(&self, lyric_url: &str) -> Option<String> {
         self.rate_limit().await;
 
-        let full_url = if lyric_url.starts_with("http") {
-            lyric_url.to_string()
-        } else {
+        // Only allow UtaTen URLs (absolute https://utaten.com/... or relative
+        // /lyric/... paths) — anything else would let a tampered search page
+        // drive requests to arbitrary hosts (SSRF).
+        let full_url = if let Some(rest) = lyric_url.strip_prefix(BASE_URL) {
+            if rest.is_empty() {
+                error!("Invalid lyrics URL: {}", lyric_url);
+                return None;
+            }
+            format!("{}{}", BASE_URL, rest)
+        } else if lyric_url.starts_with('/') {
             format!("{}{}", BASE_URL, lyric_url)
+        } else {
+            error!("Refusing non-UtaTen lyrics URL: {}", lyric_url);
+            return None;
         };
 
         debug!("HTTP GET (lyrics): {}", full_url);
@@ -1569,6 +1616,15 @@ impl UtaTenSearcher {
                 return None;
             }
         };
+
+        // Error pages (404/403/...) must not be parsed as lyrics.
+        if !response.status().is_success() {
+            error!(
+                "Lyrics page returned HTTP {}",
+                response.status()
+            );
+            return None;
+        }
 
         debug!(
             "Lyrics page: status={}, content-length={:?}",
@@ -1886,9 +1942,17 @@ impl UtaTenSearcher {
         let found_title = selected.title.clone();
         let found_artist = selected.artist.clone();
 
-        // Check cache first (source-aware keys)
-        let qq_cache_key = format!("qq:{}:{}", found_title, found_artist);
-        let ne_cache_key = format!("ne:{}", lyrics_url);
+        // Check cache first (source-aware keys). The QQ key is derived from
+        // the selected song's mid so different songs with identical
+        // title+artist never share lyrics.
+        let qq_cache_key = lyrics_url
+            .strip_prefix("qq_music:")
+            .map(|mid| format!("qq:{}", mid))
+            .unwrap_or_else(|| format!("qq:{}:{}", found_title, found_artist));
+        let ne_cache_key = lyrics_url
+            .strip_prefix("ne:")
+            .map(|id| format!("ne:{}", id))
+            .unwrap_or_else(|| format!("ne:{}", lyrics_url));
         let cache_hit = match lyric_preference {
             LyricSourcePreference::QqMusic => self.cache.lyrics().get(&qq_cache_key).await,
             LyricSourcePreference::UtaTen => self.cache.lyrics().get(&lyrics_url).await,
@@ -1961,8 +2025,11 @@ impl UtaTenSearcher {
         }
 
         if use_qq {
+            let qq_song_id = lyrics_url
+                .strip_prefix("qq_music:")
+                .and_then(|mid| mid.parse::<i64>().ok());
             if let Some(annotations) = self
-                .fetch_qq_music_lyrics(&found_title, Some(&found_artist))
+                .fetch_qq_music_lyrics(&found_title, Some(&found_artist), qq_song_id)
                 .await
             {
                 if !annotations.is_empty() {

@@ -1,4 +1,5 @@
 import { $$, router } from './dom.js';
+import { loadSavedLyrics } from './songs.js';
 export function initBottomMenu() {
     $$('[data-app-tab]').forEach((button) => {
         const btn = button;
@@ -8,6 +9,9 @@ export function initBottomMenu() {
                 return;
             if (tab !== router.current) {
                 router.navigate(tab, { animate: true });
+                if (tab === 'songs') {
+                    void loadSavedLyrics();
+                }
             }
         });
     });

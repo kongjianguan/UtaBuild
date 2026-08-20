@@ -10,11 +10,6 @@ body {
     "Meiryo",
     sans-serif;
   font-feature-settings: "palt";
-  background-image:
-    radial-gradient(ellipse 80% 60% at 50% -8%, var(--primary-dim), transparent),
-    radial-gradient(ellipse 60% 50% at 80% 40%, var(--primary-dim), transparent),
-    radial-gradient(ellipse 70% 40% at 20% 70%, var(--primary-dim), transparent);
-  background-attachment: fixed;
   transition: background var(--motion-slow) ease, color var(--motion-slow) ease;
 }
 
@@ -37,7 +32,21 @@ body[data-theme="mygo"] {
 
 h1, h2, h3 {
   line-height: 1.3;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
+}
+
+// Programmatic view focus (router) must stay visible for keyboard users;
+// remove the outline only for mouse clicks.
+h1:focus,
+h2:focus,
+h3:focus {
+  outline: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }
 
 h1 { font-size: var(--font-xl); font-weight: 700; }
