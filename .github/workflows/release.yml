@@ -73,6 +73,10 @@ jobs:
           prerelease: false
           args: --target ${{ matrix.target }}
 
+      - name: Install Rust Tauri CLI (Dev build)
+        if: github.ref_type == 'branch'
+        run: cargo install tauri-cli --version 2.11.3 --locked
+
       - name: Build (Tauri) Dev
         if: github.ref_type == 'branch'
         run: |
