@@ -69,6 +69,13 @@ public final class RubyCanvasInjector {
         resetSearchCursorIfNeeded(cacheKey);
     }
 
+    /** Word-level entry from w61 cells — optional hint to reset cursor per word batch. */
+    public static void onLyricsWordCells(java.util.List<String> cells, StructuredLyrics sessionLyrics) {
+        if (cells == null || cells.isEmpty() || sessionLyrics == null) return;
+        // Word batch hint: ensure current line still valid; no extra state needed beyond line.
+        // Keep cursor tracking for substring matching; word order matches line order.
+    }
+
     public static void clearLine() {
         currentLineText = "";
         currentRubyChars = Collections.emptyList();
@@ -331,3 +338,4 @@ public final class RubyCanvasInjector {
         RubyChar(char character, String ruby) { this.character = character; this.ruby = ruby; }
     }
 }
+

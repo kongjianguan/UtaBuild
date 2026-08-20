@@ -30,19 +30,21 @@ import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedModuleInterface;
 
 /**
- * LSPosed API 101 hook for Salt Player 11.1.0.
+ * LSPosed API 101 hook — verified against Salt Player 12.2.0 (2026081002).
+ *
+ * <p>12.2.0 real model (verified via APK): {@code w61}=LyricsLine, {@code i61}=LyricsCell
+ * (word), {@code is.ޏ(w61)->String} = pureMain + "\n" + pureSub. LyricsLine fields:
+ * Ϳ=startTime, Ԩ=endTime, ԩ=List&lt;i61&gt;, Ԫ=pureSubText, ԫ=pureMainText (obfuscated).
+ * Word-level = each i61 holds a karaoke word with its own timing.</p>
  *
  * <p>Architecture:</p>
  * <ul>
- *     <li><b>Data layer:</b> Hook {@code t3.m6147(ks0) → String} to intercept each
- *         lyrics line's text as it enters the rendering pipeline. Pass the text to
- *         {@link RubyCanvasInjector#onLyricsLine} along with the matched UtaBuild
- *         ruby annotations.</li>
- *     <li><b>Render layer:</b> Hook {@link Canvas#drawText(String, float, float, Paint)}
- *         to intercept per-character drawing. When a CJK character has a ruby annotation,
- *         draw the reading above it before the original character is drawn.</li>
- *     <li><b>Data flow:</b> Salt song open → {@link UtaBuildLyricProvider#findBySong}
- *         → {@link StructuredLyrics} → per-line character map → Canvas injection.</li>
+ *   <li><b>Data layer:</b> Hook {@code is.ޏ(w61)} (12.2.0) + legacy {@code t3.m6147(ks0)} (11.x compat)
+ *       to capture pureMainText per line; feed {@link RubyCanvasInjector} with current song ruby.</li>
+ *   <li><b>Render layer:</b> Hook {@link Canvas} all drawText overloads (String/char[]/CharSequence/drawTextRun)
+ *       — word batches (1~N chars) handled via span-aware centering over annotation [start,end).</li>
+ *   <li><b>Data flow:</b> Salt song open → UtaBuildLyricProvider → StructuredLyrics → w61 pureMain
+ *       → per-word Canvas injection (dedupe 80ms for shadow/highlight).</li>
  * </ul>
  */
 public final class UtaBuildSaltModule extends XposedModule {
@@ -52,9 +54,15 @@ public final class UtaBuildSaltModule extends XposedModule {
     private static final String SONG_UPDATE_RECEIVER_CLASS = "com.salt.music.ui.MainActivity$UpdateSongBroadcastReceiver";
     private static final String MUSIC_CONTROLLER_CLASS = "com.salt.music.service.MusicController";
     private static final String SONG_CLASS = "com.salt.music.data.entry.Song";
-    // Obfuscated Salt classes for lyric data interception
+    // Obfuscated Salt classes for lyric data interception — verified on 12.2.0
+    // 12.2.0: w61=LyricsLine, i61=LyricsCell(word), is=accessor, t3/ks0=legacy (11.x compat)
+    private static final String W61_CLASS = "androidx.media3.w61";
+    private static final String I61_CLASS = "androidx.media3.i61";
+    private static final String IS_CLASS = "androidx.media3.is";
     private static final String KS0_CLASS = "androidx.core.ks0";
     private static final String T3_CLASS = "androidx.core.t3";
+    private static final String LEGACY_KS0_ALT = "androidx.media3.ks0";
+    private static final String LEGACY_T3_ALT = "androidx.media3.t3";
     private static final String UTABUILD_PACKAGE = "com.utabuild.app";
     private static final Uri PENDING_REQUEST_URI = Uri.parse("content://com.utabuild.app.lyrics/pending");
     private static final Uri LOG_URI = Uri.parse("content://com.utabuild.app.lyrics/logs");
@@ -89,7 +97,9 @@ public final class UtaBuildSaltModule extends XposedModule {
         hookSaltMainActivity(classLoader);
         hookSaltSongOpen(classLoader);
         hookSaltSongUpdateBroadcast(classLoader);
+        hookLyricsLineAccessorV2(classLoader);
         hookLyricsLineAccessor(classLoader);
+        hookLyricsWordCells(classLoader);
         hookCanvasDrawText();
     }
 
@@ -313,6 +323,196 @@ public final class UtaBuildSaltModule extends XposedModule {
         } catch (Throwable throwable) {
             moduleLog("failed to hook lyrics line accessor", throwable);
         }
+    }
+
+    // ── 12.2.0 word-level hooks ──────────────────────────────────────────────
+
+    /**
+     * Hook {@code is.ޏ(w61) -> String} — 12.2.0 verified: w61=LyricsLine, returns pureMain+"\n"+pureSub.
+     * Also scans for any other (w61)->String accessor by signature (obfuscation-resilient).
+     */
+    private void hookLyricsLineAccessorV2(ClassLoader classLoader) {
+        try {
+            Class<?> w61Class;
+            try { w61Class = Class.forName(W61_CLASS, false, classLoader); }
+            catch (ClassNotFoundException e) { moduleLog("w61 class not found, skip V2 hook", e); return; }
+            // Primary: is.ޏ(w61)
+            try {
+                Class<?> isClass = Class.forName(IS_CLASS, false, classLoader);
+                Method target = null;
+                for (Method m : isClass.getDeclaredMethods()) {
+                    if (m.getReturnType() != String.class) continue;
+                    Class<?>[] ps = m.getParameterTypes();
+                    if (ps.length == 1 && ps[0] == w61Class) { target = m; break; }
+                }
+                if (target != null) {
+                    target.setAccessible(true);
+                    moduleLog("found 12.2.0 accessor: " + isClass.getSimpleName() + "." + target.getName() + "(w61)");
+                    hook(target).intercept(chain -> {
+                        Object result = chain.proceed();
+                        Object w61Arg = chain.getArgs().size() > 0 ? chain.getArg(0) : null;
+                        if (w61Arg != null) {
+                            String pure = readW61PureMain(w61Arg);
+                            if (pure != null && !pure.isEmpty()) {
+                                RubyCanvasInjector.onLyricsLine(pure, currentSongLyrics);
+                                // Also feed per-cell path for word-level safety
+                                try { RubyCanvasInjector.onLyricsWordCells(extractW61Cells(w61Arg), currentSongLyrics); } catch (Throwable ignored) {}
+                            }
+                        }
+                        return result;
+                    });
+                    moduleLog("installed 12.2.0 is.ޏ(w61) hook");
+                } else {
+                    moduleLog("is.ޏ(w61) not found by signature in " + isClass.getName());
+                }
+            } catch (Throwable t) { moduleLog("failed to hook is(w61)", t); }
+
+            // Generic scan: any class with (w61)->String accessor (fallback for future builds)
+            int genericHits = 0;
+            for (String cand : new String[]{IS_CLASS, "androidx.media3.t3", LEGACY_T3_ALT}) {
+                try {
+                    Class<?> c = Class.forName(cand, false, classLoader);
+                    for (Method m : c.getDeclaredMethods()) {
+                        if (m.getReturnType() != String.class) continue;
+                        Class<?>[] ps = m.getParameterTypes();
+                        if (ps.length != 1 || ps[0] != w61Class) continue;
+                        // avoid double-hooking is.ޏ already
+                        if (c.getName().equals(IS_CLASS) && m.getParameterTypes()[0]==w61Class) continue;
+                        try {
+                            m.setAccessible(true);
+                            hook(m).intercept(chain -> {
+                                Object w = chain.getArgs().size()>0? chain.getArg(0):null;
+                                if (w != null) {
+                                    String pure = readW61PureMain(w);
+                                    if (pure != null && !pure.isEmpty()) RubyCanvasInjector.onLyricsLine(pure, currentSongLyrics);
+                                }
+                                return chain.proceed();
+                            });
+                            genericHits++;
+                        } catch (Throwable ignored) {}
+                    }
+                } catch (Throwable ignored) {}
+            }
+            if (genericHits>0) moduleLog("installed " + genericHits + " generic (w61)->String hooks");
+        } catch (Throwable t) { moduleLog("failed hookLyricsLineAccessorV2", t); }
+    }
+
+    private void hookLyricsWordCells(ClassLoader classLoader) {
+        // Hook MusicController methods that directly handle w61 (karaoke word delivery)
+        try {
+            Class<?> w61Class = Class.forName(W61_CLASS, false, classLoader);
+            Class<?> controllerClass = Class.forName(MUSIC_CONTROLLER_CLASS, false, classLoader);
+            int cnt=0;
+            for (Method m : controllerClass.getDeclaredMethods()) {
+                if (isUnhookable(m)) continue;
+                Class<?>[] ps = m.getParameterTypes();
+                boolean hasW61=false;
+                for (Class<?> p:ps) if (p==w61Class) { hasW61=true; break; }
+                if (!hasW61) continue;
+                try {
+                    m.setAccessible(true);
+                    hook(m).intercept(chain -> {
+                        // Try to extract w61 arg
+                        for (Object a: chain.getArgs()) {
+                            if (a!=null && w61Class.isInstance(a)) {
+                                String pure = readW61PureMain(a);
+                                if (pure != null && !pure.isEmpty()) RubyCanvasInjector.onLyricsLine(pure, currentSongLyrics);
+                                break;
+                            }
+                        }
+                        return chain.proceed();
+                    });
+                    cnt++;
+                } catch (Throwable ignored) {}
+            }
+            if (cnt>0) moduleLog("installed " + cnt + " MusicController w61 word hooks");
+        } catch (Throwable t) { moduleLog("skip hookLyricsWordCells", t); }
+    }
+
+    // Extract pureMainText from w61 via field scan (obfuscation resilient)
+    private static String readW61PureMain(Object w61) {
+        if (w61==null) return null;
+        try {
+            // Fast: try direct field ԫ then Ԫ (verified names), then scan all String fields pick longest that matches cells text
+            Class<?> cls=w61.getClass();
+            // Try known obfuscated names first
+            for (String fn : new String[]{"\u052b","\u052a"}) { // ԫ main, Ԫ sub (see APK dump)
+                try {
+                    java.lang.reflect.Field f=cls.getDeclaredField(fn);
+                    f.setAccessible(true);
+                    Object v=f.get(w61);
+                    if (v instanceof String && !((String)v).isEmpty()) {
+                        // For ԫ (main) we return directly if it looks like main (contains cells text)
+                        if (fn.equals("\u052b")) return (String)v;
+                        // For sub, return only if main not found; we still need main, so continue searching main first
+                    }
+                } catch (NoSuchFieldException ignored) {}
+            }
+            // Reflective scan: w61 has 2 String fields (Ԫ=sub, ԫ=main) + built string; pick the one equal to concatenated cells text or longest
+            String best=null;
+            String cellsConcat=null;
+            try {
+                java.lang.reflect.Field listF=null;
+                for (java.lang.reflect.Field f: cls.getDeclaredFields()) if (java.util.List.class.isAssignableFrom(f.getType())) { listF=f; break; }
+                if (listF!=null) {
+                    listF.setAccessible(true);
+                    Object list=listF.get(w61);
+                    if (list instanceof java.util.List) {
+                        StringBuilder sb=new StringBuilder();
+                        for (Object cell: (java.util.List)list) {
+                            if (cell==null) continue;
+                            // i61.ԩ is the word text
+                            String wt=readI61Text(cell);
+                            if (wt!=null) sb.append(wt);
+                        }
+                        cellsConcat=sb.toString();
+                    }
+                }
+            } catch (Throwable ignored) {}
+            // Now scan string fields
+            for (java.lang.reflect.Field f: cls.getDeclaredFields()) {
+                if (f.getType()!=String.class) continue;
+                f.setAccessible(true);
+                String v=(String)f.get(w61);
+                if (v==null || v.isEmpty()) continue;
+                if (cellsConcat!=null && v.equals(cellsConcat)) return v; // exact match to cells = main
+                if (best==null || v.length()>best.length()) best=v;
+            }
+            return best;
+        } catch (Throwable ignored) { return null; }
+    }
+
+    private static String readI61Text(Object i61) {
+        if (i61==null) return null;
+        try {
+            for (java.lang.reflect.Field f: i61.getClass().getDeclaredFields()) {
+                if (f.getType()==String.class) {
+                    f.setAccessible(true);
+                    String v=(String)f.get(i61);
+                    if (v!=null) return v;
+                }
+            }
+        } catch (Throwable ignored) {}
+        return null;
+    }
+
+    private static java.util.List<String> extractW61Cells(Object w61) {
+        java.util.List<String> out=new java.util.ArrayList<>();
+        try {
+            for (java.lang.reflect.Field f: w61.getClass().getDeclaredFields()) {
+                if (!java.util.List.class.isAssignableFrom(f.getType())) continue;
+                f.setAccessible(true);
+                Object list=f.get(w61);
+                if (list instanceof java.util.List) {
+                    for (Object cell: (java.util.List)list) {
+                        String t=readI61Text(cell);
+                        if (t!=null && !t.isEmpty()) out.add(t);
+                    }
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {}
+        return out;
     }
 
     /**
@@ -715,5 +915,10 @@ public final class UtaBuildSaltModule extends XposedModule {
         }
     }
 }
+
+
+
+
+
 
 
