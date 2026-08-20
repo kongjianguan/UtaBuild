@@ -323,25 +323,49 @@ public final class UtaBuildSaltModule extends XposedModule {
      * Salt Player builds and Android versions.</p>
      */
     private void hookCanvasDrawText() {
+        int installed = 0;
+        // String variant
         try {
-            Method drawText = Canvas.class.getMethod("drawText", String.class, float.class, float.class, Paint.class);
-            hook(drawText).intercept(chain -> {
-                // Before original draw: inject ruby above the character
+            Method m = Canvas.class.getMethod("drawText", String.class, float.class, float.class, Paint.class);
+            hook(m).intercept(chain -> {
                 Object[] args = chain.getArgs().toArray(new Object[0]);
-                RubyCanvasInjector.beforeDrawText(
-                        (Canvas) chain.getThisObject(),
-                        (String) args[0],
-                        (float) args[1],
-                        (float) args[2],
-                        (Paint) args[3]
-                );
-                // Proceed with original character drawing
+                RubyCanvasInjector.beforeDrawText((Canvas) chain.getThisObject(), (String) args[0], (float) args[1], (float) args[2], (Paint) args[3]);
                 return chain.proceed();
             });
-            moduleLog("installed Canvas.drawText ruby injector hook");
-        } catch (Throwable throwable) {
-            moduleLog("failed to hook Canvas.drawText", throwable);
-        }
+            installed++;
+        } catch (Throwable t) { moduleLog("skip Canvas.drawText(String) hook", t); }
+        // char[] variant (逐字常用)
+        try {
+            Method m = Canvas.class.getMethod("drawText", char[].class, int.class, int.class, float.class, float.class, Paint.class);
+            hook(m).intercept(chain -> {
+                Object[] a = chain.getArgs().toArray(new Object[0]);
+                RubyCanvasInjector.beforeDrawText((Canvas) chain.getThisObject(), (char[]) a[0], (int) a[1], (int) a[2], (float) a[3], (float) a[4], (Paint) a[5]);
+                return chain.proceed();
+            });
+            installed++;
+        } catch (Throwable t) { moduleLog("skip Canvas.drawText(char[]) hook", t); }
+        // CharSequence variant
+        try {
+            Method m = Canvas.class.getMethod("drawText", CharSequence.class, int.class, int.class, float.class, float.class, Paint.class);
+            hook(m).intercept(chain -> {
+                Object[] a = chain.getArgs().toArray(new Object[0]);
+                RubyCanvasInjector.beforeDrawText((Canvas) chain.getThisObject(), (CharSequence) a[0], (int) a[1], (int) a[2], (float) a[3], (float) a[4], (Paint) a[5]);
+                return chain.proceed();
+            });
+            installed++;
+        } catch (Throwable t) { moduleLog("skip Canvas.drawText(CharSequence) hook", t); }
+        // drawTextRun variant (Android 23+, some lyric views use it)
+        try {
+            Method m = Canvas.class.getMethod("drawTextRun", CharSequence.class, int.class, int.class, int.class, int.class, float.class, float.class, boolean.class, Paint.class);
+            hook(m).intercept(chain -> {
+                Object[] a = chain.getArgs().toArray(new Object[0]);
+                RubyCanvasInjector.beforeDrawText((Canvas) chain.getThisObject(), (CharSequence) a[0], (int) a[1], (int) a[2], (float) a[5], (float) a[6], (Paint) a[8]);
+                return chain.proceed();
+            });
+            installed++;
+        } catch (Throwable t) { moduleLog("skip Canvas.drawTextRun hook", t); }
+        // drawTextOnPath variants — intentionally not hooked (rarely used for lyrics)
+        moduleLog("installed Canvas ruby hooks: " + installed + "/4");
     }
 
     // ── Song open event handler ─────────────────────────────────────────────
@@ -691,3 +715,5 @@ public final class UtaBuildSaltModule extends XposedModule {
         }
     }
 }
+
+
