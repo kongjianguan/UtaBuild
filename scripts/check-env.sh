@@ -3,12 +3,16 @@ set -euo pipefail
 
 missing=()
 
-if ! command -v tsc &> /dev/null; then
-  missing+=("tsc (TypeScript) — install with: npm install -g typescript")
-fi
+if ! command -v pnpm &> /dev/null; then
+  missing+=("pnpm — install pnpm 11.17.0 or run through Corepack")
+else
+  if ! pnpm exec tsc --version &> /dev/null; then
+    missing+=("tsc (TypeScript) — run: pnpm install")
+  fi
 
-if ! command -v sass &> /dev/null; then
-  missing+=("sass (Dart Sass) — install with: npm install -g sass")
+  if ! pnpm exec sass --version &> /dev/null; then
+    missing+=("sass (Dart Sass) — run: pnpm install")
+  fi
 fi
 
 if [ ${#missing[@]} -gt 0 ]; then

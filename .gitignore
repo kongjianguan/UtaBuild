@@ -6,6 +6,7 @@ src-tauri/target/
 dist/
 build/
 node_modules/
+.pnpm-store/
 
 # IDE
 .idea/
@@ -42,9 +43,7 @@ src-tauri/gen/android/**/.gradle/
 
 
 # Project docs (generated / research)
-AGENTS.md
 CLAUDE.md
-docs/
 
 # Scripts
 scripts/

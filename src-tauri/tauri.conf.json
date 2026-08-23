@@ -5,8 +5,8 @@
   "identifier": "fyi.kongjianguan.utabuild",
   "build": {
     "frontendDist": "../src",
-    "beforeDevCommand": "npm run build",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "pnpm run build",
+    "beforeBuildCommand": "pnpm run build"
   },
   "app": {
     "withGlobalTauri": true,

@@ -2,11 +2,12 @@
   "name": "utabuild-frontend",
   "private": true,
   "version": "1.1.6",
+  "packageManager": "pnpm@11.17.0",
   "scripts": {
     "prebuild": "bash scripts/check-env.sh",
     "build:ts": "tsc",
     "build:scss": "sass src/scss/main.scss src/css/style.css --style compressed",
-    "build": "npm run build:ts && npm run build:scss",
+    "build": "pnpm run build:ts && pnpm run build:scss",
     "watch:ts": "tsc --watch",
     "watch:scss": "sass src/scss/main.scss src/css/style.css --watch",
     "lint": "eslint src/ts/ --ext .ts",
