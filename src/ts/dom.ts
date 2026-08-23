@@ -32,20 +32,29 @@ export function hide(el: Element | null): void {
 }
 
 export function currentPageScrollY(): number {
-  return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  const scrollContainer = document.querySelector<HTMLElement>(
+    `[data-view-scroll="${router._current}"]`,
+  );
+  return scrollContainer?.scrollTop || 0;
 }
 
-function _scrollPageTo(y: number): void {
+function _scrollViewTo(view: ViewType, y: number): void {
   const top = Math.max(0, Math.round(y || 0));
-  document.documentElement.scrollTop = top;
-  document.body.scrollTop = top;
-  window.scrollTo({ top, left: 0, behavior: 'auto' });
+  const scrollContainer = document.querySelector<HTMLElement>(
+    `[data-view-scroll="${view}"]`,
+  );
+  if (scrollContainer) {
+    scrollContainer.scrollTop = top;
+    return;
+  }
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
 }
 
-function _repeatScrollTo(y: number): void {
-  _scrollPageTo(y);
-  requestAnimationFrame(() => _scrollPageTo(y));
-  setTimeout(() => _scrollPageTo(y), 80);
+function _repeatScrollTo(view: ViewType, y: number): void {
+  _scrollViewTo(view, y);
+  requestAnimationFrame(() => _scrollViewTo(view, y));
+  setTimeout(() => _scrollViewTo(view, y), 80);
 }
 
 export function showLoading(): void {
@@ -99,10 +108,11 @@ const VIEW_ORDER: Record<ViewType, number> = {
   search: 0,
   songs: 1,
   settings: 2,
-  lspSettings: 3,
-  lspLogs: 3,
-  results: 3,
-  lyrics: 3,
+  settingsAbout: 3,
+  lspSettings: 4,
+  lspLogs: 4,
+  results: 4,
+  lyrics: 4,
 };
 
 const _viewScroll = new Map<ViewType, number>();
@@ -112,7 +122,7 @@ function _saveScroll(): void {
 }
 
 function _restoreScroll(view: ViewType): void {
-  _repeatScrollTo(_viewScroll.get(view) || 0);
+  _repeatScrollTo(view, _viewScroll.get(view) || 0);
 }
 
 function _syncBottomMenu(activeTab: string): void {
@@ -141,13 +151,14 @@ function _setBottomMenu(visible: boolean, activeTab?: string): void {
 
 function _toggleViewElements(view: ViewType): void {
   const ids = [
-    'search-header', 'songs-view', 'settings-view',
+    'search-header', 'songs-view', 'settings-view', 'settings-about-view',
     'lsp-settings-view', 'lsp-log-view', 'result-list', 'lyrics-view',
   ];
   const viewIdMap: Record<ViewType, string> = {
     search: 'search-header',
     songs: 'songs-view',
     settings: 'settings-view',
+    settingsAbout: 'settings-about-view',
     lspSettings: 'lsp-settings-view',
     lspLogs: 'lsp-log-view',
     results: 'result-list',
@@ -168,6 +179,7 @@ function _animateEntry(view: ViewType, direction: 'forward' | 'back'): void {
     search: 'search-header',
     songs: 'songs-view',
     settings: 'settings-view',
+    settingsAbout: 'settings-about-view',
     lspSettings: 'lsp-settings-view',
     lspLogs: 'lsp-log-view',
     results: 'result-list',
@@ -192,15 +204,18 @@ function _focusView(view: ViewType): void {
     search: 'search-header',
     songs: 'songs-view',
     settings: 'settings-view',
+    settingsAbout: 'settings-about-view',
     lspSettings: 'lsp-settings-view',
     lspLogs: 'lsp-log-view',
     results: 'result-list',
     lyrics: 'lyrics-view',
   };
   const viewEl = el<HTMLElement>(viewIdMap[view]);
+  $$('h1, h2').forEach((heading) => heading.classList.remove('router-focus'));
   const heading = viewEl.querySelector('h1, h2') as HTMLElement | null;
   if (!heading) return;
   if (!heading.hasAttribute('tabindex')) heading.tabIndex = -1;
+  heading.classList.add('router-focus');
   heading.focus({ preventScroll: true });
 }
 
@@ -223,7 +238,7 @@ export class Router {
     _setBottomMenu(FIRST_LEVEL.has(view), view);
 
     if (opts?.resetScroll) {
-      _repeatScrollTo(0);
+      _repeatScrollTo(view, 0);
     }
 
     if (opts?.animate) {

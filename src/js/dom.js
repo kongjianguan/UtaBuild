@@ -24,18 +24,23 @@ export function hide(el) {
         el.classList.add('hidden');
 }
 export function currentPageScrollY() {
-    return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    const scrollContainer = document.querySelector(`[data-view-scroll="${router._current}"]`);
+    return scrollContainer?.scrollTop || 0;
 }
-function _scrollPageTo(y) {
+function _scrollViewTo(view, y) {
     const top = Math.max(0, Math.round(y || 0));
-    document.documentElement.scrollTop = top;
-    document.body.scrollTop = top;
-    window.scrollTo({ top, left: 0, behavior: 'auto' });
+    const scrollContainer = document.querySelector(`[data-view-scroll="${view}"]`);
+    if (scrollContainer) {
+        scrollContainer.scrollTop = top;
+        return;
+    }
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
 }
-function _repeatScrollTo(y) {
-    _scrollPageTo(y);
-    requestAnimationFrame(() => _scrollPageTo(y));
-    setTimeout(() => _scrollPageTo(y), 80);
+function _repeatScrollTo(view, y) {
+    _scrollViewTo(view, y);
+    requestAnimationFrame(() => _scrollViewTo(view, y));
+    setTimeout(() => _scrollViewTo(view, y), 80);
 }
 export function showLoading() {
     show(el('loading'));
@@ -81,17 +86,18 @@ const VIEW_ORDER = {
     search: 0,
     songs: 1,
     settings: 2,
-    lspSettings: 3,
-    lspLogs: 3,
-    results: 3,
-    lyrics: 3,
+    settingsAbout: 3,
+    lspSettings: 4,
+    lspLogs: 4,
+    results: 4,
+    lyrics: 4,
 };
 const _viewScroll = new Map();
 function _saveScroll() {
     _viewScroll.set(router._current, currentPageScrollY());
 }
 function _restoreScroll(view) {
-    _repeatScrollTo(_viewScroll.get(view) || 0);
+    _repeatScrollTo(view, _viewScroll.get(view) || 0);
 }
 function _syncBottomMenu(activeTab) {
     const menu = el('bottom-menu');
@@ -119,13 +125,14 @@ function _setBottomMenu(visible, activeTab) {
 }
 function _toggleViewElements(view) {
     const ids = [
-        'search-header', 'songs-view', 'settings-view',
+        'search-header', 'songs-view', 'settings-view', 'settings-about-view',
         'lsp-settings-view', 'lsp-log-view', 'result-list', 'lyrics-view',
     ];
     const viewIdMap = {
         search: 'search-header',
         songs: 'songs-view',
         settings: 'settings-view',
+        settingsAbout: 'settings-about-view',
         lspSettings: 'lsp-settings-view',
         lspLogs: 'lsp-log-view',
         results: 'result-list',
@@ -145,6 +152,7 @@ function _animateEntry(view, direction) {
         search: 'search-header',
         songs: 'songs-view',
         settings: 'settings-view',
+        settingsAbout: 'settings-about-view',
         lspSettings: 'lsp-settings-view',
         lspLogs: 'lsp-log-view',
         results: 'result-list',
@@ -166,17 +174,20 @@ function _focusView(view) {
         search: 'search-header',
         songs: 'songs-view',
         settings: 'settings-view',
+        settingsAbout: 'settings-about-view',
         lspSettings: 'lsp-settings-view',
         lspLogs: 'lsp-log-view',
         results: 'result-list',
         lyrics: 'lyrics-view',
     };
     const viewEl = el(viewIdMap[view]);
+    $$('h1, h2').forEach((heading) => heading.classList.remove('router-focus'));
     const heading = viewEl.querySelector('h1, h2');
     if (!heading)
         return;
     if (!heading.hasAttribute('tabindex'))
         heading.tabIndex = -1;
+    heading.classList.add('router-focus');
     heading.focus({ preventScroll: true });
 }
 export class Router {
@@ -194,7 +205,7 @@ export class Router {
         _toggleViewElements(view);
         _setBottomMenu(FIRST_LEVEL.has(view), view);
         if (opts?.resetScroll) {
-            _repeatScrollTo(0);
+            _repeatScrollTo(view, 0);
         }
         if (opts?.animate) {
             const dir = (VIEW_ORDER[view] > VIEW_ORDER[prev]) ? 'forward' : 'back';

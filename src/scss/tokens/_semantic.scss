@@ -28,6 +28,7 @@
   // Primary
   --primary: var(--prim-dark-primary);
   --primary-hover: var(--prim-dark-primary-hover);
+  --primary-content: var(--prim-dark-primary-content);
   --primary-glow: var(--prim-dark-primary-glow);
   --primary-dim: var(--prim-dark-primary-dim);
 
@@ -63,6 +64,7 @@ body[data-theme="light"] {
   --border-focus: var(--prim-light-border-focus);
   --primary: var(--prim-light-primary);
   --primary-hover: var(--prim-light-primary-hover);
+  --primary-content: var(--prim-light-primary-content);
   --primary-glow: var(--prim-light-primary-glow);
   --primary-dim: var(--prim-light-primary-dim);
   --danger: var(--prim-light-danger);
@@ -92,6 +94,7 @@ body[data-theme="mygo"] {
   --border-focus: var(--prim-mygo-border-focus);
   --primary: var(--prim-mygo-primary);
   --primary-hover: var(--prim-mygo-primary-hover);
+  --primary-content: var(--prim-mygo-primary-content);
   --primary-glow: var(--prim-mygo-primary-glow);
   --primary-dim: var(--prim-mygo-primary-dim);
   --danger: var(--prim-mygo-danger);

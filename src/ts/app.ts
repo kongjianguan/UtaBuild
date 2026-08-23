@@ -73,6 +73,72 @@ async function checkSaltLaunchRequest(): Promise<void> {
 
 // ==================== Init Controls ====================
 
+function initSearchForm(): void {
+  const form = el<HTMLFormElement>('search-form');
+  const titleInput = el<HTMLInputElement>('search-title');
+  const artistInput = el<HTMLInputElement>('search-artist');
+  const scrim = el<HTMLButtonElement>('search-scrim');
+
+  const isNarrowSearch = (): boolean => window.matchMedia('(max-width: 768px)').matches;
+
+  const setExpanded = (expanded: boolean): void => {
+    const active = expanded && isNarrowSearch();
+    form.dataset.expanded = String(active);
+    form.setAttribute('aria-expanded', String(active));
+    form.classList.toggle('is-expanded', active);
+    scrim.classList.toggle('hidden', !active);
+    scrim.setAttribute('aria-hidden', String(!active));
+  };
+
+  titleInput.addEventListener('focus', () => {
+    if (isNarrowSearch()) setExpanded(true);
+  });
+  artistInput.addEventListener('focus', () => {
+    if (isNarrowSearch()) setExpanded(true);
+  });
+
+  scrim.addEventListener('click', () => setExpanded(false));
+  form.addEventListener('submit', () => {
+    if (titleInput.value.trim()) setExpanded(false);
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (form.dataset.expanded !== 'true') return;
+    if (!form.contains(event.target as Node)) setExpanded(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && form.dataset.expanded === 'true') {
+      event.preventDefault();
+      setExpanded(false);
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (!isNarrowSearch()) setExpanded(false);
+  });
+}
+
+function initViewportGuards(): void {
+  document.addEventListener(
+    'touchmove',
+    (event) => {
+      if (event.touches.length > 1) event.preventDefault();
+    },
+    { passive: false },
+  );
+  document.addEventListener('gesturestart', (event) => event.preventDefault());
+  window.addEventListener(
+    'wheel',
+    (event) => {
+      if (event.ctrlKey || event.metaKey) event.preventDefault();
+    },
+    { passive: false },
+  );
+  window.addEventListener('keydown', (event) => {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    if (['+', '-', '=', '0'].includes(event.key)) event.preventDefault();
+  });
+}
+
 function initControls(): void {
   // Cache checkbox
   el<HTMLInputElement>('setting-use-cache').checked = shouldUseCache();
@@ -140,6 +206,12 @@ function initControls(): void {
   el<HTMLButtonElement>('setting-goto-lsp').addEventListener('click', () => {
     router.navigate('lspSettings', { resetScroll: true });
   });
+
+  // About subpage
+  el<HTMLButtonElement>('setting-goto-about').addEventListener('click', () => {
+    router.navigate('settingsAbout', { animate: true, resetScroll: true });
+  });
+  el<HTMLButtonElement>('settings-about-back-btn').addEventListener('click', () => handleBack());
 
   // LSP log refresh
   el<HTMLButtonElement>('lsp-log-refresh-btn').addEventListener('click', () => {
@@ -244,6 +316,8 @@ function init(): void {
   el<HTMLButtonElement>('error-close').addEventListener('click', () => hide(el<HTMLElement>('error-toast')));
 
   // Controls
+  initSearchForm();
+  initViewportGuards();
   initControls();
   initSongsControls();
 

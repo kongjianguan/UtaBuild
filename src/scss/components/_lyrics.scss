@@ -1,83 +1,73 @@
 // ============================================================
-// Lyrics View
+// Lyrics View - Miuix reading surface
 // ============================================================
 
 #lyrics-view {
   max-width: 920px;
   margin: 0 auto;
-  padding: var(--space-5) 0 var(--space-8);
+  padding: 0;
 }
 
 #lyrics-header {
-  margin-bottom: var(--space-4);
-}
+  flex: 0 0 auto;
+  min-height: 64px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  padding: 4px 0 16px;
 
-#lyrics-header h2 {
-  font-size: var(--font-xl);
-  font-weight: 700;
-  margin-bottom: var(--space-1);
-}
+  h2 {
+    font-size: clamp(1.2rem, 2.4vw, 1.65rem);
+    font-weight: 700;
+    margin-bottom: var(--space-1);
+  }
 
-#lyrics-header p {
-  font-size: var(--font-md);
-  color: var(--text-secondary);
+  p {
+    margin-top: 3px;
+    font-size: var(--font-md);
+    color: var(--text-secondary);
+  }
 }
 
 .lyrics-controls {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
-  justify-content: center;
-  padding: var(--space-3);
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  margin-bottom: var(--space-5);
-  transition: background var(--motion-slow), border-color var(--motion-slow);
+  margin: 0 0 12px;
+  transition: background var(--motion-slow), box-shadow var(--motion-slow);
 }
 
 .control-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
 }
 
 .control-group span {
+  padding: 0 8px;
   font-size: var(--font-xs);
   font-weight: 600;
   color: var(--text-secondary);
-  letter-spacing: 0.03em;
 }
 
 .control-group button {
-  padding: 4px 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--motion-fast) ease;
-  letter-spacing: 0.02em;
-}
-
-.control-group button:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.control-group button:focus-visible {
-  outline: 2px solid var(--border-focus);
-  outline-offset: 2px;
+  min-height: 36px;
+  padding: 7px 12px;
+  font-size: 0.76rem;
 }
 
 .control-group button[aria-pressed="true"] {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-  box-shadow: 0 0 12px var(--primary-glow);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
 }
 
 .lyricBody {
@@ -86,56 +76,31 @@
   line-height: 2.3;
   padding: 24px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   min-height: 200px;
-  transition: background var(--motion-slow), border-color var(--motion-slow), box-shadow var(--motion-slow);
+  transition: background var(--motion-slow), box-shadow var(--motion-slow);
 }
 
-// MyGO theme: frosted lyrics card
-body[data-theme="mygo"] .lyricBody {
-  backdrop-filter: blur(16px) saturate(110%);
-  -webkit-backdrop-filter: blur(16px) saturate(110%);
+#lyrics-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 0 2px;
+  touch-action: pan-y;
+  scrollbar-width: thin;
 }
 
 #export-lyrics-btn {
-  font-size: 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 4px 12px;
+  min-height: 36px;
+  font-size: 0.78rem;
+  padding: 7px 12px;
 }
 
-#export-lyrics-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-#back-to-results-btn {
-  display: block;
-  margin: var(--space-4) auto 0;
-  padding: 6px 20px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: border-color var(--motion-fast), color var(--motion-fast);
-}
-
-#back-to-results-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-// Responsive
 @media (max-width: 768px) {
   .lyricBody {
-    padding: 12px;
+    padding: 16px;
   }
 
   .lyricBody div.medium {
@@ -147,7 +112,7 @@ body[data-theme="mygo"] .lyricBody {
   }
 
   .lyrics-controls {
-    gap: 10px;
+    justify-content: flex-start;
   }
 
   .control-group {

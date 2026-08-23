@@ -30,6 +30,67 @@ async function checkSaltLaunchRequest() {
     }
 }
 // ==================== Init Controls ====================
+function initSearchForm() {
+    const form = el('search-form');
+    const titleInput = el('search-title');
+    const artistInput = el('search-artist');
+    const scrim = el('search-scrim');
+    const isNarrowSearch = () => window.matchMedia('(max-width: 768px)').matches;
+    const setExpanded = (expanded) => {
+        const active = expanded && isNarrowSearch();
+        form.dataset.expanded = String(active);
+        form.setAttribute('aria-expanded', String(active));
+        form.classList.toggle('is-expanded', active);
+        scrim.classList.toggle('hidden', !active);
+        scrim.setAttribute('aria-hidden', String(!active));
+    };
+    titleInput.addEventListener('focus', () => {
+        if (isNarrowSearch())
+            setExpanded(true);
+    });
+    artistInput.addEventListener('focus', () => {
+        if (isNarrowSearch())
+            setExpanded(true);
+    });
+    scrim.addEventListener('click', () => setExpanded(false));
+    form.addEventListener('submit', () => {
+        if (titleInput.value.trim())
+            setExpanded(false);
+    });
+    document.addEventListener('pointerdown', (event) => {
+        if (form.dataset.expanded !== 'true')
+            return;
+        if (!form.contains(event.target))
+            setExpanded(false);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && form.dataset.expanded === 'true') {
+            event.preventDefault();
+            setExpanded(false);
+        }
+    });
+    window.addEventListener('resize', () => {
+        if (!isNarrowSearch())
+            setExpanded(false);
+    });
+}
+function initViewportGuards() {
+    document.addEventListener('touchmove', (event) => {
+        if (event.touches.length > 1)
+            event.preventDefault();
+    }, { passive: false });
+    document.addEventListener('gesturestart', (event) => event.preventDefault());
+    window.addEventListener('wheel', (event) => {
+        if (event.ctrlKey || event.metaKey)
+            event.preventDefault();
+    }, { passive: false });
+    window.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey || event.metaKey))
+            return;
+        if (['+', '-', '=', '0'].includes(event.key))
+            event.preventDefault();
+    });
+}
 function initControls() {
     // Cache checkbox
     el('setting-use-cache').checked = shouldUseCache();
@@ -88,6 +149,11 @@ function initControls() {
     el('setting-goto-lsp').addEventListener('click', () => {
         router.navigate('lspSettings', { resetScroll: true });
     });
+    // About subpage
+    el('setting-goto-about').addEventListener('click', () => {
+        router.navigate('settingsAbout', { animate: true, resetScroll: true });
+    });
+    el('settings-about-back-btn').addEventListener('click', () => handleBack());
     // LSP log refresh
     el('lsp-log-refresh-btn').addEventListener('click', () => {
         void viewLspLogs();
@@ -186,6 +252,8 @@ function init() {
     // Error close
     el('error-close').addEventListener('click', () => hide(el('error-toast')));
     // Controls
+    initSearchForm();
+    initViewportGuards();
     initControls();
     initSongsControls();
     // Bottom menu

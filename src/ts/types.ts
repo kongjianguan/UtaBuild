@@ -94,6 +94,7 @@ export type ViewType =
   | 'search'
   | 'songs'
   | 'settings'
+  | 'settingsAbout'
   | 'lspSettings'
   | 'lspLogs'
   | 'results'

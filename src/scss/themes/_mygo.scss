@@ -1,15 +1,15 @@
 // ============================================================
-// Theme: MyGO!!!!! (Immersive Anime Band)
-// Direction: Deep night-sky + five-member color accents.
+// Theme: MyGO!!!!! (Miuix color variant)
+// Keep the band palette while using the shared Miuix geometry and surfaces.
 // ============================================================
 
 body[data-theme="mygo"] {
   // Background
   --prim-mygo-bg: #080d1a;
   --prim-mygo-bg-secondary: #0e1627;
-  --prim-mygo-surface: rgba(18, 28, 48, 0.82);
-  --prim-mygo-surface-hover: rgba(28, 40, 62, 0.88);
-  --prim-mygo-surface-elevated: rgba(24, 34, 54, 0.90);
+  --prim-mygo-surface: #182238;
+  --prim-mygo-surface-hover: #22304b;
+  --prim-mygo-surface-elevated: #293650;
 
   // Text
   --prim-mygo-text: #e8edf5;
@@ -26,6 +26,7 @@ body[data-theme="mygo"] {
   // Primary (Tomori blue)
   --prim-mygo-primary: #77BBDD;
   --prim-mygo-primary-hover: #99CCEE;
+  --prim-mygo-primary-content: #101828;
   --prim-mygo-primary-glow: rgba(119, 187, 221, 0.35);
   --prim-mygo-primary-dim: rgba(119, 187, 221, 0.10);
 

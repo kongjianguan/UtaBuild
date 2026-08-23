@@ -3,12 +3,17 @@
 // ============================================================
 
 #app {
-  max-width: 920px;
+  height: 100%;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 24px;
-  padding-bottom: 24px;
+  padding: 8px 32px 24px;
   padding-left: max(20px, env(safe-area-inset-left));
   padding-right: max(20px, env(safe-area-inset-right));
+  overflow: hidden;
+}
+
+body.has-bottom-menu #app {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
 }
 
 // View visibility
@@ -24,41 +29,26 @@ select {
 }
 
 button {
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
+  transition: color var(--motion-fast), background var(--motion-fast), box-shadow var(--motion-fast), transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
 
   &:focus-visible {
-    outline: 2px solid var(--primary-glow);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: 0 0 0 3px var(--primary-dim), inset 0 0 0 1px var(--border-focus);
   }
-}
 
-button:not(.bottom-menu__item):active {
-  transform: scale(0.985);
-}
-
-// Secondary button style
-button.secondary {
-  min-height: 36px;
-  padding: 7px 12px;
-  font-size: 0.95rem;
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s;
-
-  &:hover {
-    border-color: var(--primary);
-    color: var(--primary);
+  &:hover:not(:disabled) {
+    color: var(--text);
     background: var(--surface-hover);
-  }
-
-  &.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
   }
 
   &:disabled {
@@ -67,29 +57,164 @@ button.secondary {
   }
 }
 
+button:not(.bottom-menu__item):active {
+  transform: scale(0.97);
+}
+
+// Miuix secondary / text button styles
+button.secondary {
+  background: var(--surface);
+  color: var(--text);
+
+  &:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+
+  &:active {
+    background: var(--surface-hover);
+  }
+
+  &.active {
+    position: relative;
+    background: var(--primary-dim);
+    color: var(--primary);
+  }
+}
+
 // Primary button style
 button.primary {
-  min-height: 36px;
-  padding: 7px 14px;
-  font-size: 0.95rem;
+  min-height: 40px;
+  padding: 9px 18px;
+  font-size: 0.9rem;
   font-weight: 600;
   background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
+  color: var(--primary-content);
   box-shadow: var(--shadow-sm);
-  transition: background 0.2s, transform 0.12s, box-shadow 0.2s;
+  transition: background var(--motion-fast), transform 0.16s, box-shadow var(--motion-fast);
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--primary-hover);
     box-shadow: var(--shadow-md);
   }
 }
 
-#back-btn,
 #back-to-results-btn {
   margin-top: 20px;
+}
+
+.icon-button {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  line-height: 1;
+  flex: 0 0 40px;
+
+  &:hover:not(:disabled) {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+}
+
+.segment-button {
+  position: relative;
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  background: transparent;
+
+  &.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+.view-header {
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 4px 0 12px;
+
+  &--with-actions {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+  }
+
+  &--top-level {
+    grid-template-columns: minmax(0, 1fr);
+
+    &.view-header--with-actions {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+  }
+
+  &__title {
+    min-width: 0;
+
+    h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    p:not(.view-header__eyebrow) {
+      margin-top: 3px;
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__eyebrow {
+    display: none;
+  }
+}
+
+h1.router-focus:focus,
+h1.router-focus:focus-visible,
+h2.router-focus:focus,
+h2.router-focus:focus-visible {
+  outline: none;
+}
+
+#search-header,
+.songs-view,
+.settings-view,
+.settings-about-view,
+.lsp-settings-view,
+.lsp-log-view,
+#result-list,
+#lyrics-view {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.songs-view,
+.settings-view,
+.settings-about-view,
+.lsp-settings-view,
+.lsp-log-view,
+#result-list,
+#lyrics-view {
+  display: flex;
+  flex-direction: column;
 }
 
 // Long press context menu
@@ -97,12 +222,12 @@ button.primary {
   position: fixed;
   z-index: 1200;
   min-width: 148px;
-  padding: 7px;
+  padding: 8px;
   opacity: 0;
   transform: translateY(8px) scale(0.96);
   transform-origin: top left;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface-elevated);
   box-shadow: var(--shadow-lg);
   transition: opacity 0.14s ease, transform 0.16s cubic-bezier(0.19, 1, 0.22, 1);
@@ -117,7 +242,7 @@ button.primary {
     min-height: 42px;
     padding: 9px 14px;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     background: transparent;
     color: var(--text);
     font: inherit;
@@ -207,24 +332,7 @@ button.primary {
 // Responsive
 @media (max-width: 768px) {
   #app {
-    padding: 12px;
-    padding-bottom: 24px;
-  }
-
-  #search-header {
-    padding: 28px 0 20px;
-
-    h1 {
-      font-size: 1.7rem;
-    }
-  }
-
-  .search-form {
-    grid-template-columns: 1fr;
-
-    button {
-      width: 100%;
-    }
+    padding: 6px max(16px, env(safe-area-inset-left)) 16px max(16px, env(safe-area-inset-right));
   }
 
   #lyrics-view {
@@ -232,12 +340,31 @@ button.primary {
     padding-right: 0;
   }
 
-  .subpage-header {
-    grid-template-columns: 1fr;
-  }
-
   .songs-header {
     flex-direction: column;
+  }
+
+  .view-header--with-actions {
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: start;
+
+    .songs-sort {
+      grid-column: 2;
+      grid-row: 2;
+      margin-top: 6px;
+    }
+  }
+
+  .view-header--top-level {
+    grid-template-columns: minmax(0, 1fr);
+
+    &.view-header--with-actions {
+      grid-template-columns: minmax(0, 1fr);
+
+      .songs-sort {
+        grid-column: 1;
+      }
+    }
   }
 
   .songs-sort {

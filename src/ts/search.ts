@@ -156,7 +156,9 @@ function syncInfiniteScrollObserver(): void {
 
 export function initInfiniteScroll(): void {
   if (!resultsScrollEventsInitialized) {
-    window.addEventListener('scroll', maybeLoadMoreResults, { passive: true });
+    el<HTMLElement>('results-scroll').addEventListener('scroll', maybeLoadMoreResults, {
+      passive: true,
+    });
     window.addEventListener('resize', maybeLoadMoreResults);
     resultsScrollEventsInitialized = true;
   }
@@ -178,7 +180,7 @@ export function initInfiniteScroll(): void {
         }
       },
       {
-        root: null,
+        root: el<HTMLElement>('results-scroll'),
         rootMargin: '0px 0px 160px 0px',
         threshold: 0,
       },
@@ -286,11 +288,11 @@ function maybeLoadMoreResults(): void {
     return;
   }
 
+  const scrollView = el<HTMLElement>('results-scroll');
   const rect = el<HTMLElement>('results-pagination').getBoundingClientRect();
-  const viewportHeight =
-    window.innerHeight || document.documentElement?.clientHeight || 0;
+  const viewportRect = scrollView.getBoundingClientRect();
 
-  if (rect.top <= viewportHeight + 160) {
+  if (rect.top <= viewportRect.bottom + 160) {
     void loadRemainingSearchPages(currentSearchRunId);
   }
 }

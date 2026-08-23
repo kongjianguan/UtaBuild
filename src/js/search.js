@@ -108,7 +108,9 @@ function syncInfiniteScrollObserver() {
 }
 export function initInfiniteScroll() {
     if (!resultsScrollEventsInitialized) {
-        window.addEventListener('scroll', maybeLoadMoreResults, { passive: true });
+        el('results-scroll').addEventListener('scroll', maybeLoadMoreResults, {
+            passive: true,
+        });
         window.addEventListener('resize', maybeLoadMoreResults);
         resultsScrollEventsInitialized = true;
     }
@@ -129,7 +131,7 @@ export function initInfiniteScroll() {
                 maybeLoadMoreResults();
             }
         }, {
-            root: null,
+            root: el('results-scroll'),
             rootMargin: '0px 0px 160px 0px',
             threshold: 0,
         });
@@ -218,9 +220,10 @@ function maybeLoadMoreResults() {
         el('results-pagination').classList.contains('hidden')) {
         return;
     }
+    const scrollView = el('results-scroll');
     const rect = el('results-pagination').getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
-    if (rect.top <= viewportHeight + 160) {
+    const viewportRect = scrollView.getBoundingClientRect();
+    if (rect.top <= viewportRect.bottom + 160) {
         void loadRemainingSearchPages(currentSearchRunId);
     }
 }

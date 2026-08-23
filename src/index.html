@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>UtaBuild - 歌詞ビューア</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -10,56 +10,78 @@
   <canvas id="mygo-stars" aria-hidden="true" style="display:none; position:fixed; inset:0; pointer-events:none; z-index:-1;"></canvas>
   <main id="app">
     <!-- 搜索界面 -->
-    <header id="search-header" aria-labelledby="app-title">
-      <h1 id="app-title">UtaBuild</h1>
-      <p class="subtitle">Ruby 歌詞ビューア</p>
-      <p class="subtitle-note">搜索日文歌词，并以假名注音辅助阅读。</p>
-      
-      <form id="search-form" class="search-form" role="search">
-        <label class="visually-hidden" for="search-title">曲名</label>
-        <input
-          type="text"
-          id="search-title"
-          placeholder="曲名を入力..."
-          autocomplete="off"
-        />
-        <label class="visually-hidden" for="search-artist">アーティスト名（任意）</label>
-        <input 
-          type="text" 
-          id="search-artist" 
-          placeholder="アーティスト名（任意）"
-          autocomplete="off"
-        />
-        <button id="search-btn" type="submit">検索</button>
-      </form>
+    <section id="search-header" aria-label="検索">
+      <button
+        id="search-scrim"
+        class="search-scrim hidden"
+        type="button"
+        aria-label="検索を閉じる"
+        aria-hidden="true"
+        tabindex="-1"
+      ></button>
+      <div class="search-panel">
+        <form
+          id="search-form"
+          class="search-form"
+          role="search"
+          data-expanded="false"
+          aria-expanded="false"
+        >
+          <div class="search-form__fields">
+            <label class="visually-hidden" for="search-title">曲名</label>
+            <input
+              type="text"
+              id="search-title"
+              placeholder="曲名を入力..."
+              autocomplete="off"
+            />
+            <label class="visually-hidden" for="search-artist">アーティスト名（任意）</label>
+            <input
+              type="text"
+              id="search-artist"
+              placeholder="アーティスト名（任意）"
+              autocomplete="off"
+            />
+          </div>
+          <button id="search-btn" class="primary search-form__submit" type="submit" aria-label="検索" title="検索">
+            <span class="search-form__icon" aria-hidden="true"></span>
+          </button>
+        </form>
+      </div>
 
-      <section class="search-history">
-        <h2 class="search-history__title">検索履歴</h2>
-        <div id="search-history-list" class="search-history__list"></div>
+      <section class="search-history" aria-labelledby="search-history-title">
+        <h2 id="search-history-title" class="search-history__title">検索履歴</h2>
+        <div id="search-history-list" class="search-history__list" data-view-scroll="search"></div>
         <p id="search-history-empty" class="search-history__empty">まだ検索履歴はありません。搜索后会显示在这里。</p>
       </section>
-    </header>
+    </section>
 
     <!-- 歌曲页面 -->
     <section id="songs-view" class="songs-view hidden" aria-labelledby="songs-title" aria-hidden="true">
-      <div class="songs-header">
-        <div>
+      <div class="view-header view-header--top-level view-header--with-actions">
+        <div class="view-header__title">
+          <p class="view-header__eyebrow">UtaBuild</p>
           <h2 id="songs-title">保存済みの曲</h2>
           <p>已永久保存的歌词会显示在这里。</p>
         </div>
         <div class="songs-sort" aria-label="保存済み曲の並び替え">
-          <button type="button" class="secondary active" data-song-sort="title" aria-pressed="true">曲名</button>
-          <button type="button" class="secondary" data-song-sort="artist" aria-pressed="false">アーティスト</button>
+          <button type="button" class="segment-button active" data-song-sort="title" aria-pressed="true">曲名</button>
+          <button type="button" class="segment-button" data-song-sort="artist" aria-pressed="false">アーティスト</button>
         </div>
       </div>
-      <div id="songs-list" class="songs-list"></div>
+      <div id="songs-list" class="songs-list" data-view-scroll="songs"></div>
       <p id="songs-empty" class="songs-empty">保存済みの歌詞はまだありません。搜索并打开歌词后会永久保存到这里。</p>
     </section>
 
     <!-- 设置页面 -->
     <section id="settings-view" class="settings-view hidden" aria-labelledby="settings-title" aria-hidden="true">
-      <h2 id="settings-title">設定</h2>
-      <div class="settings-list">
+      <div class="view-header view-header--top-level">
+        <div class="view-header__title">
+          <p class="view-header__eyebrow">UtaBuild</p>
+          <h2 id="settings-title">設定</h2>
+        </div>
+      </div>
+      <div class="settings-list" data-view-scroll="settings">
         <label class="settings-item" for="setting-use-cache">
           <div class="settings-item__text">
             <span class="settings-item__label">キャッシュを使う</span>
@@ -91,19 +113,45 @@
             <span class="settings-item__description">配置LSP日志、Hi UtaBuild通知和自动跳转行为。</span>
           </div>
         </button>
+        <button id="setting-goto-about" type="button" class="settings-item settings-item--button">
+          <div class="settings-item__text">
+            <span class="settings-item__label">このアプリについて</span>
+            <span class="settings-item__description">UtaBuild の説明と、このアプリでできること。</span>
+          </div>
+          <span class="settings-item__chevron" aria-hidden="true">›</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 关于页面 -->
+    <section id="settings-about-view" class="settings-about-view hidden" aria-labelledby="settings-about-title" aria-hidden="true">
+      <div class="view-header">
+        <button id="settings-about-back-btn" type="button" class="icon-button" aria-label="設定に戻る" title="設定に戻る">‹</button>
+        <div class="view-header__title">
+          <p class="view-header__eyebrow">設定</p>
+          <h2 id="settings-about-title">このアプリについて</h2>
+        </div>
+      </div>
+      <div class="settings-about__content" data-view-scroll="settingsAbout">
+        <div class="about-intro">
+          <h3>UtaBuild</h3>
+          <p class="about-intro__subtitle">Ruby 歌詞ビューア</p>
+          <p>搜索日文歌词，并以假名注音辅助阅读。</p>
+        </div>
       </div>
     </section>
 
     <!-- LSP设置页面 -->
     <section id="lsp-settings-view" class="lsp-settings-view hidden" aria-labelledby="lsp-settings-title" aria-hidden="true">
       <div class="subpage-header">
-        <button id="lsp-settings-back-btn" type="button" class="secondary">設定に戻る</button>
-        <div>
+        <button id="lsp-settings-back-btn" type="button" class="icon-button" aria-label="設定に戻る" title="設定に戻る">‹</button>
+        <div class="view-header__title">
+          <p class="view-header__eyebrow">設定</p>
           <h2 id="lsp-settings-title">LSP設定</h2>
           <p>配置 LSPosed 模块的行为。</p>
         </div>
       </div>
-      <div class="settings-list">
+      <div class="settings-list" data-view-scroll="lspSettings">
         <label class="settings-item" for="setting-lsp-log">
           <div class="settings-item__text">
             <span class="settings-item__label">LSPログ</span>
@@ -137,8 +185,9 @@
     <!-- LSP日志页面 -->
     <section id="lsp-log-view" class="lsp-log-view hidden" aria-labelledby="lsp-log-title" aria-hidden="true">
       <div class="subpage-header">
-        <button id="lsp-log-back-btn" type="button" class="secondary">設定に戻る</button>
-        <div>
+        <button id="lsp-log-back-btn" type="button" class="icon-button" aria-label="設定に戻る" title="設定に戻る">‹</button>
+        <div class="view-header__title">
+          <p class="view-header__eyebrow">設定</p>
           <h2 id="lsp-log-title">LSPログ</h2>
           <p>不换行显示，可横向/纵向滑动，并支持缩放字体。</p>
         </div>
@@ -152,32 +201,42 @@
         </div>
       </div>
       <div class="lsp-log-frame">
-        <pre id="lsp-log-content" class="lsp-log-content">ページを開くとログを読み込みます...</pre>
+        <pre id="lsp-log-content" class="lsp-log-content" data-view-scroll="lspLogs">ページを開くとログを読み込みます...</pre>
       </div>
     </section>
 
     <!-- 搜索结果列表 -->
     <section id="result-list" class="hidden" aria-labelledby="results-title" aria-hidden="true">
-      <h2 id="results-title">検索結果</h2>
+      <div class="view-header">
+        <button id="back-btn" type="button" class="icon-button" aria-label="検索に戻る" title="検索に戻る">‹</button>
+        <div class="view-header__title">
+          <p class="view-header__eyebrow">検索</p>
+          <h2 id="results-title">検索結果</h2>
+        </div>
+      </div>
       <div id="source-tabs" class="source-tabs" role="tablist" aria-label="検索ソース">
         <button type="button" class="source-tab active" data-source="all" role="tab" aria-selected="true">全部</button>
         <button type="button" class="source-tab" data-source="utaten" role="tab" aria-selected="false">UtaTen</button>
         <button type="button" class="source-tab" data-source="qq_music" role="tab" aria-selected="false">QQ音楽</button>
         <button type="button" class="source-tab" data-source="netease" role="tab" aria-selected="false">网易雲</button>
       </div>
-      <p id="results-summary" class="results-summary hidden"></p>
-      <div id="results-container"></div>
-      <div id="results-pagination" class="pagination hidden">
-        <span id="pagination-info"></span>
+      <div id="results-scroll" class="results-scroll" data-view-scroll="results">
+        <p id="results-summary" class="results-summary hidden"></p>
+        <div id="results-container"></div>
+        <div id="results-pagination" class="pagination hidden">
+          <span id="pagination-info"></span>
+        </div>
       </div>
-      <button id="back-btn" class="secondary">戻る</button>
     </section>
 
     <!-- 歌词显示 -->
     <section id="lyrics-view" class="hidden" aria-labelledby="lyrics-title" aria-hidden="true">
-      <div id="lyrics-header">
-        <h2 id="lyrics-title"></h2>
-        <p id="lyrics-artist"></p>
+      <div id="lyrics-header" class="view-header">
+        <button id="back-to-results-btn" class="icon-button" aria-label="結果に戻る" title="結果に戻る">‹</button>
+        <div class="view-header__title">
+          <h2 id="lyrics-title"></h2>
+          <p id="lyrics-artist"></p>
+        </div>
       </div>
       
       <div class="lyrics-controls">
@@ -198,9 +257,8 @@
         </div>
       </div>
       
-      <div id="lyrics-body"></div>
+      <div id="lyrics-body" data-view-scroll="lyrics"></div>
       
-      <button id="back-to-results-btn" class="secondary">結果に戻る</button>
     </section>
 
     <!-- 加载指示器 -->
