@@ -1,7 +1,9 @@
-import { loadSettings } from './settings.js';
+import { clampFontSize, defaultFontSizeForViewport, FONT_SIZE_MAX, FONT_SIZE_MIN, loadSettings, } from './settings.js';
 // ==================== Element Accessors ====================
 const _elCache = new Map();
 let errorToastTimer = null;
+let toastActionHandler = null;
+let toastActionBound = false;
 export function el(id) {
     if (!_elCache.has(id)) {
         const node = document.querySelector(`#${id}`);
@@ -52,24 +54,49 @@ export function hideLoading() {
     el('app').removeAttribute('aria-busy');
     document.body.classList.remove('is-loading');
 }
-export function showToast(msg, tone = 'error') {
+export function showToast(msg, tone = 'error', action) {
     const toast = el('error-toast');
+    const actionBtn = el('error-action');
+    if (!toastActionBound) {
+        toastActionBound = true;
+        actionBtn.addEventListener('click', () => {
+            const handler = toastActionHandler;
+            hide(toast);
+            toastActionHandler = null;
+            handler?.();
+        });
+    }
     toast.classList.remove('is-success', 'is-info');
     if (tone !== 'error')
         toast.classList.add(`is-${tone}`);
     toast.setAttribute('role', tone === 'error' ? 'alert' : 'status');
     toast.setAttribute('aria-live', tone === 'error' ? 'assertive' : 'polite');
     el('error-message').textContent = msg;
+    if (action) {
+        actionBtn.textContent = action.label;
+        toastActionHandler = action.onClick;
+        show(actionBtn);
+    }
+    else {
+        toastActionHandler = null;
+        hide(actionBtn);
+    }
     show(toast);
-    if (errorToastTimer)
+    if (errorToastTimer) {
         clearTimeout(errorToastTimer);
-    errorToastTimer = setTimeout(() => {
-        hide(toast);
         errorToastTimer = null;
-    }, 5000);
+    }
+    // Errors stay until dismissed so the message and its recovery action
+    // cannot be missed; success/info toasts still auto-dismiss.
+    if (tone !== 'error') {
+        errorToastTimer = setTimeout(() => {
+            hide(toast);
+            errorToastTimer = null;
+        }, 5000);
+    }
 }
-export function showError(msg) {
-    showToast(msg, 'error');
+export function showError(msg, action) {
+    showToast(msg, 'error', action);
 }
 export function showSuccess(msg) {
     showToast(msg, 'success');
@@ -102,18 +129,54 @@ function _restoreScroll(view) {
 function _syncBottomMenu(activeTab) {
     const menu = el('bottom-menu');
     menu.dataset.activeTab = activeTab;
+    let activeBtn = null;
     $$('[data-app-tab]').forEach((button) => {
         const btn = button;
         const isActive = btn.dataset.appTab === activeTab;
         btn.classList.toggle('active', isActive);
         btn.setAttribute('aria-selected', String(isActive));
+        // Roving tabindex: only the active tab stays in the keyboard tab order.
+        btn.tabIndex = isActive ? 0 : -1;
         if (isActive) {
             btn.setAttribute('aria-current', 'page');
+            activeBtn = btn;
         }
         else {
             btn.removeAttribute('aria-current');
         }
     });
+    const slider = menu.querySelector('.bottom-menu__slider');
+    if (slider && activeBtn) {
+        const btn = activeBtn;
+        const track = slider.parentElement;
+        if (track) {
+            const btnLeft = btn.offsetLeft;
+            const btnTop = btn.offsetTop;
+            const btnWidth = btn.offsetWidth;
+            const btnHeight = btn.offsetHeight;
+            slider.style.width = `${btnWidth}px`;
+            slider.style.height = `${btnHeight}px`;
+            slider.style.transform = `translate3d(${btnLeft - 6}px, ${btnTop - 6}px, 0)`;
+            slider.classList.add('is-ready');
+        }
+    }
+}
+export function updateBottomMenuSlider() {
+    const menu = document.getElementById('bottom-menu');
+    if (!menu || menu.classList.contains('hidden'))
+        return;
+    const activeBtn = menu.querySelector('.bottom-menu__item.active');
+    const slider = menu.querySelector('.bottom-menu__slider');
+    if (!slider || !activeBtn)
+        return;
+    const btnLeft = activeBtn.offsetLeft;
+    const btnTop = activeBtn.offsetTop;
+    const btnWidth = activeBtn.offsetWidth;
+    const btnHeight = activeBtn.offsetHeight;
+    slider.style.width = `${btnWidth}px`;
+    slider.style.height = `${btnHeight}px`;
+    slider.style.transform = `translate3d(${btnLeft - 6}px, ${btnTop - 6}px, 0)`;
+    slider.classList.add('is-ready');
 }
 function _setBottomMenu(visible, activeTab) {
     const menu = el('bottom-menu');
@@ -213,7 +276,14 @@ export class Router {
         }
         _focusView(view);
         if (!this._navigatingBack) {
-            history.pushState({ view }, '', '');
+            // Switching between first-level tabs replaces the current entry so the
+            // Android back button leaves the app instead of replaying tab history.
+            if (opts?.replace) {
+                history.replaceState({ view }, '', '');
+            }
+            else {
+                history.pushState({ view }, '', '');
+            }
         }
         this._navigatingBack = false;
         if (view === 'lspSettings') {
@@ -244,24 +314,95 @@ export class Router {
 }
 export const router = new Router();
 // ==================== Button States ====================
+export function syncFontSizeControls(fontSize) {
+    const range = document.getElementById('font-size-range');
+    const valueInput = document.getElementById('font-size-value');
+    if (!range || !valueInput)
+        return;
+    const currentFontSize = fontSize ?? loadSettings().fontSize ?? defaultFontSizeForViewport();
+    const normalized = clampFontSize(currentFontSize);
+    range.min = String(FONT_SIZE_MIN);
+    range.max = String(FONT_SIZE_MAX);
+    range.step = '1';
+    range.value = String(normalized);
+    range.style.setProperty('--range-progress', `${((normalized - FONT_SIZE_MIN) / (FONT_SIZE_MAX - FONT_SIZE_MIN)) * 100}%`);
+    range.setAttribute('aria-valuetext', `${normalized}px`);
+    valueInput.min = String(FONT_SIZE_MIN);
+    valueInput.max = String(FONT_SIZE_MAX);
+    valueInput.step = '1';
+    valueInput.value = String(normalized);
+}
 export function updateButtonStates() {
     const settings = loadSettings();
-    const fontSize = settings.fontSize || 'medium';
-    $$('[data-size]').forEach((button) => {
-        const btn = button;
-        const isActive = btn.dataset.size === fontSize;
-        btn.classList.toggle('active', isActive);
-        btn.setAttribute('aria-pressed', String(isActive));
-    });
-    const sizeBtn = document.querySelector(`[data-size="${fontSize}"]`);
-    if (sizeBtn)
-        sizeBtn.classList.add('active');
+    syncFontSizeControls(settings.fontSize);
     const theme = settings.theme || 'dark';
     $$('.lyrics-controls [data-theme]').forEach((button) => {
         const btn = button;
         const isActive = btn.dataset.theme === theme;
         btn.classList.toggle('active', isActive);
         btn.setAttribute('aria-pressed', String(isActive));
+    });
+}
+let confirmDialogActive = false;
+/**
+ * Modal confirmation dialog with focus trap, ESC handling and focus restore.
+ * Resolves true on confirm, false on cancel/dismiss.
+ */
+export function confirmDialog(options) {
+    if (confirmDialogActive)
+        return Promise.resolve(false);
+    confirmDialogActive = true;
+    return new Promise((resolve) => {
+        const dialog = el('confirm-dialog');
+        const confirmButton = el('confirm-dialog-confirm');
+        const cancelButton = el('confirm-dialog-cancel');
+        const previouslyFocused = document.activeElement;
+        let isResolved = false;
+        const finish = (confirmed) => {
+            if (isResolved)
+                return;
+            isResolved = true;
+            document.removeEventListener('keydown', handleKeydown, true);
+            confirmButton.removeEventListener('click', handleConfirm);
+            cancelButton.removeEventListener('click', handleCancel);
+            hide(dialog);
+            confirmDialogActive = false;
+            // Return focus to the element that opened the dialog.
+            previouslyFocused?.focus?.();
+            resolve(confirmed);
+        };
+        const handleConfirm = () => finish(true);
+        const handleCancel = () => finish(false);
+        const handleKeydown = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                finish(false);
+                return;
+            }
+            // Focus trap: keep Tab cycling between the two dialog buttons.
+            if (event.key === 'Tab') {
+                const focusables = [cancelButton, confirmButton];
+                const currentIndex = focusables.indexOf(document.activeElement);
+                event.preventDefault();
+                const nextIndex = event.shiftKey
+                    ? (currentIndex <= 0 ? focusables.length - 1 : currentIndex - 1)
+                    : (currentIndex + 1) % focusables.length;
+                focusables[nextIndex].focus();
+            }
+        };
+        // The step indicator is a leftover of the old multi-step flow.
+        hide(el('confirm-dialog-step'));
+        el('confirm-dialog-title').textContent = options.title;
+        el('confirm-dialog-message').textContent = options.message;
+        confirmButton.textContent = options.confirmLabel || '確認';
+        confirmButton.disabled = false;
+        confirmButton.classList.toggle('confirm-dialog__confirm--danger', options.danger === true);
+        confirmButton.addEventListener('click', handleConfirm);
+        cancelButton.addEventListener('click', handleCancel);
+        document.addEventListener('keydown', handleKeydown, true);
+        show(dialog);
+        // Safe default: focus Cancel so Enter does not trigger the destructive action.
+        cancelButton.focus();
     });
 }
 // ==================== LSP Log Visibility (DOM-side) ====================

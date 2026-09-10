@@ -192,10 +192,28 @@ export function isTauriEnv(): boolean {
   return _isTauriEnv;
 }
 
+const INVOKE_TIMEOUT_MS = 15000;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function invoke<T = any>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   await tauriReady;
-  return _invoke(cmd, args) as Promise<T>;
+  // The backend promise is not cancellable, but the user must not stare at a
+  // spinner forever when the backend hangs: surface a timeout error instead.
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('リクエストがタイムアウトしました。通信状況を確認してもう一度お試しください。'));
+    }, INVOKE_TIMEOUT_MS);
+    (_invoke(cmd, args) as Promise<T>).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
 }
 
 export { tauriReady };

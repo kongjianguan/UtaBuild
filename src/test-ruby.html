@@ -11,11 +11,15 @@
     <h1 style="text-align: center;">Ruby Rendering Test</h1>
     
     <div class="lyrics-controls">
-      <div class="control-group">
-        <span>文字サイズ:</span>
-        <button id="size-small" data-size="small">小</button>
-        <button id="size-medium" data-size="medium" disabled>中</button>
-        <button id="size-large" data-size="large">大</button>
+      <div class="control-group font-size-control">
+        <label class="control-group__label" for="font-size-range">文字サイズ</label>
+        <div class="font-size-control__body">
+          <input id="font-size-range" class="font-size-control__range" type="range" min="14" max="32" step="1" value="17" aria-label="文字サイズスライダー">
+          <div class="font-size-control__value">
+            <input id="font-size-value" class="font-size-control__number" type="number" min="14" max="32" step="1" value="17" inputmode="numeric" aria-label="文字サイズ（ピクセル）">
+            <span class="font-size-control__unit" aria-hidden="true">px</span>
+          </div>
+        </div>
       </div>
       <div class="control-group">
         <span>ダークモード:</span>
@@ -27,7 +31,7 @@
     <!-- 完整歌词测试（千本桜片段） -->
     <div id="lyrics-body">
       <div class="lyricBody">
-        <div class="medium">
+        <div data-font-size="17" style="--lyric-font-size: 17px">
           <!-- 大胆不敵だいたんふてきにハイカラ革命かくめい -->
           <span class="ruby"><span class="rb">大胆不敵</span><span class="rt">だいたんふてき</span></span>にハイカラ<span class="ruby"><span class="rb">革命</span><span class="rt">かくめい</span></span><br>
           <!-- 磊々落々反戦国家らいらいらくらくはんせんこっか -->
@@ -64,7 +68,7 @@
     <!-- 测试：纯文字 vs Ruby的对比 -->
     <h2 style="margin-top: 40px;">对比测试</h2>
     <div class="lyricBody">
-      <div class="medium">
+      <div data-font-size="17" style="--lyric-font-size: 17px">
         <!-- 普通文字 -->
         <div style="margin-bottom: 10px; color: #666;">
           （無注音）春日影、不思議な時は
@@ -78,17 +82,58 @@
   </div>
 
   <script>
-    // 控制按钮逻辑
-    document.querySelectorAll('[data-size]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const size = btn.dataset.size;
-        document.querySelectorAll('.lyricBody > div').forEach(el => {
-          el.className = size;
-        });
-        document.querySelectorAll('[data-size]').forEach(b => b.disabled = false);
-        btn.disabled = true;
+    const FONT_SIZE_MIN = 14;
+    const FONT_SIZE_MAX = 32;
+    const fontRange = document.getElementById('font-size-range');
+    const fontValue = document.getElementById('font-size-value');
+    const lyricDivs = document.querySelectorAll('.lyricBody > div');
+
+    function clampFontSize(value) {
+      if (!Number.isFinite(value)) return 17;
+      return Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, Math.round(value)));
+    }
+
+    function applyFontSize(value) {
+      const size = clampFontSize(value);
+      lyricDivs.forEach(el => {
+        el.style.setProperty('--lyric-font-size', `${size}px`);
+        el.dataset.fontSize = String(size);
       });
+      fontRange.value = String(size);
+      fontRange.style.setProperty('--range-progress', `${(size - FONT_SIZE_MIN) / (FONT_SIZE_MAX - FONT_SIZE_MIN) * 100}%`);
+      fontRange.setAttribute('aria-valuetext', `${size}px`);
+      fontValue.value = String(size);
+    }
+
+    function commitNumberInput() {
+      isEditingNumber = false;
+      const rawValue = fontValue.value.trim();
+      const parsed = Number(rawValue);
+      if (!rawValue || !Number.isFinite(parsed)) {
+        applyFontSize(17);
+        return;
+      }
+      applyFontSize(parsed);
+    }
+
+    let isEditingNumber = false;
+    fontValue.addEventListener('beforeinput', event => {
+      if (event.inputType.startsWith('insert') || event.inputType.startsWith('delete')) {
+        isEditingNumber = true;
+      }
     });
+    fontRange.addEventListener('input', () => applyFontSize(Number(fontRange.value)));
+    fontValue.addEventListener('input', () => {
+      const rawValue = fontValue.value.trim();
+      const parsed = Number(rawValue);
+      if (!rawValue || !Number.isFinite(parsed)) return;
+      if (isEditingNumber && parsed < FONT_SIZE_MIN && rawValue.length < 3) return;
+      isEditingNumber = false;
+      applyFontSize(parsed);
+    });
+    fontValue.addEventListener('change', commitNumberInput);
+    fontValue.addEventListener('blur', commitNumberInput);
+    applyFontSize(17);
 
     document.querySelectorAll('[data-dark]').forEach(btn => {
       btn.addEventListener('click', () => {

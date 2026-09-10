@@ -13,7 +13,7 @@
 
 .search-panel {
   position: relative;
-  z-index: 30;
+  z-index: var(--z-search-panel);
   flex: 0 0 auto;
   padding: 8px;
   border-radius: var(--radius-lg);
@@ -44,7 +44,7 @@
     outline: none;
     background: var(--bg-secondary);
     color: var(--text);
-    font-size: 0.92rem;
+    font-size: var(--font-md);
     font-weight: 500;
     transition: background var(--motion-fast), box-shadow var(--motion-fast);
 
@@ -96,7 +96,7 @@
 
 button.search-scrim {
   position: absolute;
-  z-index: 20;
+  z-index: var(--z-search-scrim);
   inset: 0;
   width: 100%;
   min-height: 0;
@@ -129,7 +129,7 @@ button.search-scrim {
   flex: 0 0 auto;
   margin: 0 4px 10px;
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: var(--font-md);
   font-weight: 700;
 }
 
@@ -139,12 +139,11 @@ button.search-scrim {
   display: flex;
   flex-direction: column;
   gap: 0;
-  overflow-y: auto;
+  overflow: hidden auto;
   overscroll-behavior: contain;
   padding: 0;
   touch-action: pan-y;
   scrollbar-width: thin;
-  overflow: hidden auto;
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
@@ -205,7 +204,7 @@ button.search-scrim {
     justify-content: space-between;
     gap: 10px;
     color: var(--text-secondary);
-    font-size: 0.76rem;
+    font-size: var(--font-xs);
 
     span {
       overflow: hidden;
@@ -248,7 +247,7 @@ button.search-scrim {
     &.is-expanded,
     &[data-expanded="true"] {
       position: absolute;
-      z-index: 40;
+      z-index: var(--z-search-expanded);
       top: -6px;
       right: -6px;
       left: -6px;

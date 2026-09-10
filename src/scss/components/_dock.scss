@@ -7,7 +7,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: var(--z-dock);
   padding: 8px max(16px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-right));
   display: flex;
   justify-content: center;
@@ -34,7 +34,21 @@
 }
 
 .bottom-menu__slider {
-  display: none;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 0;
+  height: 0;
+  border-radius: var(--radius-lg);
+  background: var(--primary-dim);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: transform var(--motion-normal), width var(--motion-normal), height var(--motion-normal), opacity var(--motion-fast);
+
+  &.is-ready {
+    opacity: 1;
+  }
 }
 
 .bottom-menu__item {
@@ -56,7 +70,7 @@
   letter-spacing: 0;
   cursor: pointer;
   border-radius: var(--radius-lg);
-  transition: color var(--motion-fast), background var(--motion-fast), transform 0.16s;
+  transition: color var(--motion-fast), transform 0.16s;
   position: relative;
   z-index: 1;
 
@@ -75,7 +89,6 @@
 
   &:hover {
     color: var(--text);
-    background: var(--surface-hover);
   }
 
   &:active {
@@ -84,7 +97,6 @@
 
   &.active {
     color: var(--primary);
-    background: var(--primary-dim);
   }
 }
 
@@ -101,7 +113,6 @@ body[data-theme="mygo"] .bottom-menu__track {
 
 body[data-theme="mygo"] .bottom-menu__item.active {
   color: var(--primary);
-  background: var(--primary-dim);
   text-shadow: none;
 }
 
@@ -122,8 +133,8 @@ body[data-theme="mygo"] .bottom-menu__item.active {
   }
 }
 
-// Miuix switches to a NavigationRail-like layout on large windows.
-@media (min-width: 960px) {
+// Miuix switches to a NavigationRail-like layout on wide desktop windows.
+@media (min-width: 1080px) {
   body.has-bottom-menu #app {
     padding-bottom: 24px;
   }

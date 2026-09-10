@@ -14,7 +14,8 @@ html {
   height: 100%;
   overflow: hidden;
   -webkit-text-size-adjust: 100%;
-  touch-action: pan-x pan-y;
+  // manipulation = pan + pinch-zoom without double-tap delay
+  touch-action: manipulation;
   overscroll-behavior: none;
 }
 
@@ -28,7 +29,7 @@ body {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   margin: 0;
-  touch-action: pan-x pan-y;
+  touch-action: manipulation;
   overscroll-behavior: none;
 }
 
@@ -65,4 +66,17 @@ img {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+// Global reduced-motion: neutralize all transitions/animations when the user
+// requests reduced motion. Component-level overrides are not needed.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

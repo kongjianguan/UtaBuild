@@ -1,6 +1,6 @@
 import { isTauriEnv, invoke, tauriReady } from './tauri.js';
-import { loadSettings, saveSettings, shouldUseCache, selectedArtworkSource, VALID_ARTWORK_SOURCES, DEFAULT_ARTWORK_SOURCE, } from './settings.js';
-import { el, $$, hide, showError, showInfo, showSuccess, router, updateButtonStates, syncLspLogVisibility, } from './dom.js';
+import { loadSettings, saveSettings, shouldUseCache, selectedArtworkSource, VALID_ARTWORK_SOURCES, DEFAULT_ARTWORK_SOURCE, clampFontSize, defaultFontSizeForViewport, FONT_SIZE_MIN, } from './settings.js';
+import { el, $$, hide, showError, showInfo, showSuccess, router, updateButtonStates, syncLspLogVisibility, syncFontSizeControls, } from './dom.js';
 import { renderSearchHistory } from './search-history.js';
 import { loadSavedLyrics, initSongsControls, initSongsDockAutoHide } from './songs.js';
 import { handleSearch, initInfiniteScroll, initSourceTabKeyboardNav, setPendingSaltRequest, setCurrentActiveTab, currentSearchData, renderResultList, } from './search.js';
@@ -10,6 +10,7 @@ import { exportLyricsToFile, getExportData } from './export.js';
 import { initBackButton, initBackGesture, handleBack } from './back-gesture.js';
 import { initBottomMenu } from './bottom-menu.js';
 import { initStarfield } from './starfield.js';
+import { setLyricsFontSize } from './ruby.js';
 // ==================== Salt Player Launch Flow ====================
 async function checkSaltLaunchRequest() {
     if (!isTauriEnv())
@@ -74,6 +75,46 @@ function initSearchForm() {
             setExpanded(false);
     });
 }
+function initLyricsMenu() {
+    const toggle = el('lyrics-more-btn');
+    const controls = el('lyrics-controls');
+    const isNarrowLyrics = () => window.matchMedia('(max-width: 768px)').matches;
+    let backdrop = document.querySelector('.lyrics-controls-backdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.className = 'lyrics-controls-backdrop';
+        document.body.appendChild(backdrop);
+        backdrop.addEventListener('click', () => setOpen(false));
+    }
+    const setOpen = (open) => {
+        const active = open && isNarrowLyrics();
+        toggle.setAttribute('aria-expanded', String(active));
+        toggle.classList.toggle('is-open', active);
+        controls.classList.toggle('is-open', active);
+        backdrop?.classList.toggle('is-open', active);
+    };
+    toggle.addEventListener('click', () => {
+        setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+    document.addEventListener('pointerdown', (event) => {
+        if (toggle.getAttribute('aria-expanded') !== 'true')
+            return;
+        const target = event.target;
+        if (!toggle.contains(target) && !controls.contains(target))
+            setOpen(false);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || toggle.getAttribute('aria-expanded') !== 'true')
+            return;
+        event.preventDefault();
+        setOpen(false);
+        toggle.focus();
+    });
+    window.addEventListener('resize', () => {
+        if (!isNarrowLyrics())
+            setOpen(false);
+    });
+}
 function initViewportGuards() {
     document.addEventListener('touchmove', (event) => {
         if (event.touches.length > 1)
@@ -89,6 +130,56 @@ function initViewportGuards() {
             return;
         if (['+', '-', '=', '0'].includes(event.key))
             event.preventDefault();
+    });
+}
+function applyFontSize(value) {
+    const fontSize = clampFontSize(value);
+    setLyricsFontSize(fontSize);
+    saveSettings({ fontSize });
+    syncFontSizeControls(fontSize);
+}
+function initFontSizeControl() {
+    const range = el('font-size-range');
+    const valueInput = el('font-size-value');
+    let isEditingNumber = false;
+    syncFontSizeControls();
+    range.addEventListener('input', () => {
+        applyFontSize(Number(range.value));
+    });
+    const commitNumberInput = () => {
+        isEditingNumber = false;
+        const rawValue = valueInput.value.trim();
+        const parsed = Number(rawValue);
+        if (!rawValue || !Number.isFinite(parsed)) {
+            syncFontSizeControls();
+            return;
+        }
+        applyFontSize(parsed);
+    };
+    valueInput.addEventListener('beforeinput', (event) => {
+        if (event.inputType.startsWith('insert') || event.inputType.startsWith('delete')) {
+            isEditingNumber = true;
+        }
+    });
+    valueInput.addEventListener('input', () => {
+        const rawValue = valueInput.value.trim();
+        const parsed = Number(rawValue);
+        if (!rawValue || !Number.isFinite(parsed))
+            return;
+        // Keep a short out-of-range draft intact while the user types the next digit.
+        if (isEditingNumber && parsed < FONT_SIZE_MIN && rawValue.length < 3)
+            return;
+        isEditingNumber = false;
+        applyFontSize(parsed);
+    });
+    valueInput.addEventListener('change', commitNumberInput);
+    valueInput.addEventListener('blur', commitNumberInput);
+    window.addEventListener('resize', () => {
+        if (loadSettings().fontSize !== undefined)
+            return;
+        const fontSize = defaultFontSizeForViewport();
+        setLyricsFontSize(fontSize);
+        syncFontSizeControls(fontSize);
     });
 }
 function initControls() {
@@ -163,20 +254,7 @@ function initControls() {
     el('lsp-log-zoom-in').addEventListener('click', () => adjustLspLogZoom(0.1));
     syncLspLogZoom();
     // Font size controls
-    $$('[data-size]').forEach((btn) => {
-        const button = btn;
-        button.addEventListener('click', () => {
-            const size = button.dataset.size;
-            if (!size)
-                return;
-            const body = el('lyrics-body').querySelector('.lyricBody > div');
-            if (body) {
-                body.className = size;
-            }
-            saveSettings({ fontSize: size });
-            updateButtonStates();
-        });
-    });
+    initFontSizeControl();
     // Theme controls
     $$('.lyrics-controls [data-theme]').forEach((btn) => {
         const button = btn;
@@ -253,6 +331,7 @@ function init() {
     el('error-close').addEventListener('click', () => hide(el('error-toast')));
     // Controls
     initSearchForm();
+    initLyricsMenu();
     initViewportGuards();
     initControls();
     initSongsControls();

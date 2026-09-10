@@ -177,10 +177,24 @@ console.log('window.__TAURI_INVOKE__:', typeof window.__TAURI_INVOKE__);
 export function isTauriEnv() {
     return _isTauriEnv;
 }
+const INVOKE_TIMEOUT_MS = 15000;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function invoke(cmd, args) {
     await tauriReady;
-    return _invoke(cmd, args);
+    // The backend promise is not cancellable, but the user must not stare at a
+    // spinner forever when the backend hangs: surface a timeout error instead.
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error('リクエストがタイムアウトしました。通信状況を確認してもう一度お試しください。'));
+        }, INVOKE_TIMEOUT_MS);
+        _invoke(cmd, args).then((value) => {
+            clearTimeout(timer);
+            resolve(value);
+        }, (err) => {
+            clearTimeout(timer);
+            reject(err);
+        });
+    });
 }
 export { tauriReady };
 //# sourceMappingURL=tauri.js.map

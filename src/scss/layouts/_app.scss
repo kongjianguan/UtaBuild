@@ -16,6 +16,14 @@ body.has-bottom-menu #app {
   padding-bottom: calc(84px + env(safe-area-inset-bottom));
 }
 
+@media (min-width: 1080px) {
+  body.has-bottom-menu #app {
+    margin-left: max(120px, calc(50vw - 480px));
+    margin-right: auto;
+    padding-bottom: 24px;
+  }
+}
+
 // View visibility
 .hidden {
   display: none !important;
@@ -29,13 +37,13 @@ select {
 }
 
 button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 9px 16px;
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text);
-  font-size: 0.88rem;
+  font-size: var(--font-sm);
   font-weight: 600;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
@@ -83,9 +91,9 @@ button.secondary {
 
 // Primary button style
 button.primary {
-  min-height: 40px;
+  min-height: 44px;
   padding: 9px 18px;
-  font-size: 0.9rem;
+  font-size: var(--font-md);
   font-weight: 600;
   background: var(--primary);
   color: var(--primary-content);
@@ -98,14 +106,10 @@ button.primary {
   }
 }
 
-#back-to-results-btn {
-  margin-top: 20px;
-}
-
 .icon-button {
-  width: 40px;
-  min-width: 40px;
-  height: 40px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -114,7 +118,7 @@ button.primary {
   color: var(--text-secondary);
   font-size: 1.25rem;
   line-height: 1;
-  flex: 0 0 40px;
+  flex: 0 0 44px;
 
   &:hover:not(:disabled) {
     color: var(--text);
@@ -124,9 +128,9 @@ button.primary {
 
 .segment-button {
   position: relative;
-  min-height: 36px;
+  min-height: 44px;
   padding: 7px 14px;
-  font-size: 0.78rem;
+  font-size: var(--font-xs);
   background: transparent;
 
   &.active {
@@ -173,7 +177,7 @@ button.primary {
     p:not(.view-header__eyebrow) {
       margin-top: 3px;
       color: var(--text-secondary);
-      font-size: 0.78rem;
+      font-size: var(--font-xs);
       line-height: 1.35;
       white-space: nowrap;
       overflow: hidden;
@@ -184,13 +188,6 @@ button.primary {
   &__eyebrow {
     display: none;
   }
-}
-
-h1.router-focus:focus,
-h1.router-focus:focus-visible,
-h2.router-focus:focus,
-h2.router-focus:focus-visible {
-  outline: none;
 }
 
 #search-header,
@@ -220,7 +217,7 @@ h2.router-focus:focus-visible {
 // Long press context menu
 .long-press-menu {
   position: fixed;
-  z-index: 1200;
+  z-index: var(--z-menu);
   min-width: 148px;
   padding: 8px;
   opacity: 0;
@@ -239,7 +236,7 @@ h2.router-focus:focus-visible {
 
   &__item {
     width: 100%;
-    min-height: 42px;
+    min-height: 44px;
     padding: 9px 14px;
     border: none;
     border-radius: var(--radius-md);
@@ -392,16 +389,5 @@ h2.router-focus:focus-visible {
   .view-enter-from-right,
   .view-enter-from-left {
     animation-name: first-level-fade;
-  }
-}
-
-@media (max-width: 375px) {
-  // Minimal adjustments for very small viewports
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .view-enter-from-right,
-  .view-enter-from-left {
-    animation: none;
   }
 }

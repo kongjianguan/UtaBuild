@@ -14,7 +14,8 @@
   // Text
   --prim-dark-text: #f5f5f5;
   --prim-dark-text-secondary: #aaaaaa;
-  --prim-dark-text-muted: #777777;
+  // #888 on #191919 ≈ 5.1:1 (WCAG AA for normal text)
+  --prim-dark-text-muted: #888888;
 
   // Ruby
   --prim-dark-ruby-color: #999999;

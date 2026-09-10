@@ -33,4 +33,15 @@
   --motion-fast: 0.15s;
   --motion-base: 0.25s;
   --motion-slow: 0.35s;
+
+  // Layering scale (bottom → top). Components must use these, not raw numbers.
+  --z-search-scrim: 20;
+  --z-search-panel: 30;
+  --z-search-expanded: 40;
+  --z-lyrics-controls: 50;
+  --z-dock: 100;
+  --z-loading: 200;
+  --z-dialog: 300;
+  --z-menu: 400;
+  --z-toast: 500;
 }

@@ -3,19 +3,20 @@
 // ============================================================
 
 body[data-theme="light"] {
-  --prim-light-bg: #f5f5f5;
-  --prim-light-bg-secondary: #eeeeee;
+  --prim-light-bg: #f0f2f5;
+  --prim-light-bg-secondary: #e4e7ec;
   --prim-light-surface: #ffffff;
-  --prim-light-surface-hover: #e7e7e7;
+  --prim-light-surface-hover: #e9ecef;
   --prim-light-surface-elevated: #ffffff;
 
   --prim-light-text: #1f1f1f;
   --prim-light-text-secondary: #666666;
-  --prim-light-text-muted: #999999;
+  // #767676 on #ffffff ≈ 4.54:1 (WCAG AA for normal text)
+  --prim-light-text-muted: #767676;
 
   --prim-light-ruby-color: #666666;
 
-  --prim-light-border: rgba(31, 31, 31, 0.08);
+  --prim-light-border: rgba(31, 31, 31, 0.09);
   --prim-light-border-focus: rgba(52, 120, 246, 0.45);
 
   --prim-light-primary: #3478f6;
@@ -33,7 +34,7 @@ body[data-theme="light"] {
 
   --prim-light-glass-code-bg: rgba(0, 0, 0, 0.04);
 
-  --prim-light-shadow-sm: 0 2px 8px rgba(31, 31, 31, 0.08);
-  --prim-light-shadow-md: 0 8px 24px rgba(31, 31, 31, 0.10);
-  --prim-light-shadow-lg: 0 16px 40px rgba(31, 31, 31, 0.14);
+  --prim-light-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --prim-light-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --prim-light-shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.09), 0 4px 10px rgba(0, 0, 0, 0.04);
 }

@@ -1,6 +1,6 @@
 import { invoke } from './tauri.js';
 import { shouldUseCache, selectedArtworkSource } from './settings.js';
-import { el, $$, showLoading, hideLoading, showError, showInfo, showSuccess, router, updateButtonStates, currentPageScrollY, setBottomMenuAutoHidden, } from './dom.js';
+import { el, $$, showLoading, hideLoading, showError, showInfo, showSuccess, router, updateButtonStates, currentPageScrollY, setBottomMenuAutoHidden, confirmDialog, } from './dom.js';
 import { renderLyrics } from './ruby.js';
 import { exportLyricsToFile, setExportData } from './export.js';
 // ==================== State ====================
@@ -242,6 +242,9 @@ function positionSongContextMenu(menu, clientX, clientY) {
     const y = Math.min(Math.max(clientY, margin), window.innerHeight - rect.height - margin);
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
+    const originX = clientX > window.innerWidth / 2 ? 'right' : 'left';
+    const originY = clientY > window.innerHeight / 2 ? 'bottom' : 'top';
+    menu.style.transformOrigin = `${originY} ${originX}`;
 }
 async function refreshSavedSongArtwork(song) {
     if (!song?.lyrics_url) {
@@ -303,7 +306,12 @@ async function deleteSavedSong(song) {
         return;
     }
     const label = song.title || 'この曲';
-    if (!window.confirm(`「${label}」の保存済み歌詞を削除しますか？`))
+    if (!(await confirmDialog({
+        title: '保存済み歌詞を削除',
+        message: `「${label}」の保存済み歌詞を削除しますか？`,
+        confirmLabel: '削除',
+        danger: true,
+    })))
         return;
     showLoading();
     try {
@@ -356,12 +364,16 @@ export function showSongContextMenu(song, trigger, event) {
 }
 export function attachSongLongPressMenu(button, song) {
     button.setAttribute('aria-haspopup', 'menu');
+    let startX = 0;
+    let startY = 0;
     button.addEventListener('pointerdown', (event) => {
         if (event.pointerType === 'mouse' && event.button !== 0)
             return;
         closeSongContextMenu();
         songLongPressTriggered = false;
         songLongPressTarget = null;
+        startX = event.clientX;
+        startY = event.clientY;
         songLongPressTimer = setTimeout(() => {
             songLongPressTriggered = true;
             songLongPressTarget = button;
@@ -375,6 +387,16 @@ export function attachSongLongPressMenu(button, song) {
             }
             showSongContextMenu(song, button, event);
         }, 560);
+    });
+    button.addEventListener('pointermove', (event) => {
+        if (!songLongPressTimer)
+            return;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        if (dx * dx + dy * dy > 100) {
+            clearTimeout(songLongPressTimer);
+            songLongPressTimer = null;
+        }
     });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => {
         button.addEventListener(type, () => {
@@ -415,6 +437,9 @@ function positionResultContextMenu(menu, clientX, clientY) {
     const y = Math.min(Math.max(clientY, margin), window.innerHeight - rect.height - margin);
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
+    const originX = clientX > window.innerWidth / 2 ? 'right' : 'left';
+    const originY = clientY > window.innerHeight / 2 ? 'bottom' : 'top';
+    menu.style.transformOrigin = `${originY} ${originX}`;
 }
 async function copyResultItemJson(item) {
     showLoading();
@@ -496,7 +521,7 @@ export function showResultContextMenu(item, trigger, event) {
     menu.className = 'long-press-menu';
     menu.setAttribute('role', 'menu');
     menu.innerHTML = `
-    <button class="long-press-menu__item long-press-menu__item--copy" type="button" role="menuitem" data-result-action="copy-json">复制utaten-cli输出的json到剪切板</button>
+    <button class="long-press-menu__item long-press-menu__item--copy" type="button" role="menuitem" data-result-action="copy-json">JSONをコピー</button>
   `;
     menu
         .querySelector('[data-result-action="copy-json"]')
@@ -520,12 +545,16 @@ export function showResultContextMenu(item, trigger, event) {
 }
 export function attachResultLongPressMenu(button, item) {
     button.setAttribute('aria-haspopup', 'menu');
+    let startX = 0;
+    let startY = 0;
     button.addEventListener('pointerdown', (event) => {
         if (event.pointerType === 'mouse' && event.button !== 0)
             return;
         closeResultContextMenu();
         resultLongPressTriggered = false;
         resultLongPressTarget = null;
+        startX = event.clientX;
+        startY = event.clientY;
         resultLongPressTimer = setTimeout(() => {
             resultLongPressTriggered = true;
             resultLongPressTarget = button;
@@ -539,6 +568,16 @@ export function attachResultLongPressMenu(button, item) {
             }
             showResultContextMenu(item, button, event);
         }, 560);
+    });
+    button.addEventListener('pointermove', (event) => {
+        if (!resultLongPressTimer)
+            return;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        if (dx * dx + dy * dy > 100) {
+            clearTimeout(resultLongPressTimer);
+            resultLongPressTimer = null;
+        }
     });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => {
         button.addEventListener(type, () => {

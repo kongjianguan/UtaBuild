@@ -18,7 +18,7 @@
   flex-shrink: 0;
 
   button {
-    min-height: 36px;
+    min-height: 44px;
 
     &.active {
       color: var(--text);
@@ -35,12 +35,11 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  overflow-y: auto;
+  overflow: hidden auto;
   overscroll-behavior: contain;
   padding: 0;
   touch-action: pan-y;
   scrollbar-width: thin;
-  overflow: hidden auto;
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
@@ -54,7 +53,7 @@
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  font-size: 0.88rem;
+  font-size: var(--font-sm);
 }
 
 .song-item {
@@ -107,10 +106,15 @@
     height: 56px;
     border: 0;
     border-radius: var(--radius-md);
+    overflow: hidden;
     background: var(--bg-secondary);
-    background-position: center;
-    background-size: cover;
     box-shadow: var(--shadow-sm);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
 
     &.has-cover {
       box-shadow: var(--shadow-md);
@@ -130,7 +134,7 @@
       height: 22px;
       margin: 0;
       padding: 0 9px;
-      font-size: 0.72rem;
+      font-size: var(--font-xs);
       line-height: 22px;
       justify-self: start;
     }
@@ -139,7 +143,7 @@
   &__title {
     overflow: hidden;
     color: var(--text);
-    font-size: 0.98rem;
+    font-size: var(--font-md);
     font-weight: 700;
     line-height: 24px;
     text-overflow: ellipsis;
@@ -149,16 +153,25 @@
   &__meta {
     overflow: hidden;
     color: var(--text-secondary);
-    font-size: 0.82rem;
+    font-size: var(--font-sm);
     line-height: 20px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  &__export {
-    width: 40px;
-    height: 40px;
-    min-height: 40px;
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  &__export,
+  &__menu {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
     padding: 0;
     border: 0;
     border-radius: 50%;
@@ -170,7 +183,6 @@
     justify-content: center;
     font-size: 1.1rem;
     transition: color var(--motion-fast), background var(--motion-fast), transform 0.16s;
-    margin-left: auto;
     flex-shrink: 0;
 
     &:hover {

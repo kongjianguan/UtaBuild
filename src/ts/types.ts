@@ -57,7 +57,7 @@ export interface SavedLyricsListResponse {
 }
 
 export interface AppSettings {
-  fontSize?: 'small' | 'medium' | 'large';
+  fontSize?: number;
   theme?: 'dark' | 'light' | 'mygo';
   useCache?: boolean;
   artworkSource?: 'auto' | 'utaten' | 'qq' | 'netease';

@@ -72,7 +72,7 @@ function formatHistoryTime(timestamp) {
     if (!Number.isFinite(timestamp))
         return '';
     try {
-        return new Date(timestamp).toLocaleString('zh-CN', {
+        return new Date(timestamp).toLocaleString('ja-JP', {
             month: '2-digit',
             day: '2-digit',
             hour: '2-digit',
@@ -102,7 +102,7 @@ export function renderSearchHistory() {
         button.innerHTML = `
       <span class="history-item__title">${escapeHtml(entry.title)}</span>
       <span class="history-item__meta">
-        <span>${escapeHtml(entry.artist || 'アーティスト未指定')}</span>
+        <span>${escapeHtml(entry.artist || 'アーティスト不明')}</span>
         <span>${escapeHtml(formatHistoryTime(entry.searchedAt))}</span>
       </span>
     `;

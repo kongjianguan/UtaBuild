@@ -5,7 +5,7 @@
 .confirm-dialog {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: var(--z-dialog);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,11 +74,21 @@
 .confirm-dialog__confirm {
   background: var(--primary);
   border-color: transparent;
-  color: #fff;
+  color: var(--primary-content);
 }
 
 .confirm-dialog__confirm:hover {
   background: var(--primary-hover);
+}
+
+.confirm-dialog__confirm--danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.confirm-dialog__confirm--danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .confirm-dialog__confirm:disabled {

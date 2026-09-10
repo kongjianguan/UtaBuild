@@ -6,6 +6,9 @@ import {
   selectedArtworkSource,
   VALID_ARTWORK_SOURCES,
   DEFAULT_ARTWORK_SOURCE,
+  clampFontSize,
+  defaultFontSizeForViewport,
+  FONT_SIZE_MIN,
 } from './settings.js';
 import {
   el,
@@ -17,6 +20,7 @@ import {
   router,
   updateButtonStates,
   syncLspLogVisibility,
+  syncFontSizeControls,
 } from './dom.js';
 import { renderSearchHistory } from './search-history.js';
 import { loadSavedLyrics, initSongsControls, initSongsDockAutoHide } from './songs.js';
@@ -42,6 +46,7 @@ import { exportLyricsToFile, getExportData } from './export.js';
 import { initBackButton, initBackGesture, handleBack } from './back-gesture.js';
 import { initBottomMenu } from './bottom-menu.js';
 import { initStarfield } from './starfield.js';
+import { setLyricsFontSize } from './ruby.js';
 import type { AppSettings } from './types.js';
 
 // ==================== Salt Player Launch Flow ====================
@@ -117,6 +122,49 @@ function initSearchForm(): void {
   });
 }
 
+function initLyricsMenu(): void {
+  const toggle = el<HTMLButtonElement>('lyrics-more-btn');
+  const controls = el<HTMLElement>('lyrics-controls');
+  const isNarrowLyrics = (): boolean => window.matchMedia('(max-width: 768px)').matches;
+
+  let backdrop = document.querySelector<HTMLElement>('.lyrics-controls-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'lyrics-controls-backdrop';
+    document.body.appendChild(backdrop);
+    backdrop.addEventListener('click', () => setOpen(false));
+  }
+
+  const setOpen = (open: boolean): void => {
+    const active = open && isNarrowLyrics();
+    toggle.setAttribute('aria-expanded', String(active));
+    toggle.classList.toggle('is-open', active);
+    controls.classList.toggle('is-open', active);
+    backdrop?.classList.toggle('is-open', active);
+  };
+
+  toggle.addEventListener('click', () => {
+    setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (toggle.getAttribute('aria-expanded') !== 'true') return;
+    const target = event.target as Node;
+    if (!toggle.contains(target) && !controls.contains(target)) setOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || toggle.getAttribute('aria-expanded') !== 'true') return;
+    event.preventDefault();
+    setOpen(false);
+    toggle.focus();
+  });
+
+  window.addEventListener('resize', () => {
+    if (!isNarrowLyrics()) setOpen(false);
+  });
+}
+
 function initViewportGuards(): void {
   document.addEventListener(
     'touchmove',
@@ -136,6 +184,60 @@ function initViewportGuards(): void {
   window.addEventListener('keydown', (event) => {
     if (!(event.ctrlKey || event.metaKey)) return;
     if (['+', '-', '=', '0'].includes(event.key)) event.preventDefault();
+  });
+}
+
+function applyFontSize(value: number): void {
+  const fontSize = clampFontSize(value);
+  setLyricsFontSize(fontSize);
+  saveSettings({ fontSize });
+  syncFontSizeControls(fontSize);
+}
+
+function initFontSizeControl(): void {
+  const range = el<HTMLInputElement>('font-size-range');
+  const valueInput = el<HTMLInputElement>('font-size-value');
+  let isEditingNumber = false;
+  syncFontSizeControls();
+
+  range.addEventListener('input', () => {
+    applyFontSize(Number(range.value));
+  });
+
+  const commitNumberInput = (): void => {
+    isEditingNumber = false;
+    const rawValue = valueInput.value.trim();
+    const parsed = Number(rawValue);
+    if (!rawValue || !Number.isFinite(parsed)) {
+      syncFontSizeControls();
+      return;
+    }
+    applyFontSize(parsed);
+  };
+
+  valueInput.addEventListener('beforeinput', (event) => {
+    if (event.inputType.startsWith('insert') || event.inputType.startsWith('delete')) {
+      isEditingNumber = true;
+    }
+  });
+  valueInput.addEventListener('input', () => {
+    const rawValue = valueInput.value.trim();
+    const parsed = Number(rawValue);
+    if (!rawValue || !Number.isFinite(parsed)) return;
+
+    // Keep a short out-of-range draft intact while the user types the next digit.
+    if (isEditingNumber && parsed < FONT_SIZE_MIN && rawValue.length < 3) return;
+    isEditingNumber = false;
+    applyFontSize(parsed);
+  });
+  valueInput.addEventListener('change', commitNumberInput);
+  valueInput.addEventListener('blur', commitNumberInput);
+
+  window.addEventListener('resize', () => {
+    if (loadSettings().fontSize !== undefined) return;
+    const fontSize = defaultFontSizeForViewport();
+    setLyricsFontSize(fontSize);
+    syncFontSizeControls(fontSize);
   });
 }
 
@@ -225,19 +327,7 @@ function initControls(): void {
   syncLspLogZoom();
 
   // Font size controls
-  $$('[data-size]').forEach((btn) => {
-    const button = btn as HTMLElement;
-    button.addEventListener('click', () => {
-      const size = button.dataset.size;
-      if (!size) return;
-      const body = el<HTMLElement>('lyrics-body').querySelector('.lyricBody > div') as HTMLElement | null;
-      if (body) {
-        body.className = size;
-      }
-      saveSettings({ fontSize: size as AppSettings['fontSize'] });
-      updateButtonStates();
-    });
-  });
+  initFontSizeControl();
 
   // Theme controls
   $$('.lyrics-controls [data-theme]').forEach((btn) => {
@@ -317,6 +407,7 @@ function init(): void {
 
   // Controls
   initSearchForm();
+  initLyricsMenu();
   initViewportGuards();
   initControls();
   initSongsControls();

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>UtaBuild - 歌詞ビューア</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -52,7 +52,7 @@
       <section class="search-history" aria-labelledby="search-history-title">
         <h2 id="search-history-title" class="search-history__title">検索履歴</h2>
         <div id="search-history-list" class="search-history__list" data-view-scroll="search"></div>
-        <p id="search-history-empty" class="search-history__empty">まだ検索履歴はありません。搜索后会显示在这里。</p>
+        <p id="search-history-empty" class="search-history__empty">まだ検索履歴はありません。検索するとここに表示されます。</p>
       </section>
     </section>
 
@@ -62,7 +62,7 @@
         <div class="view-header__title">
           <p class="view-header__eyebrow">UtaBuild</p>
           <h2 id="songs-title">保存済みの曲</h2>
-          <p>已永久保存的歌词会显示在这里。</p>
+          <p>永久保存された歌詞はここに表示されます。</p>
         </div>
         <div class="songs-sort" aria-label="保存済み曲の並び替え">
           <button type="button" class="segment-button active" data-song-sort="title" aria-pressed="true">曲名</button>
@@ -70,7 +70,7 @@
         </div>
       </div>
       <div id="songs-list" class="songs-list" data-view-scroll="songs"></div>
-      <p id="songs-empty" class="songs-empty">保存済みの歌詞はまだありません。搜索并打开歌词后会永久保存到这里。</p>
+      <p id="songs-empty" class="songs-empty">保存済みの歌詞はまだありません。検索して歌詞を開くと、ここに保存されます。</p>
     </section>
 
     <!-- 设置页面 -->
@@ -85,20 +85,20 @@
         <label class="settings-item" for="setting-use-cache">
           <div class="settings-item__text">
             <span class="settings-item__label">キャッシュを使う</span>
-            <span class="settings-item__description">一天内命中缓存时直接使用缓存数据。</span>
+            <span class="settings-item__description">1日以内にヒットした場合はキャッシュデータをそのまま使用します。</span>
           </div>
           <input type="checkbox" id="setting-use-cache" />
         </label>
         <label class="settings-item settings-item--select" for="setting-artwork-source">
           <div class="settings-item__text">
             <span class="settings-item__label">ジャケット画像ソース</span>
-            <span class="settings-item__description">默认先用 UtaTen；无图时自动尝试 QQ 音乐和网易云。</span>
+            <span class="settings-item__description">まず UtaTen を使い、画像がない場合は QQ 音楽と NetEase を自動で試します。</span>
           </div>
           <select id="setting-artwork-source" class="settings-select">
             <option value="auto">自動</option>
             <option value="utaten">UtaTen</option>
             <option value="qq">QQ 音楽</option>
-            <option value="netease">网易云音乐</option>
+            <option value="netease">NetEase</option>
           </select>
         </label>
         <button id="setting-clear-cache" type="button" class="settings-item settings-item--button">
@@ -109,8 +109,8 @@
         </button>
         <button id="setting-goto-lsp" type="button" class="settings-item settings-item--button hidden" aria-hidden="true" tabindex="-1">
           <div class="settings-item__text">
-            <span class="settings-item__label">LSP相关</span>
-            <span class="settings-item__description">配置LSP日志、Hi UtaBuild通知和自动跳转行为。</span>
+            <span class="settings-item__label">LSP 設定</span>
+            <span class="settings-item__description">LSP ログ、Hi UtaBuild 通知、自動遷移の設定を行います。</span>
           </div>
         </button>
         <button id="setting-goto-about" type="button" class="settings-item settings-item--button">
@@ -136,7 +136,7 @@
         <div class="about-intro">
           <h3>UtaBuild</h3>
           <p class="about-intro__subtitle">Ruby 歌詞ビューア</p>
-          <p>搜索日文歌词，并以假名注音辅助阅读。</p>
+          <p>日本語の歌詞を検索し、ふりがな（ルビ）付きで読みやすく表示します。</p>
         </div>
       </div>
     </section>
@@ -148,14 +148,14 @@
         <div class="view-header__title">
           <p class="view-header__eyebrow">設定</p>
           <h2 id="lsp-settings-title">LSP設定</h2>
-          <p>配置 LSPosed 模块的行为。</p>
+          <p>LSPosed モジュールの動作を設定します。</p>
         </div>
       </div>
       <div class="settings-list" data-view-scroll="lspSettings">
         <label class="settings-item" for="setting-lsp-log">
           <div class="settings-item__text">
             <span class="settings-item__label">LSPログ</span>
-            <span class="settings-item__description">开启后可进入独立页面查看 LSP 日志。</span>
+            <span class="settings-item__description">有効にすると、専用ページで LSP ログを確認できます。</span>
           </div>
           <input type="checkbox" id="setting-lsp-log" />
         </label>
@@ -167,7 +167,7 @@
         <label class="settings-item" for="setting-show-popup">
           <div class="settings-item__text">
             <span class="settings-item__label">Hi UtaBuild通知</span>
-            <span class="settings-item__description">歌曲切换时显示确认无需操作的提示信息。</span>
+            <span class="settings-item__description">曲が切り替わったときに、操作不要であることの確認通知を表示します。</span>
           </div>
           <input type="checkbox" id="setting-show-popup" checked />
         </label>
@@ -175,7 +175,7 @@
         <label class="settings-item" for="setting-auto-launch">
           <div class="settings-item__text">
             <span class="settings-item__label">UtaBuildに自動遷移</span>
-            <span class="settings-item__description">当 UtaBuild 中没有匹配的歌词时自动跳转到 UtaBuild。</span>
+            <span class="settings-item__description">UtaBuild に一致する歌詞がない場合、自動的に UtaBuild を開きます。</span>
           </div>
           <input type="checkbox" id="setting-auto-launch" checked />
         </label>
@@ -189,7 +189,7 @@
         <div class="view-header__title">
           <p class="view-header__eyebrow">設定</p>
           <h2 id="lsp-log-title">LSPログ</h2>
-          <p>不换行显示，可横向/纵向滑动，并支持缩放字体。</p>
+          <p>折り返しなしで表示します。横・縦スクロールと文字サイズの変更に対応しています。</p>
         </div>
       </div>
       <div class="lsp-log-toolbar">
@@ -215,42 +215,80 @@
         </div>
       </div>
       <div id="source-tabs" class="source-tabs" role="tablist" aria-label="検索ソース">
-        <button type="button" class="source-tab active" data-source="all" role="tab" aria-selected="true">全部</button>
+        <button type="button" class="source-tab active" data-source="all" role="tab" aria-selected="true">すべて</button>
         <button type="button" class="source-tab" data-source="utaten" role="tab" aria-selected="false">UtaTen</button>
         <button type="button" class="source-tab" data-source="qq_music" role="tab" aria-selected="false">QQ音楽</button>
-        <button type="button" class="source-tab" data-source="netease" role="tab" aria-selected="false">网易雲</button>
+        <button type="button" class="source-tab" data-source="netease" role="tab" aria-selected="false">NetEase</button>
       </div>
       <div id="results-scroll" class="results-scroll" data-view-scroll="results">
-        <p id="results-summary" class="results-summary hidden"></p>
+        <p id="results-summary" class="results-summary hidden" aria-live="polite"></p>
         <div id="results-container"></div>
         <div id="results-pagination" class="pagination hidden">
           <span id="pagination-info"></span>
+          <button id="pagination-retry" class="secondary hidden" type="button">再試行</button>
         </div>
       </div>
     </section>
 
     <!-- 歌词显示 -->
     <section id="lyrics-view" class="hidden" aria-labelledby="lyrics-title" aria-hidden="true">
-      <div id="lyrics-header" class="view-header">
-        <button id="back-to-results-btn" class="icon-button" aria-label="結果に戻る" title="結果に戻る">‹</button>
+      <div id="lyrics-header" class="view-header view-header--with-actions">
+        <button id="back-to-results-btn" class="icon-button" aria-label="結果に戻る" title="結果に戻る">
+          <span class="lyrics-back-icon" aria-hidden="true">←</span>
+        </button>
         <div class="view-header__title">
           <h2 id="lyrics-title"></h2>
           <p id="lyrics-artist"></p>
         </div>
+        <button
+          id="lyrics-more-btn"
+          class="icon-button lyrics-more-button"
+          type="button"
+          aria-label="歌詞表示設定を開く"
+          aria-controls="lyrics-controls"
+          aria-expanded="false"
+          title="歌詞表示設定"
+        >
+          <span class="lyrics-more-icon" aria-hidden="true"></span>
+        </button>
       </div>
       
-      <div class="lyrics-controls">
-        <div class="control-group">
-          <span>文字サイズ:</span>
-          <button type="button" data-size="small" aria-pressed="false">小</button>
-          <button type="button" data-size="medium" aria-pressed="true">中</button>
-          <button type="button" data-size="large" aria-pressed="false">大</button>
+      <div id="lyrics-controls" class="lyrics-controls" aria-label="歌詞表示設定">
+        <div class="control-group font-size-control">
+          <label class="control-group__label" for="font-size-range">文字サイズ</label>
+          <div class="font-size-control__body">
+            <input
+              id="font-size-range"
+              class="font-size-control__range"
+              type="range"
+              min="14"
+              max="32"
+              step="1"
+              value="17"
+              aria-label="文字サイズスライダー"
+            />
+            <div class="font-size-control__value">
+              <input
+                id="font-size-value"
+                class="font-size-control__number"
+                type="number"
+                min="14"
+                max="32"
+                step="1"
+                value="17"
+                inputmode="numeric"
+                aria-label="文字サイズ（ピクセル）"
+              />
+              <span class="font-size-control__unit" aria-hidden="true">px</span>
+            </div>
+          </div>
         </div>
         <div class="control-group">
           <span>テーマ:</span>
-          <button type="button" data-theme="dark" aria-pressed="true">暗</button>
-          <button type="button" data-theme="light" aria-pressed="false">亮</button>
-          <button type="button" data-theme="mygo" aria-pressed="false">MyGO</button>
+          <button type="button" data-theme="dark" aria-pressed="true">ダーク</button>
+          <button type="button" data-theme="light" aria-pressed="false">ライト</button>
+          <!-- MyGO テーマは仕上がり未達のため非公開（テーマ自体のコードは保持） -->
+          <button type="button" data-theme="mygo" aria-pressed="false" class="hidden" aria-hidden="true" tabindex="-1">MyGO</button>
         </div>
         <div class="control-group">
           <button type="button" id="export-lyrics-btn">エクスポート</button>
@@ -270,6 +308,7 @@
     <!-- 错误提示 -->
     <div id="error-toast" class="hidden" role="alert" aria-live="assertive">
       <span id="error-message"></span>
+      <button id="error-action" class="toast-action hidden" type="button"></button>
       <button id="error-close" aria-label="閉じる">&times;</button>
     </div>
 

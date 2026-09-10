@@ -1,6 +1,6 @@
 import { invoke, isTauriEnv } from './tauri.js';
 import { shouldUseCache, selectedArtworkSource } from './settings.js';
-import { el, show, hide, showLoading, hideLoading, showError, router, updateButtonStates, } from './dom.js';
+import { el, show, hide, showLoading, hideLoading, showError, router, updateButtonStates, confirmDialog, } from './dom.js';
 import { renderLyrics } from './ruby.js';
 import { addSearchHistory } from './search-history.js';
 import { appendAppLspLog } from './lsp.js';
@@ -26,7 +26,7 @@ let currentLyricsRequestId = 0;
 const SEARCH_SOURCES = [
     { key: 'utaten', label: 'UtaTen' },
     { key: 'qq_music', label: 'QQ音楽' },
-    { key: 'netease', label: '网易雲' },
+    { key: 'netease', label: 'NetEase' },
 ];
 export function getPendingSaltRequest() {
     return _pendingSaltRequest;
@@ -530,7 +530,11 @@ async function handleSelectResult(index) {
     const requestId = ++currentLyricsRequestId;
     const saltRequest = _pendingSaltRequest;
     if (saltRequest) {
-        const confirmed = window.confirm(`Salt Player の「${saltRequest.title || ''}」に UtaBuild の「${selectedItem.title}」を紐付け、今後 Ruby 表示に使用しますか？`);
+        const confirmed = await confirmDialog({
+            title: 'Salt Player と紐付け',
+            message: `Salt Player の「${saltRequest.title || ''}」に UtaBuild の「${selectedItem.title}」を紐付け、今後 Ruby 表示に使用しますか？`,
+            confirmLabel: '紐付ける',
+        });
         if (!confirmed) {
             void appendAppLspLog('salt', `binding cancelled salt="${saltRequest.title || ''}"`);
             clearPendingSaltRequest();

@@ -15,12 +15,11 @@
 .results-scroll {
   min-height: 0;
   flex: 1 1 auto;
-  overflow-y: auto;
+  overflow: hidden auto;
   overscroll-behavior: contain;
   padding: 12px 0 2px;
   touch-action: pan-y;
   scrollbar-width: thin;
-  overflow: hidden auto;
 }
 
 #results-container {
@@ -32,12 +31,19 @@
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+
+  // Stale-while-revalidate: previous results stay visible while a new search
+  // is in flight, but are dimmed and non-interactive until replaced.
+  &.is-stale {
+    opacity: 0.55;
+    pointer-events: none;
+  }
 }
 
 .results-summary {
   margin: 0 4px 10px;
   color: var(--text-secondary);
-  font-size: 0.84rem;
+  font-size: var(--font-sm);
 
   &.hidden { display: none; }
 }
@@ -82,7 +88,13 @@
 
   .artist {
     color: var(--text-secondary);
-    font-size: 0.82rem;
+    font-size: var(--font-sm);
+  }
+
+  .credits {
+    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: var(--font-xs);
   }
 
   &.is-menu-open {
@@ -108,9 +120,9 @@
 .source-tab {
   position: relative;
   flex-shrink: 0;
-  min-height: 36px;
+  min-height: 44px;
   padding: 7px 14px;
-  font-size: 0.82rem;
+  font-size: var(--font-sm);
   font-weight: 600;
   border: 0;
   border-radius: var(--radius-md);
@@ -132,7 +144,7 @@
 
   .tab-count {
     margin-left: 4px;
-    font-size: 0.72rem;
+    font-size: var(--font-xs);
     opacity: 0.7;
   }
 
@@ -145,7 +157,7 @@
   display: inline-block;
   padding: 3px 8px;
   margin-bottom: 4px;
-  font-size: 0.68rem;
+  font-size: var(--font-xs);
   font-weight: 700;
   border-radius: var(--radius-pill);
   letter-spacing: 0.02em;
@@ -156,8 +168,8 @@
   }
 
   &--qq {
-    color: #8dd694;
-    background: rgba(141, 214, 148, 0.14);
+    color: var(--success);
+    background: var(--success-bg);
   }
 
   &--ne {
@@ -167,11 +179,12 @@
 }
 
 .source-error,
-.source-loading {
+.source-loading,
+.source-empty {
   padding: 24px 18px;
   margin: 12px 0;
   border-radius: var(--radius-lg);
-  font-size: 0.88rem;
+  font-size: var(--font-sm);
   text-align: center;
 }
 
@@ -182,6 +195,12 @@
 
 .source-loading {
   color: var(--text-secondary);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.source-empty {
+  color: var(--text-muted);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
@@ -197,7 +216,7 @@
     min-width: 180px;
     text-align: center;
     color: var(--text-secondary);
-    font-size: 0.82rem;
+    font-size: var(--font-sm);
   }
 
   &.hidden { display: none; }

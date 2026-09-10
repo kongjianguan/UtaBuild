@@ -10,6 +10,7 @@ import {
   showError,
   router,
   updateButtonStates,
+  confirmDialog,
 } from './dom.js';
 import { renderLyrics } from './ruby.js';
 import { addSearchHistory } from './search-history.js';
@@ -45,7 +46,7 @@ type SearchSourceKey = 'utaten' | 'qq_music' | 'netease';
 const SEARCH_SOURCES: Array<{ key: SearchSourceKey; label: string }> = [
   { key: 'utaten', label: 'UtaTen' },
   { key: 'qq_music', label: 'QQ音楽' },
-  { key: 'netease', label: '网易雲' },
+  { key: 'netease', label: 'NetEase' },
 ];
 
 export function getPendingSaltRequest(): {
@@ -655,9 +656,11 @@ async function handleSelectResult(index: number): Promise<void> {
   const saltRequest = _pendingSaltRequest;
 
   if (saltRequest) {
-    const confirmed = window.confirm(
-      `Salt Player の「${saltRequest.title || ''}」に UtaBuild の「${selectedItem.title}」を紐付け、今後 Ruby 表示に使用しますか？`,
-    );
+    const confirmed = await confirmDialog({
+      title: 'Salt Player と紐付け',
+      message: `Salt Player の「${saltRequest.title || ''}」に UtaBuild の「${selectedItem.title}」を紐付け、今後 Ruby 表示に使用しますか？`,
+      confirmLabel: '紐付ける',
+    });
     if (!confirmed) {
       void appendAppLspLog(
         'salt',
