@@ -51,14 +51,24 @@ fn to_hiragana(ch: char) -> char {
 /// 比较两个假名字符是否匹配，处理助词音变和长音符号的等价关系。具体来说：
 /// - `は`（ha）作为主题助词时，罗马音读作 `わ`（wa）
 /// - `へ`（he）作为方向助词时，罗马音读作 `え`（e）
+/// - `じ`/`ぢ` 和 `ず`/`づ` 的同音异写形式
 /// - `ー`（长音符号）在片假名中表示元音延长；
 ///   在由罗马音派生的平假名中，对应的是短元音
 /// NetEase 的 romalrc 总是使用实际发音（wa/e/元音），
 /// 而原始 YRC 文本保留书写形式（は/へ/ー）。
 #[inline]
 fn chars_match_kana(a: char, b: char) -> bool {
-    let a = to_hiragana(a);
-    let b = to_hiragana(b);
+    let a = match to_hiragana(a) {
+        // NetEase romalrc commonly writes ぢ/づ as ji/zu, producing じ/ず.
+        'ぢ' => 'じ',
+        'づ' => 'ず',
+        ch => ch,
+    };
+    let b = match to_hiragana(b) {
+        'ぢ' => 'じ',
+        'づ' => 'ず',
+        ch => ch,
+    };
     a == b
         || (a == 'は' && b == 'わ') || (a == 'わ' && b == 'は')
         || (a == 'へ' && b == 'え') || (a == 'え' && b == 'へ')

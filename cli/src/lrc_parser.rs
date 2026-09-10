@@ -582,6 +582,24 @@ mod tests {
     }
 
     #[test]
+    fn netease_historical_kana_spelling_preserves_ruby_boundary() {
+        // NetEase's spiral romalrc spells 気づけ as ki zu ke, while the
+        // original lyric uses the orthographic kana づ.
+        let lrc = Some("[01:03.820]それさえ気づけなかったんだ\n");
+        let romalrc = Some("[01:03.820]so re sa e ki zu ke na ka tta n da\n");
+        let elements = parse_lyrics_with_ruby(None, lrc, romalrc);
+
+        assert_eq!(elements.len(), 3);
+        assert_eq!(elements[0].element_type, "text");
+        assert_eq!(elements[0].base.as_deref(), Some("それさえ"));
+        assert_eq!(elements[1].element_type, "ruby");
+        assert_eq!(elements[1].base.as_deref(), Some("気"));
+        assert_eq!(elements[1].ruby.as_deref(), Some("き"));
+        assert_eq!(elements[2].element_type, "text");
+        assert_eq!(elements[2].base.as_deref(), Some("づけなかったんだ"));
+    }
+
+    #[test]
     fn empty_inputs_yield_empty() {
         let elements = parse_lyrics_with_ruby(None, None, None);
         assert!(elements.is_empty());
