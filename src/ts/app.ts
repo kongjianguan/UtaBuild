@@ -147,12 +147,6 @@ function initLyricsMenu(): void {
     setOpen(toggle.getAttribute('aria-expanded') !== 'true');
   });
 
-  document.addEventListener('pointerdown', (event) => {
-    if (toggle.getAttribute('aria-expanded') !== 'true') return;
-    const target = event.target as Node;
-    if (!toggle.contains(target) && !controls.contains(target)) setOpen(false);
-  });
-
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape' || toggle.getAttribute('aria-expanded') !== 'true') return;
     event.preventDefault();

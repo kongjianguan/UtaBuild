@@ -390,8 +390,6 @@ export function confirmDialog(options) {
                 focusables[nextIndex].focus();
             }
         };
-        // The step indicator is a leftover of the old multi-step flow.
-        hide(el('confirm-dialog-step'));
         el('confirm-dialog-title').textContent = options.title;
         el('confirm-dialog-message').textContent = options.message;
         confirmButton.textContent = options.confirmLabel || '確認';

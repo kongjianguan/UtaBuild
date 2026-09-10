@@ -8,11 +8,6 @@ export const VALID_THEMES = new Set(['dark', 'light']);
 export const VALID_ARTWORK_SOURCES = new Set(['auto', 'utaten', 'qq', 'netease']);
 export const DEFAULT_USE_CACHE = true;
 export const DEFAULT_ARTWORK_SOURCE = 'auto';
-const LEGACY_FONT_SIZES = {
-    small: FONT_SIZE_MIN,
-    medium: DEFAULT_FONT_SIZE,
-    large: 21,
-};
 export function clampFontSize(value) {
     if (!Number.isFinite(value))
         return DEFAULT_FONT_SIZE;
@@ -26,9 +21,13 @@ export function defaultFontSizeForViewport(viewportWidth = typeof window === 'un
     return DEFAULT_FONT_SIZE;
 }
 function normalizeFontSize(rawFontSize) {
-    if (typeof rawFontSize === 'string' && rawFontSize in LEGACY_FONT_SIZES) {
-        return LEGACY_FONT_SIZES[rawFontSize];
-    }
+    // Migrate legacy font size keywords if present; fallback to undefined to let viewport decide.
+    if (rawFontSize === 'small')
+        return FONT_SIZE_MIN;
+    if (rawFontSize === 'medium')
+        return DEFAULT_FONT_SIZE;
+    if (rawFontSize === 'large')
+        return 21;
     if (typeof rawFontSize !== 'number' && typeof rawFontSize !== 'string')
         return undefined;
     const parsed = typeof rawFontSize === 'number' ? rawFontSize : Number(rawFontSize);

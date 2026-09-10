@@ -468,8 +468,6 @@ export function confirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
       }
     };
 
-    // The step indicator is a leftover of the old multi-step flow.
-    hide(el<HTMLElement>('confirm-dialog-step'));
     el<HTMLElement>('confirm-dialog-title').textContent = options.title;
     el<HTMLElement>('confirm-dialog-message').textContent = options.message;
     confirmButton.textContent = options.confirmLabel || '確認';

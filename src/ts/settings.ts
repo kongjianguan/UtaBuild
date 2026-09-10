@@ -11,12 +11,6 @@ export const VALID_ARTWORK_SOURCES = new Set(['auto', 'utaten', 'qq', 'netease']
 export const DEFAULT_USE_CACHE = true;
 export const DEFAULT_ARTWORK_SOURCE = 'auto';
 
-const LEGACY_FONT_SIZES: Record<string, number> = {
-  small: FONT_SIZE_MIN,
-  medium: DEFAULT_FONT_SIZE,
-  large: 21,
-};
-
 export function clampFontSize(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_FONT_SIZE;
   return Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, Math.round(value)));
@@ -31,9 +25,10 @@ export function defaultFontSizeForViewport(
 }
 
 function normalizeFontSize(rawFontSize: unknown): number | undefined {
-  if (typeof rawFontSize === 'string' && rawFontSize in LEGACY_FONT_SIZES) {
-    return LEGACY_FONT_SIZES[rawFontSize];
-  }
+  // Migrate legacy font size keywords if present; fallback to undefined to let viewport decide.
+  if (rawFontSize === 'small') return FONT_SIZE_MIN;
+  if (rawFontSize === 'medium') return DEFAULT_FONT_SIZE;
+  if (rawFontSize === 'large') return 21;
 
   if (typeof rawFontSize !== 'number' && typeof rawFontSize !== 'string') return undefined;
   const parsed = typeof rawFontSize === 'number' ? rawFontSize : Number(rawFontSize);
