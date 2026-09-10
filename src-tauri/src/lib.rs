@@ -1145,7 +1145,10 @@ async fn get_cache_stats(state: State<'_, AppState>) -> Result<serde_json::Value
     serde_json::to_value(stats).map_err(|e| e.to_string())
 }
 
-/// 清除缓存
+/// 清除网络与搜索临时缓存。
+///
+/// 注意：此处特意不调用 `clear_lyrics_annotations_cache`，
+/// 以避免抹除用户在本地保存/收藏的歌词及注音元数据（Saved Songs）。
 #[tauri::command]
 async fn clear_cache(state: State<'_, AppState>) -> Result<(), String> {
     let searcher = state.searcher.lock().await;

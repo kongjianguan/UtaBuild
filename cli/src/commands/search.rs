@@ -94,19 +94,6 @@ pub async fn execute_from_url(
     Ok(())
 }
 
-/// 清理文件名中的非法字符，将 `< > : " / \ | ? *` 替换为下划线。
-///
-/// - `s`: 原始文件名
-/// 返回: 过滤后的安全文件名
-fn sanitize_filename(s: &str) -> String {
-    let invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
-    let mut result = s.to_string();
-    for c in invalid_chars {
-        result = result.replace(c, "_");
-    }
-    result
-}
-
 /// 将字符串内容写入指定的文件路径，自动创建父目录。
 ///
 /// - `path`: 输出文件路径
