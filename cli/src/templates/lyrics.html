@@ -171,11 +171,151 @@ body[data-theme="mygo"] .controls {
   gap: 6px;
 }
 
-.control-group span {
+.control-group > span,
+.control-group__label {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: 0.03em;
+}
+
+.font-size-control {
+  flex: 1 1 300px;
+  min-width: min(100%, 300px);
+  gap: 12px;
+}
+
+.font-size-control__body {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.font-size-control__range {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 120px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  accent-color: var(--primary);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.font-size-control__range:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.font-size-control__range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--primary) 0%,
+    var(--primary) var(--range-progress, 17%),
+    var(--surface-hover) var(--range-progress, 17%),
+    var(--surface-hover) 100%
+  );
+}
+
+.font-size-control__range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-hover);
+}
+
+.font-size-control__range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.font-size-control__range::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  appearance: none;
+  border: 3px solid var(--primary);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.font-size-control__range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--primary);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.font-size-control__range:hover::-webkit-slider-thumb,
+.font-size-control__range:focus-visible::-webkit-slider-thumb,
+.font-size-control__range:hover::-moz-range-thumb,
+.font-size-control__range:focus-visible::-moz-range-thumb {
+  border-color: var(--primary-hover);
+  box-shadow: 0 0 0 4px rgba(68, 147, 248, 0.14), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.font-size-control__value {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  transition: background var(--motion-fast), box-shadow var(--motion-fast), border-color var(--motion-fast);
+}
+
+.font-size-control__value:focus-within {
+  border-color: var(--border-focus);
+  background: var(--surface-hover);
+  box-shadow: 0 0 0 3px rgba(68, 147, 248, 0.14);
+}
+
+.font-size-control__number {
+  width: 3.2ch;
+  min-width: 48px;
+  height: 38px;
+  padding: 6px 0 6px 4px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.font-size-control__number::-webkit-inner-spin-button,
+.font-size-control__number::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.font-size-control__number {
+  -moz-appearance: textfield;
+}
+
+.font-size-control__unit {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 
 .control-group button {
@@ -254,13 +394,38 @@ body[data-theme="mygo"] .lyricBody {
   transition: color var(--motion-slow);
 }
 
-.lyricBody div.medium { font-size: 17px; }
-.lyricBody div.medium span.ruby span.rt { font-size: 11px; }
-.lyricBody div.small { font-size: 13px; }
-.lyricBody div.small span.ruby span.rt { font-size: 7px; }
-.lyricBody div.large { font-size: 21px; }
-.lyricBody div.large span.ruby { line-height: 2.6; }
-.lyricBody div.large span.ruby span.rt { font-size: 14px; }
+.lyricBody > div {
+  --lyric-font-size: 17px;
+  font-size: var(--lyric-font-size);
+}
+
+.lyricBody > div span.ruby {
+  line-height: 2.3;
+}
+
+.lyricBody > div span.ruby span.rt {
+  font-size: clamp(8px, calc(var(--lyric-font-size) * 0.65), 20px);
+}
+
+@media (max-width: 520px) {
+  .controls {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .control-group {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .font-size-control__body {
+    gap: 8px;
+  }
+
+  .font-size-control__range {
+    min-width: 80px;
+  }
+}
 
 /* === Footer === */
 .footer {
@@ -285,11 +450,15 @@ body[data-theme="mygo"] .lyricBody {
 </div>
 
 <div class="controls">
-  <div class="control-group">
-    <span>文字サイズ</span>
-    <button data-size="small">小</button>
-    <button data-size="medium" class="active">中</button>
-    <button data-size="large">大</button>
+  <div class="control-group font-size-control">
+    <label class="control-group__label" for="font-size-range">文字サイズ</label>
+    <div class="font-size-control__body">
+      <input id="font-size-range" class="font-size-control__range" type="range" min="14" max="32" step="1" value="17" aria-label="文字サイズスライダー">
+      <div class="font-size-control__value">
+        <input id="font-size-value" class="font-size-control__number" type="number" min="14" max="32" step="1" value="17" inputmode="numeric" aria-label="文字サイズ（ピクセル）">
+        <span class="font-size-control__unit" aria-hidden="true">px</span>
+      </div>
+    </div>
   </div>
   <div class="control-group">
     <span>テーマ</span>
@@ -300,7 +469,7 @@ body[data-theme="mygo"] .lyricBody {
 </div>
 
 <div class="lyricBody">
-  <div class="medium">
+  <div data-font-size="17" style="--lyric-font-size: 17px">
 RUBY_HTML
   </div>
 </div>
@@ -312,6 +481,10 @@ RUBY_HTML
 (function() {
   var body = document.body;
   var lyricDiv = document.querySelector('.lyricBody > div');
+  var fontRange = document.getElementById('font-size-range');
+  var fontValue = document.getElementById('font-size-value');
+  var FONT_SIZE_MIN = 14;
+  var FONT_SIZE_MAX = 32;
 
   function setActive(selector, value, attr) {
     document.querySelectorAll(selector).forEach(function(btn) {
@@ -319,20 +492,64 @@ RUBY_HTML
     });
   }
 
+  function clampFontSize(value) {
+    if (!Number.isFinite(value)) return 17;
+    return Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, Math.round(value)));
+  }
+
+  function defaultFontSize() {
+    if (window.innerWidth <= 375) return 14;
+    if (window.innerWidth <= 768) return 15;
+    return 17;
+  }
+
+  function applyFontSize(value) {
+    var size = clampFontSize(value);
+    lyricDiv.style.setProperty('--lyric-font-size', size + 'px');
+    lyricDiv.dataset.fontSize = String(size);
+    fontRange.value = String(size);
+    fontRange.style.setProperty('--range-progress', ((size - FONT_SIZE_MIN) / (FONT_SIZE_MAX - FONT_SIZE_MIN) * 100) + '%');
+    fontRange.setAttribute('aria-valuetext', size + 'px');
+    fontValue.value = String(size);
+    try { localStorage.setItem('utabuild-fontsize', String(size)); } catch(e) {}
+  }
+
+  function commitNumberInput() {
+    isEditingNumber = false;
+    var rawValue = fontValue.value.trim();
+    var parsed = Number(rawValue);
+    if (!rawValue || !Number.isFinite(parsed)) {
+      applyFontSize(defaultFontSize());
+      return;
+    }
+    applyFontSize(parsed);
+  }
+
+  var isEditingNumber = false;
+  fontValue.addEventListener('beforeinput', function(event) {
+    if (event.inputType.indexOf('insert') === 0 || event.inputType.indexOf('delete') === 0) {
+      isEditingNumber = true;
+    }
+  });
+  fontRange.addEventListener('input', function() {
+    applyFontSize(Number(fontRange.value));
+  });
+  fontValue.addEventListener('input', function() {
+    var rawValue = fontValue.value.trim();
+    var parsed = Number(rawValue);
+    if (!rawValue || !Number.isFinite(parsed)) return;
+    if (isEditingNumber && parsed < FONT_SIZE_MIN && rawValue.length < 3) return;
+    isEditingNumber = false;
+    applyFontSize(parsed);
+  });
+  fontValue.addEventListener('change', commitNumberInput);
+  fontValue.addEventListener('blur', commitNumberInput);
+
   function applyTheme(theme) {
     body.setAttribute('data-theme', theme);
     setActive('[data-theme]', theme, 'theme');
     try { localStorage.setItem('utabuild-theme', theme); } catch(e) {}
   }
-
-  document.querySelectorAll('[data-size]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var size = btn.dataset.size;
-      lyricDiv.className = size;
-      setActive('[data-size]', size, 'size');
-      try { localStorage.setItem('utabuild-fontsize', size); } catch(e) {}
-    });
-  });
 
   document.querySelectorAll('[data-theme]').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -342,10 +559,9 @@ RUBY_HTML
 
   try {
     var savedSize = localStorage.getItem('utabuild-fontsize');
-    if (savedSize) {
-      lyricDiv.className = savedSize;
-      setActive('[data-size]', savedSize, 'size');
-    }
+    var legacySize = { small: 14, medium: 17, large: 21 };
+    var parsedSavedSize = savedSize in legacySize ? legacySize[savedSize] : Number(savedSize);
+    applyFontSize(savedSize && Number.isFinite(parsedSavedSize) ? parsedSavedSize : defaultFontSize());
     var savedTheme = localStorage.getItem('utabuild-theme');
     if (savedTheme) {
       applyTheme(savedTheme);
