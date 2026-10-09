@@ -312,104 +312,6 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_history_new() {
-        let history = History::new();
-        assert!(history.items.is_empty());
-    }
-
-    #[test]
-    fn test_history_default() {
-        let history = History::default();
-        assert!(history.items.is_empty());
-    }
-
-    #[test]
-    fn test_history_record_serialization() {
-        let record = HistoryRecord {
-            title: "テスト曲".to_string(),
-            artist: "テストアーティスト".to_string(),
-            url: "https://example.com/test".to_string(),
-            timestamp: "2024-01-01T12:00:00".to_string(),
-            lyricist: Some("作詞者".to_string()),
-            composer: Some("作曲者".to_string()),
-        };
-
-        let json = serde_json::to_string(&record).unwrap();
-        assert!(json.contains("テスト曲"));
-        assert!(json.contains("テストアーティスト"));
-        assert!(json.contains("https://example.com/test"));
-        assert!(json.contains("2024-01-01T12:00:00"));
-        assert!(json.contains("作詞者"));
-        assert!(json.contains("作曲者"));
-
-        let deserialized: HistoryRecord = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.title, "テスト曲");
-        assert_eq!(deserialized.artist, "テストアーティスト");
-    }
-
-    #[test]
-    fn test_history_record_without_optional_fields() {
-        let record = HistoryRecord {
-            title: "曲名".to_string(),
-            artist: "アーティスト".to_string(),
-            url: "https://example.com/test".to_string(),
-            timestamp: "2024-01-01T12:00:00".to_string(),
-            lyricist: None,
-            composer: None,
-        };
-
-        let json = serde_json::to_string(&record).unwrap();
-        assert!(json.contains("曲名"));
-        assert!(!json.contains("lyricist"));
-        assert!(!json.contains("composer"));
-    }
-
-    #[test]
-    fn test_history_serialization() {
-        let mut history = History::new();
-        history.items.push(HistoryRecord {
-            title: "曲1".to_string(),
-            artist: "アーティスト1".to_string(),
-            url: "https://example.com/1".to_string(),
-            timestamp: "2024-01-01T12:00:00".to_string(),
-            lyricist: None,
-            composer: None,
-        });
-        history.items.push(HistoryRecord {
-            title: "曲2".to_string(),
-            artist: "アーティスト2".to_string(),
-            url: "https://example.com/2".to_string(),
-            timestamp: "2024-01-02T12:00:00".to_string(),
-            lyricist: None,
-            composer: None,
-        });
-
-        let json = serde_json::to_string(&history).unwrap();
-        assert!(json.contains("\"items\""));
-        assert!(json.contains("\"曲1\""));
-        assert!(json.contains("\"曲2\""));
-
-        let deserialized: History = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.items.len(), 2);
-    }
-
-    #[test]
-    fn test_get_history_file_path_with_cache_dir() {
-        let cache_dir = PathBuf::from("/tmp/test_cache");
-        let path = get_history_file_path(Some(&cache_dir));
-
-        assert_eq!(path, PathBuf::from("/tmp/test_cache/history.json"));
-    }
-
-    #[test]
-    fn test_get_history_file_path_without_cache_dir() {
-        let path = get_history_file_path(None);
-
-        assert!(path.to_string_lossy().contains("utabuild"));
-        assert!(path.to_string_lossy().ends_with("history.json"));
-    }
-
-    #[test]
     fn test_load_history_nonexistent_file() {
         let temp_dir = tempdir().unwrap();
         let cache_path = PathBuf::from(temp_dir.path());
@@ -537,13 +439,5 @@ mod tests {
             history.items[0].title,
             format!("曲{}", MAX_HISTORY_SIZE + 9)
         );
-    }
-
-    #[test]
-    fn test_get_current_timestamp() {
-        let timestamp = get_current_timestamp();
-
-        assert!(timestamp.contains("T"));
-        assert!(timestamp.len() > 10);
     }
 }

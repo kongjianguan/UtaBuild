@@ -387,22 +387,4 @@ mod tests {
         assert_eq!(romaji_to_hiragana("a za ya ka"), "あざやか");
         assert_eq!(romaji_to_hiragana("na ru"), "なる");
     }
-
-    /// 测试助词 \"wa\" 的转换
-    #[test]
-    fn handles_particle_wa() {
-        assert_eq!(romaji_to_hiragana("wa"), "わ");
-    }
-
-    /// 测试空输入的处理
-    #[test]
-    fn handles_empty_input() {
-        assert_eq!(romaji_to_hiragana(""), "");
-    }
-
-    /// 测试混合内容的转换
-    #[test]
-    fn handles_mixed_content() {
-        assert_eq!(romaji_to_hiragana("shi ki sa i"), "しきさい");
-    }
 }

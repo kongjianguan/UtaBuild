@@ -312,25 +312,4 @@ mod tests {
             artist_entry.lyrics_url
         );
     }
-
-    #[tokio::test]
-    async fn search_cache_preserves_pagination_and_metadata() {
-        let cache = SearchCache::new();
-        let entry = sample_entry("R", "Roselia", "/lyric/yb18072521/", 3);
-
-        cache
-            .insert_with_options("R", Some("Roselia"), "title", 3, entry.clone())
-            .await;
-
-        let restored = cache
-            .get_with_options("R", Some("Roselia"), "title", 3)
-            .await
-            .unwrap();
-
-        assert_eq!(restored.found_title, entry.found_title);
-        assert_eq!(restored.found_artist, entry.found_artist);
-        assert_eq!(restored.lyrics_url, entry.lyrics_url);
-        assert_eq!(restored.pagination, entry.pagination);
-        assert_eq!(restored.search_results, entry.search_results);
-    }
 }

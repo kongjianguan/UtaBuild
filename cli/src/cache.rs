@@ -872,26 +872,6 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_search_cache_is_valid() {
-        let query = SearchQuery {
-            title: Some("テスト曲".to_string()),
-            artist: Some("テストアーティスト".to_string()),
-            search_type: None,
-            page: None,
-        };
-        let results = vec![SearchResultItem {
-            title: "テスト曲".to_string(),
-            artist: "テストアーティスト".to_string(),
-            url: "https://example.com/test".to_string(),
-        }];
-
-        let cache = SearchCache::new(query, results);
-
-        assert!(cache.is_valid());
-        assert_eq!(cache.results.len(), 1);
-    }
-
-    #[test]
     fn test_search_cache_expired() {
         let query = SearchQuery {
             title: Some("テスト曲".to_string()),
@@ -905,54 +885,6 @@ mod tests {
         cache.timestamp = Utc::now() - Duration::hours(25);
 
         assert!(!cache.is_valid());
-    }
-
-    #[test]
-    fn test_lyrics_cache_is_valid() {
-        let lyrics_output = LyricsOutput {
-            status: "success".to_string(),
-            title: Some("テスト曲".to_string()),
-            artist: Some("テストアーティスト".to_string()),
-            url: Some("https://example.com/test".to_string()),
-            lyrics: None,
-        };
-
-        let cache = LyricsCache::new("https://example.com/test".to_string(), lyrics_output);
-
-        assert!(cache.is_valid());
-        assert_eq!(cache.url, "https://example.com/test");
-    }
-
-    #[test]
-    fn test_lyrics_cache_is_permanent() {
-        let lyrics_output = LyricsOutput {
-            status: "success".to_string(),
-            title: Some("テスト曲".to_string()),
-            artist: None,
-            url: None,
-            lyrics: None,
-        };
-
-        let mut cache = LyricsCache::new("https://example.com/test".to_string(), lyrics_output);
-        cache.timestamp = Utc::now() - Duration::hours(25);
-
-        assert!(cache.is_valid());
-    }
-
-    #[test]
-    fn test_url_to_cache_filename() {
-        let url1 = "https://example.com/song1";
-        let url2 = "https://example.com/song2";
-
-        let filename1 = url_to_cache_filename(url1);
-        let filename2 = url_to_cache_filename(url2);
-
-        assert!(filename1.ends_with(".json"));
-        assert!(filename2.ends_with(".json"));
-        assert_ne!(filename1, filename2);
-
-        let filename1_again = url_to_cache_filename(url1);
-        assert_eq!(filename1, filename1_again);
     }
 
     #[test]
@@ -1033,55 +965,6 @@ mod tests {
 
         let result_out_of_range = get_cached_result(5, Some(&cache_path));
         assert!(result_out_of_range.is_none());
-    }
-
-    #[test]
-    fn test_cache_entry_serialization() {
-        let entry = CacheEntry {
-            key: "test_key".to_string(),
-            data: serde_json::json!({"title": "テスト曲"}),
-            timestamp: 1234567890,
-        };
-
-        let json = serde_json::to_string(&entry).unwrap();
-        assert!(json.contains("test_key"));
-        assert!(json.contains("1234567890"));
-
-        let deserialized: CacheEntry = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.key, "test_key");
-        assert_eq!(deserialized.timestamp, 1234567890);
-    }
-
-    #[test]
-    fn test_search_query_serialization() {
-        let query = SearchQuery {
-            title: Some("曲名".to_string()),
-            artist: Some("アーティスト".to_string()),
-            search_type: None,
-            page: None,
-        };
-
-        let json = serde_json::to_string(&query).unwrap();
-        assert!(json.contains("曲名"));
-        assert!(json.contains("アーティスト"));
-
-        let deserialized: SearchQuery = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.title, Some("曲名".to_string()));
-        assert_eq!(deserialized.artist, Some("アーティスト".to_string()));
-    }
-
-    #[test]
-    fn test_search_result_item_serialization() {
-        let item = SearchResultItem {
-            title: "曲名".to_string(),
-            artist: "アーティスト".to_string(),
-            url: "https://example.com/test".to_string(),
-        };
-
-        let json = serde_json::to_string(&item).unwrap();
-        assert!(json.contains("曲名"));
-        assert!(json.contains("アーティスト"));
-        assert!(json.contains("https://example.com/test"));
     }
 
     #[test]

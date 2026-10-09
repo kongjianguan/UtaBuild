@@ -4,6 +4,8 @@ English | [中文](index.zh.md)
 
 UtaBuild searches lyrics, displays Japanese Ruby readings, and stores selected lyrics for later use. The desktop and Android application share the same Rust lyric pipeline.
 
+For a complete MP4 with timed lyrics, translations, vocabulary, expression explanations, and visual post-production editing, follow [Generate a song teaching video](teaching-video.md).
+
 ## Search and display
 
 Enter a title and optional artist, choose a source when the default result is not suitable, and select a result. The lyrics view renders plain text, Ruby readings, line breaks, album metadata, and cover artwork when the source provides them.

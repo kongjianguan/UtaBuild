@@ -32,6 +32,8 @@ pub mod romaji;
 pub mod ruby_align;
 /// UtaTen 搜索器
 pub mod searcher;
+/// 教学视频的原始歌词与注音来源。
+pub mod teaching;
 
 pub use cache_manager::{CacheManager, CacheStats, LyricsCache, SearchCache, SearchResultEntry};
 pub use models::{

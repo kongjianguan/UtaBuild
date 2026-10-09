@@ -9,6 +9,7 @@
 | 子系统 | 负责内容 | 主要源码 |
 |---|---|---|
 | [CLI 与歌词流水线](cli.zh.md) | 搜索源、歌词解析、Ruby 对齐、缓存、历史记录以及 JSON/HTML 输出 | `cli/src/` |
+| [教学视频流水线](teaching-video.zh.md) | 歌词时间来源准备、教学内容验证、图形编辑、视频合成、编码和完整视频证据 | `tools/teaching-video/`、`cli/src/teaching.rs` |
 | [前端](frontend.zh.md) | TypeScript 视图、状态、Tauri 调用、Ruby DOM 渲染、设置和导出控件 | `src/ts/`、`src/index.html` |
 | [Tauri 后端](tauri-backend.zh.md) | 桌面/移动端命令、共享 `AppState`、缓存编排、持久化、日志和 HTML 导出 | `src-tauri/src/lib.rs` |
 | [Android LSPosed bridge](android-lsposed.zh.md) | Salt Player hook、结构化歌词传输、Ruby 对齐和 Canvas 渲染 | `src-tauri/android-lsposed/` |

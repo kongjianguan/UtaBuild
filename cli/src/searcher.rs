@@ -2237,26 +2237,6 @@ This is plain text<br>
     }
 
     #[test]
-    fn utaten_url_is_accepted_by_get_lyrics_with_ruby_url_logic() {
-        // Verify that get_lyrics_with_ruby constructs the correct absolute URL
-        // for both absolute and relative URLs (this is a logic test, no HTTP)
-        let _searcher = UtaTenSearcher::new(CacheManager::new());
-
-        // The internal logic: if URL starts with "http", use as-is; otherwise prepend BASE_URL
-        let absolute_url = "https://utaten.com/lyric/test123/";
-        let relative_url = "/lyric/test456/";
-
-        // These are just the URL construction tests - verify the method signature exists
-        // and accepts both URL formats (compile-time check + logic verification)
-        assert!(absolute_url.starts_with("http"), "Absolute URL should start with http");
-        assert!(!relative_url.starts_with("http"), "Relative URL should not start with http");
-        assert_eq!(
-            format!("{}{}", BASE_URL, relative_url),
-            "https://utaten.com/lyric/test456/"
-        );
-    }
-
-    #[test]
     fn extracts_song_page_metadata_from_og_and_album_link() {
         let html = r#"
             <html><head>

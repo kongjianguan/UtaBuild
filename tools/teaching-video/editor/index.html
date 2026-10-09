@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UtaBuild · 视频后期编辑</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23191d24'/%3E%3Cpath d='M8 8v10a8 8 0 0 0 16 0V8' fill='none' stroke='%2389b4fa' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="liquid-glass.css">
+</head>
+<body>
+  <a class="skip" href="#stage">前往视频预览</a>
+  <header class="topbar" data-glass>
+    <div class="identity"><span class="brand">UtaBuild</span><span class="divider"></span><h1>视频后期编辑</h1></div>
+    <div class="actions"><span id="save-status" role="status">正在加载项目</span><button id="undo" disabled title="撤销 Ctrl / ⌘ Z">撤销</button><button id="redo" disabled title="重做 Ctrl / ⌘ Shift Z">重做</button><button id="save" disabled>保存项目</button><button class="primary" id="export" disabled>导出完整视频</button></div>
+  </header>
+  <div id="error" role="alert" hidden></div>
+  <main class="workspace">
+    <aside class="scenes" data-glass>
+      <div class="song"><img src="/api/cover" alt="歌曲封面" width="48" height="48"><div><strong id="song-title"></strong><span id="song-artist"></span></div></div>
+      <div class="panel-heading"><h2>歌词场景</h2><span id="line-count"></span></div>
+      <label class="search-label">搜索歌词<input id="search" type="search" placeholder="查找需要编辑的句子"></label>
+      <label class="scene-selection"><input id="all-scenes" type="checkbox">选择全部片段<span id="scene-selection-count">0 个已选</span></label>
+      <nav id="lines" aria-label="歌词场景"></nav>
+    </aside>
+    <section class="preview-panel" aria-label="视频预览">
+      <div class="canvas-toolbar"><div id="layout-control" class="segmented" data-glass data-layout="landscape" aria-label="视频比例"><button id="landscape" aria-pressed="true">横屏 16:9</button><button id="portrait" aria-pressed="false">竖屏 9:16</button></div><span id="dimensions"></span><label class="clean-toggle"><input id="clean" type="checkbox">纯净预览</label></div>
+      <div class="stage-area"><div id="stage" tabindex="-1" aria-label="可编辑视频画面" aria-busy="true"><img id="preview" alt="当前教学视频画面" draggable="false"><div id="targets"></div><div id="selection" hidden><button id="move-selection" aria-label="拖动选中组件">移动选中</button></div><div id="marquee" hidden></div><textarea id="inline-text" aria-label="直接编辑预览文字" hidden></textarea><span id="rendering">正在生成画面</span></div></div>
+      <div class="preview-hint"><span>Shift 多选 · 空白处框选 · 双击编辑</span><span id="page-info"></span></div>
+      <section class="transport" data-glass aria-label="预览播放控制">
+        <div class="transport-controls"><button id="previous-line" aria-label="上一句">上一句</button><button id="play" aria-label="播放预览">播放</button><button id="next-line" aria-label="下一句">下一句</button><label>当前时间<input id="time" type="number" min="0" step="0.1" value="0">秒</label><output id="clock"></output></div>
+        <label class="timeline-label" for="timeline">歌曲时间线</label><input id="timeline" type="range" min="0" step="33.333" value="0" aria-label="歌曲时间线">
+        <div id="markers" aria-hidden="true"></div>
+        <audio id="audio" src="/api/audio" preload="metadata"></audio>
+      </section>
+      <section id="export-status" aria-label="视频导出状态" hidden><div><strong id="export-message"></strong><progress id="export-progress" max="1" value="0"></progress></div><div id="downloads"></div></section>
+    </section>
+    <aside class="properties" data-glass>
+      <div class="panel-heading"><h2>组件属性</h2><span id="component-kind">选择组件</span></div>
+      <section class="selection-tools" aria-label="选择组件">
+        <label>片段范围<select id="selection-scope"><option value="current">当前片段</option><option value="marked">选定片段</option><option value="all">全部片段</option></select></label>
+        <fieldset id="selection-types"><legend>组件类型</legend>
+          <label><input type="checkbox" value="lyrics">原文</label><label><input type="checkbox" value="ruby">Ruby</label>
+          <label><input type="checkbox" value="roman">罗马字</label><label><input type="checkbox" value="translation">当前句翻译</label>
+          <label><input type="checkbox" value="vocabulary">教学单词</label><label><input type="checkbox" value="expressions">表达讲解</label>
+          <label><input type="checkbox" value="previous">上一句翻译</label><label><input type="checkbox" value="next">下一句翻译</label>
+        </fieldset>
+        <div class="selection-actions"><button id="select-components">选择组件</button><button id="clear-selection">清除选择</button></div>
+        <label class="check-label"><input id="link-ruby" type="checkbox" checked>原文与 Ruby 联动选择</label>
+        <p class="scope" id="selection-summary" role="status">尚未选择组件</p>
+      </section>
+      <p id="empty-selection">点击预览中的文字，或者从下方组件列表选择区域。</p>
+      <form id="inspector" hidden>
+        <strong id="selected-name"></strong>
+        <div id="text-controls"><label for="text">文字内容</label><textarea id="text" rows="4"></textarea><button id="apply-text" type="submit">应用文字</button></div>
+        <div class="coordinates"><label><span id="position-x-label">水平位置</span><input id="position-x" type="number" step="1"></label><label><span id="position-y-label">垂直位置</span><input id="position-y" type="number" step="1"></label></div>
+        <button id="apply-position" type="button">应用位置</button><button id="reset-position" type="button">恢复自动位置</button>
+        <p class="scope" id="edit-scope"></p>
+        <div class="selection-actions"><button id="hide" type="button">隐藏</button><button id="show" type="button">显示</button></div>
+        <button id="delete" class="danger" type="button">删除选中组件</button>
+      </form>
+      <section class="arrangement-tools" aria-label="排版控制"><label class="check-label"><input id="automatic" type="checkbox">自动排版 · 全部片段</label><button id="arrange-once">排版一次</button><p class="scope" id="arrange-scope">开关作用于当前画面比例。排版一次使用上方片段范围，整理全部可见组件并清除这些片段的手动位移。</p></section>
+      <div class="palette"><img src="/api/cover" alt="取色来源封面" width="40" height="40"><div><span>歌词高亮 · 封面自动取色</span><strong><i id="accent-swatch"></i><code id="accent"></code></strong></div></div>
+      <div class="panel-heading"><h2>当前片段组件</h2><button id="restore-deleted" disabled>恢复删除</button></div>
+      <div id="layers" role="group" aria-label="当前片段组件"></div>
+      <p class="keyboard-hint">Shift 点击添加或移除选择。方向键移动 1 像素，Shift 加速。Delete 删除，Enter 编辑，Esc 清除选择。</p>
+    </aside>
+  </main>
+  <script type="module" src="editor.js"></script>
+</body>
+</html>

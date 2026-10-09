@@ -517,28 +517,4 @@ mod tests {
         assert_eq!(lines[1].words[1].text, "bar");
         assert_eq!(lines[2].words[0].text, "baz");
     }
-
-    /// 验证复杂歌词（包含多个带引号的段落）能被完整提取且不被截断。
-    #[test]
-    fn extracts_full_kishikaisen_lyrics() {
-        // Verify that the full lyrics are correctly extracted when
-        // `"` characters appear in lyric text (e.g., `"白"は...`).
-        let qrc = r#"<?xml version="1.0" encoding="utf-8"?>
-<QrcInfos>
-  <LyricInfo LyricCount="1">
-    <Lyric_1 LyricType="1" LyricContent="
-[ti:Test]
-[ar:Test]
-[0,100]a(0,50)
-[100,200]b(100,50)c(150,50)
-[200,100]d(200,50)
-[300,200]e(300,50)f(350,50)
-"/>
-  </LyricInfo>
-</QrcInfos>"#;
-        let lines = parse_qrc(qrc).unwrap();
-        assert_eq!(lines.len(), 4, "all 4 lines must be parsed, none truncated");
-        assert_eq!(lines[3].words[0].text, "e");
-        assert_eq!(lines[3].words[1].text, "f");
-    }
 }

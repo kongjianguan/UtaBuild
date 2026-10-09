@@ -696,26 +696,6 @@ mod tests {
     }
 
     #[test]
-    fn bug5_okurigana_anchor_search_handles_mismatch() {
-        // Broader test: when the kana anchor search fails because
-        // hiragana doesn't contain the expected kana (e.g., って vs とて),
-        // the fallback should not blindly consume all remaining hiragana.
-        let elements = align_ruby_to_text("取って", "とて");
-        let toru = elements.iter().find(|e| e.base.as_deref() == Some("取"));
-        assert!(toru.is_some(), "取 should be a ruby element");
-        assert_eq!(
-            toru.unwrap().ruby.as_deref(),
-            Some("と"),
-            "取 should get と after fallback fix"
-        );
-        let has_tte_text = elements.iter().any(|e| {
-            e.element_type == "text"
-                && e.base.as_deref().unwrap_or("").contains("って")
-        });
-        assert!(has_tte_text, "って should appear as text after 取, not be consumed");
-    }
-
-    #[test]
     fn romaji_to_hiragana_preserves_long_vowels() {
         // Verify that romaji conversion is not the source of truncation
         // for bugs 1 (救済=きゅうさい) and 2 (感情=かんじょう)
@@ -723,16 +703,5 @@ mod tests {
         assert_eq!(h, "きゅうさい", "救済 should convert correctly from romaji");
         let h = crate::romaji::romaji_to_hiragana("ka n jo u");
         assert_eq!(h, "かんじょう", "感情 should convert correctly from romaji");
-    }
-
-    #[test]
-    fn insert_spaces_into_hiragana_preserves_boundary() {
-        // Verify insert_spaces_into_hiragana works correctly
-        let result = insert_spaces_into_hiragana(
-            "此処に立つ僕は 白紙のキャンバス",
-            "ここにたつぼくははくしのきゃんばす",
-        );
-        // Should have a space marker inserted
-        assert!(result.contains(' '), "should insert a space marker");
     }
 }

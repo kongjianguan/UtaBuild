@@ -18,6 +18,8 @@ The `cli` crate is UtaBuild's shared lyric domain layer. It is compiled as `utab
 
 `UtaTenSearcher` owns source preference routing and provider coordination. `ArtworkSourcePreference` and `LyricSourcePreference` normalize user settings to the supported source set: UtaTen, QQ Music, NetEase, or automatic selection.
 
+The `video-source` command delegates source decryption and UtaTen reading retrieval to [`teaching.rs`](../../cli/src/teaching.rs). The [teaching-video subsystem](teaching-video.md) owns the timed project and video export contract.
+
 ## Parsing and alignment
 
 `lrc_parser.rs` handles timed LRC/YRC lines and can align a romaji track by time. `qrc_parser.rs` parses QQ Music's XML-like word timing format and performs character-level overlap alignment. `ruby_align.rs` provides the general text-to-reading alignment and sanitization path. Missing, empty, or non-overlapping readings fall back to plain text.

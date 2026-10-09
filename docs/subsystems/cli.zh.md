@@ -18,6 +18,8 @@
 
 `UtaTenSearcher` 负责数据源偏好路由和提供方编排。`ArtworkSourcePreference` 与 `LyricSourcePreference` 将用户设置规范化为支持的数据源：UtaTen、QQ Music、NetEase 或自动选择。
 
+`video-source` 命令将来源解密和 UtaTen 读音获取交给 [`teaching.rs`](../../cli/src/teaching.rs)。[教学视频子系统](teaching-video.zh.md) 负责包含时间信息的项目文件和视频导出契约。
+
 ## 解析与对齐
 
 `lrc_parser.rs` 处理带时间的 LRC/YRC 行，并可以按时间对齐罗马音轨。`qrc_parser.rs` 解析 QQ Music 的 XML 风格逐词时间格式，并执行字符级重叠对齐。`ruby_align.rs` 提供通用的文本到读音对齐和清理路径。缺少、为空或没有时间重叠的读音回退为纯文本。

@@ -1,5 +1,9 @@
 # UtaBuild Repository Instructions
 
+## Teaching-video requests
+
+- 用户要求根据歌曲名称制作日语教学视频时，使用 [generate-teaching-video Skill](.agents/skills/generate-teaching-video/SKILL.md)，完成来源准备、教学内容生成、指定布局的视频渲染和完整产物验证。
+
 ## Documentation library
 
 - 任何新增、修改、移动、翻译、归档、审计或生成文档的工作，都必须遵守 `project-doc-library` skill。

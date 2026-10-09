@@ -47,6 +47,9 @@ CLAUDE.md
 
 # Scripts
 scripts/
+work/
+tools/teaching-video/.venv/
+tools/teaching-video/__pycache__/
 
 # Salt integration (prebuilt artifacts)
 SaltLycAdapter/

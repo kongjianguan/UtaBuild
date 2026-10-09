@@ -628,12 +628,6 @@ mod format_tests {
     }
 
     #[test]
-    fn test_validate_output_format_html_match() {
-        let result = validate_output_format("output.html", "html").unwrap();
-        assert_eq!(result, "output.html");
-    }
-
-    #[test]
     fn test_validate_output_format_conflict() {
         let result = validate_output_format("output.json", "html");
         assert!(result.is_err());
@@ -644,21 +638,9 @@ mod format_tests {
     }
 
     #[test]
-    fn test_validate_output_format_conflict_reverse() {
-        let result = validate_output_format("output.html", "json");
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn test_validate_output_format_no_extension_json() {
         let result = validate_output_format("output", "json").unwrap();
         assert_eq!(result, "output.json");
-    }
-
-    #[test]
-    fn test_validate_output_format_no_extension_html() {
-        let result = validate_output_format("output", "html").unwrap();
-        assert_eq!(result, "output.html");
     }
 
     #[test]

@@ -18,6 +18,17 @@ struct Cli {
 /// 支持的命令枚举
 #[derive(Subcommand)]
 enum Commands {
+    /// 获取教学视频所需的完整歌词与注音来源
+    VideoSource {
+        #[arg(long)]
+        title: String,
+        #[arg(long)]
+        artist: String,
+        #[arg(long)]
+        lyric_response: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// 搜索歌词
     #[command(about = "搜索歌词")]
     Search {
@@ -80,6 +91,15 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::VideoSource {
+            title,
+            artist,
+            lyric_response,
+            output,
+        } => {
+            utabuild_cli::teaching::prepare_source(&title, &artist, &lyric_response, &output)
+                .await?;
+        }
         Commands::Search {
             title,
             artist,

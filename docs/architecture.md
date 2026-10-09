@@ -46,6 +46,10 @@ The normal search flow is:
 
 `cli/src/searcher.rs` owns source access and source preference routing. `lrc_parser.rs` and `qrc_parser.rs` convert timed lyric formats into `LyricElement` values. `ruby_align.rs` and the tokenized LRC/YRC path produce `ruby` elements. `cache.rs`, `cache_manager.rs`, and `commands/history.rs` own local persistence and history. `output.rs` and `output_html.rs` own JSON and HTML contracts.
 
+### Teaching-video pipeline
+
+`tools/teaching-video/` prepares timed song sources through the Rust domain layer and renders teaching MP4 files through Pillow and FFmpeg. Its local browser editor saves composition edits and shares the frame renderer with video export. The working Agent owns contextual translation, vocabulary, and expression content through the [project Skill](../.agents/skills/generate-teaching-video/SKILL.md). The [teaching-video subsystem](subsystems/teaching-video.md) owns source, content, editing, render, and verification boundaries; the video workflow is independent of the Tauri interface.
+
 ### Android LSPosed bridge
 
 `src-tauri/android-lsposed/` contains Java code that runs inside Salt Player. `UtaBuildSaltModule` observes the Salt lifecycle and lyric drawing path. `UtaBuildLyricProvider` reads structured lyrics from the UtaBuild ContentProvider, local files, or the loopback bridge. `RubyAlignmentEngine` maps UtaBuild annotations onto the lyric text observed by Salt, and `RubyCanvasInjector`/`SaltRubyRenderer` render the reading above the original characters.
@@ -59,6 +63,7 @@ Cache keys are source-aware. QQ Music and NetEase use source-specific identifier
 ## Where new behavior goes
 
 - Add source retrieval, parsing, alignment, or shared output behavior to `cli/src/`.
+- Add teaching-video source orchestration, content validation, editing, rendering, or verification to `tools/teaching-video/`.
 - Add desktop/mobile command orchestration or persistence to `src-tauri/src/lib.rs`.
 - Add interaction, view state, or rendering to `src/ts/`.
 - Add Salt Player hooks or bridge behavior to `src-tauri/android-lsposed/`.

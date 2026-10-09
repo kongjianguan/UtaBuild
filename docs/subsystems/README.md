@@ -9,6 +9,7 @@ This directory owns stable subsystem contracts. Read [architecture.md](../archit
 | Subsystem | Owns | Primary sources |
 |---|---|---|
 | [CLI and lyric pipeline](cli.md) | Search sources, lyric parsing, Ruby alignment, caching, history, and JSON/HTML output | `cli/src/` |
+| [Teaching-video pipeline](teaching-video.md) | Timed source preparation, teaching-content validation, visual editing, video composition, encoding, and complete-video evidence | `tools/teaching-video/`, `cli/src/teaching.rs` |
 | [Frontend](frontend.md) | TypeScript views, state, Tauri invocation, Ruby DOM rendering, settings, and export controls | `src/ts/`, `src/index.html` |
 | [Tauri backend](tauri-backend.md) | Desktop/mobile commands, shared `AppState`, cache orchestration, persistence, logging, and HTML export | `src-tauri/src/lib.rs` |
 | [Android LSPosed bridge](android-lsposed.md) | Salt Player hooks, structured lyric transport, Ruby alignment, and Canvas rendering | `src-tauri/android-lsposed/` |

@@ -46,6 +46,10 @@ src-tauri/android-lsposed/   Salt Player hook 和结构化歌词 bridge
 
 `cli/src/searcher.rs` 负责数据源访问和数据源偏好路由。`lrc_parser.rs` 与 `qrc_parser.rs` 将带时间歌词格式转换为 `LyricElement`。`ruby_align.rs` 和 tokenized LRC/YRC 路径生成 `ruby` 元素。`cache.rs`、`cache_manager.rs` 和 `commands/history.rs` 负责本地持久化与历史记录。`output.rs` 和 `output_html.rs` 负责 JSON 与 HTML 契约。
 
+### 教学视频流水线
+
+`tools/teaching-video/` 通过 Rust 领域层准备包含时间信息的歌曲来源，使用 Pillow 和 FFmpeg 渲染教学 MP4。本地浏览器编辑器保存合成编辑内容，与视频导出共享画面渲染器。[项目 Skill](../.agents/skills/generate-teaching-video/SKILL.md) 指导当前 Agent 生成符合语境的翻译、词汇与表达内容。[教学视频子系统](subsystems/teaching-video.zh.md) 负责来源、内容、编辑、渲染和验证边界；视频流程独立于 Tauri 界面运行。
+
 ### Android LSPosed bridge
 
 `src-tauri/android-lsposed/` 中的 Java 代码运行在 Salt Player 进程内。`UtaBuildSaltModule` 观察 Salt 生命周期和歌词绘制路径。`UtaBuildLyricProvider` 从 UtaBuild ContentProvider、本地文件或 loopback bridge 读取结构化歌词。`RubyAlignmentEngine` 将 UtaBuild 注音映射到 Salt 观察到的歌词文本，`RubyCanvasInjector`/`SaltRubyRenderer` 在原字符上方绘制读音。
@@ -59,6 +63,7 @@ src-tauri/android-lsposed/   Salt Player hook 和结构化歌词 bridge
 ## 新行为的归属
 
 - 数据源获取、解析、对齐或共享输出行为放入 `cli/src/`。
+- 教学视频来源编排、内容验证、编辑、渲染或验证行为放入 `tools/teaching-video/`。
 - 桌面/移动端命令编排或持久化放入 `src-tauri/src/lib.rs`。
 - 交互、视图状态或渲染放入 `src/ts/`。
 - Salt Player hook 或 bridge 行为放入 `src-tauri/android-lsposed/`。
