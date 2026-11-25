@@ -161,6 +161,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         with:
           mobile: android
+          tauriScript: cargo tauri
           tagName: ${{ github.ref_name }}
           releaseName: 'v__VERSION__'
           releaseBody: |
