@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TITLE - ARTIST</title>
 <style>
-/* === Synced with src/scss/ design system === */
-/* Three themes: dark (default), light, mygo */
+/* === Synced with src/styles/ design system === */
+/* Two themes: dark (default), light */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -43,22 +43,6 @@ body[data-theme="light"] {
   --shadow-md: 0 6px 18px rgba(51, 68, 102, 0.10);
 }
 
-body[data-theme="mygo"] {
-  --primary: #77BBDD;
-  --primary-hover: #99CCEE;
-  --bg: #080d1a;
-  --bg-secondary: #0e1627;
-  --surface: rgba(18, 28, 48, 0.82);
-  --surface-hover: rgba(28, 40, 62, 0.88);
-  --text: #e8edf5;
-  --text-secondary: #8a9bc0;
-  --ruby-color: #7d8fb8;
-  --border: rgba(119, 187, 221, 0.13);
-  --border-focus: rgba(119, 187, 221, 0.35);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.4);
-}
-
 body {
   font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", "Meiryo", sans-serif;
   font-feature-settings: "palt";
@@ -67,13 +51,6 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   transition: background var(--motion-slow) ease, color var(--motion-slow) ease;
-}
-
-body[data-theme="mygo"] {
-  background-image:
-    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(119, 187, 221, 0.06), transparent 70%),
-    radial-gradient(ellipse 40% 30% at 75% 30%, rgba(255, 136, 153, 0.03), transparent),
-    radial-gradient(ellipse 35% 25% at 20% 60%, rgba(153, 136, 204, 0.04), transparent);
 }
 
 .container {
@@ -111,10 +88,6 @@ body[data-theme="mygo"] {
 .cover-art.has-cover {
   border-color: var(--border-focus);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
-}
-
-body[data-theme="mygo"] .cover-art.has-cover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), 0 0 40px rgba(119, 187, 221, 0.12);
 }
 
 .header-info { min-width: 0; }
@@ -159,10 +132,6 @@ body[data-theme="mygo"] .cover-art.has-cover {
   margin-bottom: 20px;
   transition: background var(--motion-slow), border-color var(--motion-slow);
   backdrop-filter: blur(12px);
-}
-
-body[data-theme="mygo"] .controls {
-  backdrop-filter: blur(20px) saturate(130%);
 }
 
 .control-group {
@@ -348,10 +317,6 @@ body[data-theme="mygo"] .controls {
   box-shadow: 0 0 12px rgba(68, 147, 248, 0.25);
 }
 
-body[data-theme="mygo"] .control-group button.active {
-  box-shadow: 0 0 16px rgba(119, 187, 221, 0.35);
-}
-
 /* === Ruby Rendering === */
 .lyricBody {
   user-select: none;
@@ -365,10 +330,6 @@ body[data-theme="mygo"] .control-group button.active {
   min-height: 200px;
   transition: background var(--motion-slow), border-color var(--motion-slow), box-shadow var(--motion-slow);
   backdrop-filter: blur(8px);
-}
-
-body[data-theme="mygo"] .lyricBody {
-  backdrop-filter: blur(16px) saturate(110%);
 }
 
 .lyricBody span.ruby {
@@ -464,7 +425,6 @@ body[data-theme="mygo"] .lyricBody {
     <span>テーマ</span>
     <button data-theme="dark" class="active">暗</button>
     <button data-theme="light">亮</button>
-    <button data-theme="mygo">MyGO</button>
   </div>
 </div>
 
@@ -563,8 +523,10 @@ RUBY_HTML
     var parsedSavedSize = savedSize in legacySize ? legacySize[savedSize] : Number(savedSize);
     applyFontSize(savedSize && Number.isFinite(parsedSavedSize) ? parsedSavedSize : defaultFontSize());
     var savedTheme = localStorage.getItem('utabuild-theme');
-    if (savedTheme) {
+    if (savedTheme === 'dark' || savedTheme === 'light') {
       applyTheme(savedTheme);
+    } else if (savedTheme) {
+      applyTheme('dark');
     }
   } catch(e) {}
 })();

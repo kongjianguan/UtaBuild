@@ -9,18 +9,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
   background: rgba(0, 0, 0, 0.56);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
-
-.confirm-dialog.hidden { display: none; }
 
 .confirm-dialog__panel {
   max-width: 360px;
-  width: calc(100% - 40px);
+  width: 100%;
   padding: 24px;
   background: var(--surface-elevated);
-  border: 0;
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   text-align: center;
@@ -35,23 +35,14 @@
 .confirm-dialog__message {
   font-size: var(--font-sm);
   color: var(--text-secondary);
+  line-height: 1.55;
   margin-bottom: var(--space-6);
 }
 
 .confirm-dialog__actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
-  justify-content: center;
-}
-
-.confirm-dialog__actions button {
-  min-width: 104px;
-  padding: 9px 20px;
-  border-radius: var(--radius-md);
-  font-size: var(--font-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--motion-fast) ease;
 }
 
 .confirm-dialog__actions .secondary {
@@ -60,32 +51,39 @@
   color: var(--text);
 }
 
-.confirm-dialog__actions .secondary:hover {
-  background: var(--surface-hover);
-  color: var(--text);
-}
-
 .confirm-dialog__confirm {
   background: var(--primary);
-  border-color: transparent;
   color: var(--primary-content);
-}
 
-.confirm-dialog__confirm:hover {
-  background: var(--primary-hover);
+  &:hover:not(:disabled) {
+    background: var(--primary-hover);
+  }
 }
 
 .confirm-dialog__confirm--danger {
   background: var(--danger-bg);
   color: var(--danger);
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 22%, transparent);
+  }
 }
 
-.confirm-dialog__confirm--danger:hover {
-  background: var(--danger-bg);
-  color: var(--danger);
+.dialog-fade-enter-active,
+.dialog-fade-leave-active {
+  transition: opacity 0.18s ease;
+
+  .confirm-dialog__panel {
+    transition: transform 0.22s var(--ease-spring), opacity 0.18s ease;
+  }
 }
 
-.confirm-dialog__confirm:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.dialog-fade-enter-from,
+.dialog-fade-leave-to {
+  opacity: 0;
+
+  .confirm-dialog__panel {
+    transform: scale(0.94);
+    opacity: 0;
+  }
 }

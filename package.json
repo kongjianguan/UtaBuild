@@ -1,36 +1,45 @@
 {
   "name": "utabuild-frontend",
   "private": true,
-  "version": "1.2.1",
+  "version": "1.2.2",
   "packageManager": "pnpm@11.17.0",
   "scripts": {
     "video:prepare": "node tools/teaching-video/prepare.mjs",
     "video:calibrate": "node tools/teaching-video/python.mjs calibrate",
-    "video:render": "node tools/teaching-video/python.mjs render",
-    "video:verify": "node tools/teaching-video/python.mjs verify",
-    "video:edit": "node tools/teaching-video/python.mjs editor",
+    "video:render": "node tools/teaching-video/rust.mjs render",
+    "video:verify": "node tools/teaching-video/rust.mjs verify",
+    "video:edit": "node tools/teaching-video/rust.mjs editor",
+    "video:pack": "node tools/teaching-video/rust.mjs pack",
+    "video:import": "node tools/teaching-video/rust.mjs import",
+    "video:inspect": "node tools/teaching-video/rust.mjs inspect",
+    "editor:dev": "cargo run --manifest-path apps/utabuild/src-tauri/Cargo.toml",
+    "editor:build": "cargo build --release --manifest-path apps/utabuild/src-tauri/Cargo.toml",
     "video:editor-e2e": "node tools/teaching-video/editor-e2e.mjs",
+    "editor:native-e2e": "node tools/teaching-video/editor-native-e2e.mjs",
     "prebuild": "bash scripts/check-env.sh",
-    "build:ts": "tsc",
-    "build:scss": "sass src/scss/main.scss src/css/style.css --style compressed",
-    "build": "pnpm run build:ts && pnpm run build:scss",
-    "watch:ts": "tsc --watch",
-    "watch:scss": "sass src/scss/main.scss src/css/style.css --watch",
-    "lint": "eslint src/ts/ --ext .ts",
-    "format": "prettier --write \"src/ts/**/*.ts\" \"src/scss/**/*.scss\""
+    "dev": "vite --host 127.0.0.1 --port 4173",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint src/ --ext .ts",
+    "format": "prettier --write \"src/**/*.{ts,vue,scss}\""
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "@vitejs/plugin-vue": "^6.0.11",
     "eslint": "^8.57.0",
-    "prettier": "^3.3.0",
     "playwright": "1.62.1",
+    "prettier": "^3.3.0",
     "sass": "^1.77.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vite": "^8.3.8",
+    "vue-tsc": "^3.3.14"
   },
   "dependencies": {
     "@applemusic-like-lyrics/lyric": "1.1.0",
     "fast-xml-parser": "5.11.2",
-    "opencc-js": "1.4.2"
+    "opencc-js": "1.4.2",
+    "vue": "^3.5.46"
   }
 }

@@ -1185,6 +1185,33 @@ async fn set_lsp_settings(
     )
 }
 
+fn sanitize_export_filename(name: &str) -> String {
+    name.replace(['<', '>', ':', '"', '/', '\\', '|', '?', '*'], "_")
+}
+
+fn save_text_with_dialog(
+    app: &AppHandle,
+    default_name: String,
+    filter_name: &str,
+    extensions: &[&str],
+    content: String,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let path = app
+        .dialog()
+        .file()
+        .add_filter(filter_name, extensions)
+        .set_file_name(default_name)
+        .blocking_save_file();
+
+    if let Some(path) = path {
+        let path_buf = path.into_path().map_err(|e| e.to_string())?;
+        std::fs::write(&path_buf, content).map_err(|e| e.to_string())?;
+        return Ok(true);
+    }
+    Ok(false)
+}
+
 /// 将歌词数据渲染为 HTML 并通过原生保存对话框写入文件
 #[tauri::command]
 async fn export_lyrics_html(
@@ -1204,25 +1231,38 @@ async fn export_lyrics_html(
         cover_url.as_deref(),
     );
 
-    let default_name = format!("{} - {}.html",
+    let default_name = sanitize_export_filename(&format!(
+        "{} - {}.html",
         if artist.is_empty() { "Unknown" } else { &artist },
         if title.is_empty() { "unknown" } else { &title },
-    ).replace(['<', '>', ':', '"', '/', '\\', '|', '?', '*'], "_");
+    ));
 
-    use tauri_plugin_dialog::DialogExt;
-    let path = app
-        .dialog()
-        .file()
-        .add_filter("HTML", &["html"])
-        .set_file_name(default_name)
-        .blocking_save_file();
+    save_text_with_dialog(&app, default_name, "HTML", &["html"], html)
+}
 
-    if let Some(path) = path {
-        let path_buf = path.into_path().map_err(|e| e.to_string())?;
-        std::fs::write(&path_buf, html).map_err(|e| e.to_string())?;
-        return Ok(true);
-    }
-    Ok(false)
+/// 将纯文本或 JSON 格式的歌词通过原生保存对话框写入文件
+#[tauri::command]
+async fn export_text_file(
+    app: AppHandle,
+    title: String,
+    artist: Option<String>,
+    extension: String,
+    content: String,
+) -> Result<bool, String> {
+    let artist = artist.unwrap_or_default();
+    let ext = match extension.as_str() {
+        "txt" | "json" => extension.as_str(),
+        _ => return Err(format!("Unsupported export extension: {}", extension)),
+    };
+    let filter_name = if ext == "json" { "JSON" } else { "Text" };
+    let default_name = sanitize_export_filename(&format!(
+        "{} - {}.{}",
+        if artist.is_empty() { "Unknown" } else { &artist },
+        if title.is_empty() { "unknown" } else { &title },
+        ext,
+    ));
+
+    save_text_with_dialog(&app, default_name, filter_name, &[ext], content)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -1278,6 +1318,7 @@ pub fn run() {
             get_lsp_logs,
             set_lsp_settings,
             export_lyrics_html,
+            export_text_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

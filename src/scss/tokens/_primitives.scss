@@ -1,6 +1,5 @@
 // ============================================================
-// Shared Primitive Tokens (not theme-dependent)
-// Scale values used across all themes.
+// Shared Primitive Tokens
 // ============================================================
 
 :root {
@@ -16,7 +15,8 @@
   --space-12: 48px;
 
   // Miuix / HyperOS geometry scale
-  --radius-sm: 10px;
+  --radius-xs: 8px;
+  --radius-sm: 12px;
   --radius-md: 16px;
   --radius-lg: 20px;
   --radius-xl: 24px;
@@ -26,22 +26,22 @@
   --font-xs: 0.75rem;
   --font-sm: 0.85rem;
   --font-md: 0.95rem;
-  --font-lg: 1.15rem;
-  --font-xl: 1.5rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.45rem;
 
-  // Motion durations
-  --motion-fast: 0.15s;
-  --motion-base: 0.25s;
-  --motion-slow: 0.35s;
+  // Motion durations & curves
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-fast: 0.16s;
+  --motion-base: 0.28s;
+  --motion-slow: 0.36s;
 
-  // Layering scale (bottom → top). Components must use these, not raw numbers.
-  --z-search-scrim: 20;
-  --z-search-panel: 30;
-  --z-search-expanded: 40;
-  --z-lyrics-controls: 50;
+  // Layering scale
+  --z-underlay: 10;
+  --z-active-view: 20;
   --z-dock: 100;
-  --z-loading: 200;
-  --z-dialog: 300;
-  --z-menu: 400;
+  --z-sheet-backdrop: 220;
+  --z-sheet: 240;
+  --z-menu: 320;
+  --z-dialog: 400;
   --z-toast: 500;
 }

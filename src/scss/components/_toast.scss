@@ -1,73 +1,87 @@
 // ============================================================
-// Error Toast
+// Toast Banner (Adaptive bottom offset)
 // ============================================================
 
-#error-toast {
+.app-toast {
   position: fixed;
-  bottom: 108px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-toast);
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  max-width: min(560px, calc(100vw - 32px));
-  padding: 12px 8px 12px 16px;
+  gap: 10px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 10px 10px 14px;
   background: var(--surface-elevated);
-  border: 0;
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   color: var(--danger);
   font-size: var(--font-sm);
   font-weight: 600;
   box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  &--above-dock {
+    bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  &--success {
+    color: var(--success);
+  }
+
+  &--info {
+    color: var(--info);
+  }
+
+  &__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+  }
+
+  &__message {
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  &__action {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--primary-dim);
+    color: var(--primary);
+    font-size: var(--font-xs);
+    font-weight: 700;
+  }
+
+  &__close {
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    border-radius: var(--radius-pill);
+    color: var(--text-secondary);
+  }
 }
 
-#error-toast.is-success {
-  background: var(--success-bg);
-  color: var(--success);
+@media (min-width: 1024px) {
+  .app-toast,
+  .app-toast--above-dock {
+    bottom: 28px;
+  }
 }
 
-#error-toast.is-info {
-  background: var(--info-bg);
-  color: var(--info);
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+  transition: opacity 0.2s ease, transform 0.24s var(--ease-spring);
 }
 
-#error-toast.hidden { display: none; }
-
-// Inline recovery action (e.g. retry) shown next to the message.
-#error-toast .toast-action {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 4px 12px;
-  border-radius: var(--radius-md);
-  background: var(--danger);
-  color: var(--surface-elevated);
-  font-size: var(--font-xs);
-  font-weight: 700;
-}
-
-#error-toast.is-success .toast-action,
-#error-toast.is-info .toast-action {
-  background: var(--surface-elevated);
-  color: var(--text);
-}
-
-#error-close {
-  background: none;
-  border: none;
-  color: var(--danger);
-  font-size: 1.2rem;
-  cursor: pointer;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 2px;
-  line-height: 1;
-}
-
-#error-toast.is-success #error-close {
-  color: var(--success);
-}
-
-#error-toast.is-info #error-close {
-  color: var(--info);
+.toast-slide-enter-from,
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 14px);
 }

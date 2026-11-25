@@ -1,11 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicegui-org/nicegui/main/nicegui/static/tauri/v2.json",
   "productName": "UtaBuild",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "identifier": "fyi.kongjianguan.utabuild",
   "build": {
-    "frontendDist": "../src",
-    "beforeDevCommand": "pnpm run build",
+    "frontendDist": "../dist",
+    "devUrl": "http://127.0.0.1:4173",
+    "beforeDevCommand": "pnpm run dev",
     "beforeBuildCommand": "pnpm run build"
   },
   "app": {
@@ -34,7 +35,7 @@
       "icons/icon.ico"
     ],
     "android": {
-      "versionCode": 10020001
+      "versionCode": 10020002
     }
   }
 }

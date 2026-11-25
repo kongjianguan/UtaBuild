@@ -1,49 +1,43 @@
 // ============================================================
 // Theme: Dark (Miuix neutral)
-// Direction: HyperOS-style neutral surfaces with one restrained action color.
 // ============================================================
 
 :root {
-  // Background
-  --prim-dark-bg: #191919;
-  --prim-dark-bg-secondary: #222222;
-  --prim-dark-surface: #2b2b2b;
-  --prim-dark-surface-hover: #353535;
-  --prim-dark-surface-elevated: #3a3a3a;
+  color-scheme: dark;
 
-  // Text
-  --prim-dark-text: #f5f5f5;
-  --prim-dark-text-secondary: #aaaaaa;
-  // #888 on #191919 ≈ 5.1:1 (WCAG AA for normal text)
-  --prim-dark-text-muted: #888888;
+  --prim-dark-bg: #141416;
+  --prim-dark-bg-secondary: #1e1f23;
+  --prim-dark-surface: #24262b;
+  --prim-dark-surface-hover: #2d3036;
+  --prim-dark-surface-elevated: #2f3239;
 
-  // Ruby
-  --prim-dark-ruby-color: #999999;
+  --prim-dark-text: #f3f5f8;
+  --prim-dark-text-secondary: #b9c0cc;
+  --prim-dark-text-muted: #8f97a6;
+  --prim-dark-ruby-color: #9da6b5;
 
-  // Borders
-  --prim-dark-border: rgba(255, 255, 255, 0.07);
-  --prim-dark-border-focus: rgba(138, 180, 248, 0.55);
+  --prim-dark-border: rgba(255, 255, 255, 0.08);
+  --prim-dark-border-subtle: rgba(255, 255, 255, 0.05);
+  --prim-dark-border-focus: rgba(120, 173, 255, 0.65);
 
-  // Primary
-  --prim-dark-primary: #8ab4f8;
-  --prim-dark-primary-hover: #a8c7fa;
-  --prim-dark-primary-content: #101010;
-  --prim-dark-primary-glow: rgba(138, 180, 248, 0.16);
-  --prim-dark-primary-dim: rgba(138, 180, 248, 0.14);
+  --prim-dark-primary: #78adff;
+  --prim-dark-primary-hover: #96c0ff;
+  --prim-dark-primary-content: #0c1421;
+  --prim-dark-primary-glow: rgba(120, 173, 255, 0.18);
+  --prim-dark-primary-dim: rgba(120, 173, 255, 0.12);
 
-  // Danger
-  --prim-dark-danger: #ff897d;
-  --prim-dark-danger-bg: rgba(255, 137, 125, 0.14);
-  --prim-dark-success: #8dd694;
-  --prim-dark-success-bg: rgba(141, 214, 148, 0.14);
-  --prim-dark-info: #8ab4f8;
-  --prim-dark-info-bg: rgba(138, 180, 248, 0.14);
+  --prim-dark-danger: #ff9a92;
+  --prim-dark-danger-bg: rgba(255, 154, 146, 0.14);
+  --prim-dark-success: #7fd88a;
+  --prim-dark-success-bg: rgba(127, 216, 138, 0.14);
+  --prim-dark-info: #8ec0ff;
+  --prim-dark-info-bg: rgba(142, 192, 255, 0.14);
 
-  // Code/log background
-  --prim-dark-glass-code-bg: rgba(0, 0, 0, 0.32);
+  --prim-dark-glass-code-bg: rgba(0, 0, 0, 0.34);
+  --prim-dark-skeleton-base: rgba(255, 255, 255, 0.06);
+  --prim-dark-skeleton-shine: rgba(255, 255, 255, 0.12);
 
-  // Shadows
-  --prim-dark-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.16);
-  --prim-dark-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.22);
-  --prim-dark-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.30);
+  --prim-dark-shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.22);
+  --prim-dark-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --prim-dark-shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.38);
 }

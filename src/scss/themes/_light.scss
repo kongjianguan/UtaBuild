@@ -3,38 +3,41 @@
 // ============================================================
 
 body[data-theme="light"] {
-  --prim-light-bg: #f0f2f5;
-  --prim-light-bg-secondary: #e4e7ec;
+  color-scheme: light;
+
+  --prim-light-bg: #f3f5f8;
+  --prim-light-bg-secondary: #e7ebf0;
   --prim-light-surface: #ffffff;
-  --prim-light-surface-hover: #e9ecef;
+  --prim-light-surface-hover: #eff2f6;
   --prim-light-surface-elevated: #ffffff;
 
-  --prim-light-text: #1f1f1f;
-  --prim-light-text-secondary: #666666;
-  // #767676 on #ffffff ≈ 4.54:1 (WCAG AA for normal text)
-  --prim-light-text-muted: #767676;
+  --prim-light-text: #181b20;
+  --prim-light-text-secondary: #4e5663;
+  --prim-light-text-muted: #6c7482;
+  --prim-light-ruby-color: #626b7a;
 
-  --prim-light-ruby-color: #666666;
+  --prim-light-border: rgba(24, 27, 32, 0.09);
+  --prim-light-border-subtle: rgba(24, 27, 32, 0.05);
+  --prim-light-border-focus: rgba(29, 78, 216, 0.55);
 
-  --prim-light-border: rgba(31, 31, 31, 0.09);
-  --prim-light-border-focus: rgba(52, 120, 246, 0.45);
-
-  --prim-light-primary: #3478f6;
-  --prim-light-primary-hover: #2868df;
+  --prim-light-primary: #2563eb;
+  --prim-light-primary-hover: #1d4ed8;
   --prim-light-primary-content: #ffffff;
-  --prim-light-primary-glow: rgba(52, 120, 246, 0.16);
-  --prim-light-primary-dim: rgba(52, 120, 246, 0.12);
+  --prim-light-primary-glow: rgba(37, 99, 235, 0.16);
+  --prim-light-primary-dim: rgba(37, 99, 235, 0.10);
 
-  --prim-light-danger: #c94c42;
-  --prim-light-danger-bg: rgba(201, 76, 66, 0.10);
-  --prim-light-success: #338a42;
-  --prim-light-success-bg: rgba(51, 138, 66, 0.10);
-  --prim-light-info: #3478f6;
-  --prim-light-info-bg: rgba(52, 120, 246, 0.10);
+  --prim-light-danger: #c0392b;
+  --prim-light-danger-bg: rgba(192, 57, 43, 0.10);
+  --prim-light-success: #237032;
+  --prim-light-success-bg: rgba(35, 112, 50, 0.10);
+  --prim-light-info: #2563eb;
+  --prim-light-info-bg: rgba(37, 99, 235, 0.10);
 
-  --prim-light-glass-code-bg: rgba(0, 0, 0, 0.04);
+  --prim-light-glass-code-bg: rgba(24, 27, 32, 0.04);
+  --prim-light-skeleton-base: rgba(24, 27, 32, 0.06);
+  --prim-light-skeleton-shine: rgba(24, 27, 32, 0.11);
 
-  --prim-light-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-  --prim-light-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
-  --prim-light-shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.09), 0 4px 10px rgba(0, 0, 0, 0.04);
+  --prim-light-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --prim-light-shadow-md: 0 6px 18px rgba(15, 23, 42, 0.07), 0 2px 4px rgba(15, 23, 42, 0.03);
+  --prim-light-shadow-lg: 0 14px 32px rgba(15, 23, 42, 0.11), 0 4px 10px rgba(15, 23, 42, 0.05);
 }

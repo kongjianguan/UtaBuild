@@ -1,6 +1,27 @@
 // ============================================================
-// Ruby / Furigana Rendering (native <ruby>/<rt> elements)
+// Ruby / Furigana Rendering
 // ============================================================
+
+.lyricBody {
+  user-select: text;
+  letter-spacing: 0.03em;
+  line-height: 2.35;
+  padding: 24px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--motion-slow), border-color var(--motion-slow);
+}
+
+.lyricBody__lines {
+  --lyric-font-size: 17px;
+  font-size: var(--lyric-font-size);
+}
+
+.lyricBody__line {
+  min-height: 0.9em;
+}
 
 .lyricBody ruby.ruby {
   ruby-align: center;
@@ -12,14 +33,21 @@
   text-align: center;
   letter-spacing: -0.001em;
   user-select: none;
+  font-size: clamp(10px, calc(var(--lyric-font-size) * 0.62), 20px);
   transition: color var(--motion-slow) ease;
 }
 
-.lyricBody > div {
-  --lyric-font-size: 17px;
-  font-size: var(--lyric-font-size);
+.lyricBody--hide-ruby rt.rt {
+  display: none;
 }
 
-.lyricBody > div rt.rt {
-  font-size: clamp(10px, calc(var(--lyric-font-size) * 0.65), 20px);
+.lyricBody--hide-ruby {
+  line-height: 1.95;
+}
+
+@media (max-width: 768px) {
+  .lyricBody {
+    padding: 18px 16px;
+    border-radius: var(--radius-lg);
+  }
 }
