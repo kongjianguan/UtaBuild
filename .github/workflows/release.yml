@@ -7,7 +7,26 @@ on:
       - 'v*'
 
 jobs:
+  prepare-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Ensure draft release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$TAG_NAME" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release create "$TAG_NAME" \
+              --repo "${{ github.repository }}" \
+              --title "$TAG_NAME" \
+              --notes "详见 git log。" \
+              --draft
+          fi
+
   build-desktop:
+    needs: prepare-release
     permissions:
       contents: write
     strategy:
