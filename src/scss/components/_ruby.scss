@@ -37,6 +37,11 @@
   transition: color var(--motion-slow) ease;
 }
 
+.lyricBody rt.rt .rt__text {
+  display: inline-block;
+  transform: translateY(-0.4em);
+}
+
 .lyricBody--hide-ruby rt.rt {
   display: none;
 }

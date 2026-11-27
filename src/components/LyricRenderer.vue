@@ -68,7 +68,7 @@ watch(
       >
         <template v-for="(el, elIdx) in line.elements" :key="elIdx">
           <ruby v-if="el.type === 'ruby'" class="ruby">
-            {{ el.base ?? '' }}<rt class="rt">{{ el.ruby ?? '' }}</rt>
+            {{ el.base ?? '' }}<rt class="rt"><span class="rt__text">{{ el.ruby ?? '' }}</span></rt>
           </ruby>
           <template v-else>{{ el.base ?? '' }}</template>
         </template>
