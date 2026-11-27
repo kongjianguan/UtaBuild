@@ -174,6 +174,8 @@ const BASE_URL: &str = "https://utaten.com";
 const REQUEST_DELAY_MS: u64 = 500;
 /// HTTP 请求超时时间（秒）
 const REQUEST_TIMEOUT_SECS: u64 = 15;
+/// QQ Music 搜索接口中用于筛选单曲的类型值
+const QQ_MUSIC_SONG_SEARCH_TYPE: i32 = 7;
 
 /// UtaTen 歌词搜索引擎主结构体。
 ///
@@ -221,6 +223,7 @@ impl UtaTenSearcher {
                     reqwest::header::ACCEPT_LANGUAGE,
                     "ja,en-US;q=0.7,en;q=0.3".parse().unwrap(),
                 );
+                headers.insert(reqwest::header::REFERER, BASE_URL.parse().unwrap());
                 headers
             })
             // UtaTen is directly reachable on supported networks; avoid inheriting
@@ -438,6 +441,12 @@ impl UtaTenSearcher {
         };
 
         let html_content = Self::decode_response(&bytes, &headers);
+        if html_content.trim().is_empty() {
+            error!("Search request returned an empty response body");
+            response.status = "error".to_string();
+            response.error = Some("搜索请求返回空响应".to_string());
+            return response;
+        }
         let (results, pagination) = {
             let document = Html::parse_document(&html_content);
             let results = Self::extract_search_results(&document);
@@ -1022,7 +1031,7 @@ impl UtaTenSearcher {
                     "search_id": search_id,
                     "remoteplace": "search.android.keyboard",
                     "query": query,
-                    "search_type": 0,
+                    "search_type": QQ_MUSIC_SONG_SEARCH_TYPE,
                     "num_per_page": 8,
                     "page_num": 1,
                     "highlight": 0,
@@ -1133,7 +1142,7 @@ impl UtaTenSearcher {
                     "search_id": search_id,
                     "remoteplace": "search.android.keyboard",
                     "query": query,
-                    "search_type": 0,
+                    "search_type": QQ_MUSIC_SONG_SEARCH_TYPE,
                     "num_per_page": 3,
                     "page_num": 1,
                     "highlight": 0, "nqc_flag": 0,
@@ -1390,7 +1399,7 @@ impl UtaTenSearcher {
                     "search_id": search_id,
                     "remoteplace": "search.android.keyboard",
                     "query": query,
-                    "search_type": 0,
+                    "search_type": QQ_MUSIC_SONG_SEARCH_TYPE,
                     "num_per_page": 8,
                     "page_num": page,
                     "highlight": 0, "nqc_flag": 0,
@@ -1436,6 +1445,17 @@ impl UtaTenSearcher {
                 return response;
             }
         };
+
+        let request_code = json
+            .pointer("/req_0/code")
+            .and_then(|value| value.as_i64())
+            .unwrap_or(-1);
+        if request_code != 0 {
+            error!("QQ Music search returned request code {}", request_code);
+            response.status = "error".to_string();
+            response.error = Some(format!("QQ Music 搜索失败: 接口返回 {}", request_code));
+            return response;
+        }
 
         let songs = match json
             .pointer("/req_0/data/body/item_song")
