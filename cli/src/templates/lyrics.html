@@ -332,27 +332,22 @@ body {
   backdrop-filter: blur(8px);
 }
 
-.lyricBody span.ruby {
-  margin-bottom: 0.55em;
-  display: inline-table;
-  position: relative;
-  vertical-align: bottom;
+.lyricBody ruby.ruby {
+  ruby-align: center;
 }
 
-.lyricBody span.ruby span.rb {
-  display: table-row;
-  position: relative;
-  line-height: 1.2;
-}
-
-.lyricBody span.ruby span.rt {
-  display: table-header-group;
-  line-height: 1.8;
+.lyricBody rt.rt {
   color: var(--ruby-color);
   white-space: nowrap;
   text-align: center;
   letter-spacing: -0.001em;
+  user-select: none;
   transition: color var(--motion-slow);
+}
+
+.lyricBody rt.rt .rt__text {
+  display: inline-block;
+  transform: translateY(-0.4em);
 }
 
 .lyricBody > div {
@@ -360,12 +355,8 @@ body {
   font-size: var(--lyric-font-size);
 }
 
-.lyricBody > div span.ruby {
-  line-height: 2.3;
-}
-
-.lyricBody > div span.ruby span.rt {
-  font-size: clamp(8px, calc(var(--lyric-font-size) * 0.65), 20px);
+.lyricBody > div rt.rt {
+  font-size: clamp(8px, calc(var(--lyric-font-size) * 0.62), 20px);
 }
 
 @media (max-width: 520px) {

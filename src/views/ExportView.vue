@@ -171,7 +171,7 @@ async function handleSaveText(
               >
                 <template v-for="(el, eIdx) in line.elements" :key="eIdx">
                   <ruby v-if="el.type === 'ruby'">
-                    {{ el.base ?? '' }}<rt>{{ el.ruby ?? '' }}</rt>
+                    {{ el.base ?? '' }}<rt><span class="rt__text">{{ el.ruby ?? '' }}</span></rt>
                   </ruby>
                   <template v-else>{{ el.base ?? '' }}</template>
                 </template>
@@ -314,6 +314,14 @@ async function handleSaveText(
   flex-direction: column;
   height: 100%;
   min-height: 0;
+
+  > .view-scroll {
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 }
 
 .export-column {
@@ -454,8 +462,18 @@ async function handleSaveText(
     font-size: 0.92rem;
     line-height: 2.15;
 
+    ruby {
+      ruby-align: center;
+    }
+
     rt {
       font-size: 0.62em;
+      letter-spacing: -0.001em;
+    }
+
+    rt .rt__text {
+      display: inline-block;
+      transform: translateY(-0.4em);
     }
   }
 

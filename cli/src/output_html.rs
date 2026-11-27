@@ -45,7 +45,7 @@ fn render_ruby_html(elements: &[LyricElement]) -> String {
                 let base = html_escape(elem.base.as_deref().unwrap_or(""));
                 let ruby = html_escape(elem.ruby.as_deref().unwrap_or(""));
                 html.push_str(&format!(
-                    "<span class=\"ruby\"><span class=\"rb\">{}</span><span class=\"rt\">{}</span></span>",
+                    "<ruby class=\"ruby\">{}<rt class=\"rt\"><span class=\"rt__text\">{}</span></rt></ruby>",
                     base, ruby
                 ));
             }
@@ -138,9 +138,9 @@ mod tests {
         }];
         let html = render_ruby_html(&elements);
         assert!(html.contains("class=\"ruby\""));
-        assert!(html.contains("class=\"rb\""));
         assert!(html.contains("私"));
         assert!(html.contains("class=\"rt\""));
+        assert!(html.contains("class=\"rt__text\""));
         assert!(html.contains("わたし"));
     }
 
